@@ -1,16 +1,27 @@
-port module Serverless
+module Serverless
     exposing
         ( httpApi
-        , endpoint
-        , Program
+        , HttpApi
+        , EndpointPort
         , Stage
         )
+
+{-| Define an HTTP API in elm.
+
+@docs httpApi, HttpApi, EndpointPort, Stage
+-}
 
 import Serverless.Request as Request exposing (..)
 import Serverless.Response as Response exposing (..)
 
 
-httpApi : Program model msg -> Platform.Program Request.Raw (Maybe model) msg
+{-| Create an HttpApi.
+
+This program guarantees a decoded Request for your init function. If an error
+happens during decoding, it will send 500 through the responsePort that
+you provide and never call init.
+-}
+httpApi : HttpApi model msg -> Platform.Program Request.Raw (Maybe model) msg
 httpApi program =
     Platform.programWithFlags
         { init = maybeInit program
@@ -19,17 +30,33 @@ httpApi program =
         }
 
 
-port endpoint : (Stage -> msg) -> Sub msg
+{-| Program for an HTTP API.
 
+Differs from Platform.program as follows
 
-type alias Program model msg =
-    { endpoint : Stage -> msg
+* endpointPort - port through which the HTTP request begins
+* responsePort - port through which the HTTP request ends
+* init - guaranteed to get a decoded Request
+-}
+type alias HttpApi model msg =
+    { endpointPort : EndpointPort msg
+    , responsePort : Response.Port msg
     , init : Request -> ( model, Cmd msg )
     , update : msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
     }
 
 
+{-| A port through which the HTTP request begins.
+
+It receives the serverless stage as an parameter.
+-}
+type alias EndpointPort msg =
+    (Stage -> msg) -> Sub msg
+
+
+{-| A serverless stage (ex, "dev")
+-}
 type alias Stage =
     String
 
@@ -38,7 +65,7 @@ type alias Stage =
 -- IMPLEMENTATION
 
 
-maybeInit : Program model msg -> Request.Raw -> ( Maybe model, Cmd msg )
+maybeInit : HttpApi model msg -> Request.Raw -> ( Maybe model, Cmd msg )
 maybeInit program raw =
     case Request.decode raw of
         Ok req ->
@@ -49,10 +76,10 @@ maybeInit program raw =
                 ( Just model, Cmd.none )
 
         Err err ->
-            ( Nothing, response ( 500, err ) )
+            ( Nothing, program.responsePort ( 500, err ) )
 
 
-maybeUpdate : Program model msg -> msg -> Maybe model -> ( Maybe model, Cmd msg )
+maybeUpdate : HttpApi model msg -> msg -> Maybe model -> ( Maybe model, Cmd msg )
 maybeUpdate program msg maybeModel =
     case maybeModel of
         Just model ->
@@ -63,17 +90,14 @@ maybeUpdate program msg maybeModel =
                 ( Just newModel, cmd )
 
         Nothing ->
-            ( Nothing, response ( 500, "Failed to initialize" ) )
+            ( Nothing, program.responsePort ( 500, "Failed to initialize" ) )
 
 
-maybeSub : Program model msg -> Maybe model -> Sub msg
+maybeSub : HttpApi model msg -> Maybe model -> Sub msg
 maybeSub program maybeModel =
     case maybeModel of
         Just model ->
-            Sub.batch
-                [ endpoint program.endpoint
-                , program.subscriptions model
-                ]
+            program.subscriptions model
 
         Nothing ->
             Sub.none

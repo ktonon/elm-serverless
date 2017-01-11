@@ -1,4 +1,15 @@
-module Serverless.Request exposing (..)
+module Serverless.Request
+    exposing
+        ( decode
+        , Method
+        , Raw
+        , Request
+        )
+
+{-| Defines an HTTP request.
+
+@docs decode, Method, Raw, Request
+-}
 
 import Json.Decode exposing (decodeValue, at)
 import Json.Encode
@@ -7,6 +18,8 @@ import Json.Encode
 -- MODEL
 
 
+{-| HTTP request message type
+-}
 type Method
     = GET
     | POST
@@ -15,6 +28,8 @@ type Method
     | OPTIONS
 
 
+{-| HTTP Request (wip)
+-}
 type alias Request =
     { method : Method
     , path : String
@@ -25,10 +40,14 @@ type alias Request =
 -- DECODER
 
 
+{-| A raw HTTP request, before decoding
+-}
 type alias Raw =
     Json.Encode.Value
 
 
+{-| Decode a raw HTTP request
+-}
 decode : Raw -> Result String Request
 decode data =
     Json.Decode.decodeValue decoder data
