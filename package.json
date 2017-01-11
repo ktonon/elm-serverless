@@ -1,0 +1,15 @@
+{
+  "name": "elm-serverless",
+  "version": "1.0.0",
+  "description": "Deploy an Elm worker to AWS Lambda using serverless",
+  "main": "index.js",
+  "scripts": {
+    "test": "eslint ."
+  },
+  "author": "Kevin Tonon <kevin@betweenconcepts.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^3.13.1",
+    "eslint-config-es2015": "^1.1.0"
+  }
+}

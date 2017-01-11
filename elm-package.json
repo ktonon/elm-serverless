@@ -1,0 +1,14 @@
+{
+    "version": "1.0.0",
+    "summary": "Deploy an Elm worker to AWS Lambda using serverless",
+    "repository": "https://github.com/user/project.git",
+    "license": "MIT",
+    "source-directories": [
+        "elm"
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "5.0.0 <= v < 6.0.0"
+    },
+    "elm-version": "0.18.0 <= v < 0.19.0"
+}
