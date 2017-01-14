@@ -4,7 +4,9 @@
   "description": "Deploy an Elm worker to AWS Lambda using serverless",
   "main": "index.js",
   "scripts": {
-    "test": "eslint ."
+    "postinstall": "elm package install -y",
+    "test": "elm test",
+    "posttest": "eslint ."
   },
   "author": "Kevin Tonon <kevin@betweenconcepts.com>",
   "license": "MIT",
@@ -12,6 +14,8 @@
     "guid": "0.0.12"
   },
   "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-test": "^0.18.2",
     "eslint": "^3.13.1",
     "eslint-config-es2015": "^1.1.0"
   }

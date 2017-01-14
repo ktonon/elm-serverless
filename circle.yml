@@ -1,0 +1,11 @@
+machine:
+  node:
+    version: 4.3
+
+dependencies:
+  cache_directories:
+    - node_modules
+    - elm-stuff
+  override:
+    - npm install
+    - ./scripts/ci-elm-hack.sh
