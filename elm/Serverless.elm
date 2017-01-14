@@ -1,18 +1,24 @@
 module Serverless
     exposing
         ( httpApi
+        , Flags
         , HttpApi
-        , EndpointPort
-        , Stage
+        , Program
+        , RequestPort
+        , ResponsePort
         )
 
 {-| Define an HTTP API in elm.
 
-@docs httpApi, HttpApi, EndpointPort, Stage
+@docs httpApi, Flags, HttpApi, Program, RequestPort, ResponsePort
 -}
 
-import Serverless.Request as Request exposing (..)
-import Serverless.Response as Response exposing (..)
+import Json.Decode exposing (Decoder, decodeValue)
+import Json.Encode as J
+import Serverless.Conn as Conn exposing (..)
+import Serverless.Conn.Pool as Pool exposing (..)
+import Serverless.Conn.PrivateRequest exposing (..)
+import Serverless.Conn.Request exposing (Id)
 
 
 {-| Create an HttpApi.
@@ -21,13 +27,27 @@ This program guarantees a decoded Request for your init function. If an error
 happens during decoding, it will send 500 through the responsePort that
 you provide and never call init.
 -}
-httpApi : HttpApi model msg -> Platform.Program Request.Raw (Maybe model) msg
+httpApi :
+    HttpApi config model msg
+    -> Program config model msg
 httpApi program =
     Platform.programWithFlags
-        { init = maybeInit program
-        , update = maybeUpdate program
-        , subscriptions = maybeSub program
+        { init = init_ program
+        , update = update_ program
+        , subscriptions = sub_ program
         }
+
+
+{-| Serverless program type
+-}
+type alias Program config model msg =
+    Platform.Program Flags (Pool config model) (Msg msg)
+
+
+{-| Type of flags for program
+-}
+type alias Flags =
+    J.Value
 
 
 {-| Program for an HTTP API.
@@ -38,66 +58,112 @@ Differs from Platform.program as follows
 * responsePort - port through which the HTTP request ends
 * init - guaranteed to get a decoded Request
 -}
-type alias HttpApi model msg =
-    { endpointPort : EndpointPort msg
-    , responsePort : Response.Port msg
-    , init : Request -> ( model, Cmd msg )
-    , update : msg -> model -> ( model, Cmd msg )
-    , subscriptions : model -> Sub msg
+type alias HttpApi config model msg =
+    { configDecoder : Decoder config
+    , requestPort : RequestPort (Msg msg)
+    , responsePort : ResponsePort (Msg msg)
+    , endpoint : msg
+    , initialModel : model
+    , update : msg -> Conn config model -> ( Conn config model, Cmd msg )
+    , subscriptions : Conn config model -> Sub msg
     }
 
 
-{-| A port through which the HTTP request begins.
-
-It receives the serverless stage as an parameter.
+{-| A port through which the request is received
 -}
-type alias EndpointPort msg =
-    (Stage -> msg) -> Sub msg
+type alias RequestPort msg =
+    (J.Value -> msg) -> Sub msg
 
 
-{-| A serverless stage (ex, "dev")
+{-| A port through which the request is sent
 -}
-type alias Stage =
-    String
+type alias ResponsePort msg =
+    J.Value -> Cmd msg
 
 
 
 -- IMPLEMENTATION
 
 
-maybeInit : HttpApi model msg -> Request.Raw -> ( Maybe model, Cmd msg )
-maybeInit program raw =
-    case Request.decode raw of
-        Ok req ->
-            let
-                ( model, cmd ) =
-                    program.init req
-            in
-                ( Just model, Cmd.none )
+init_ :
+    HttpApi config model msg
+    -> Flags
+    -> ( Pool config model, Cmd (Msg msg) )
+init_ program flags =
+    case decodeValue program.configDecoder flags of
+        Ok config ->
+            ( Debug.log "Initialized" (Pool.empty program.initialModel (Just config))
+            , Cmd.none
+            )
 
         Err err ->
-            ( Nothing, program.responsePort ( 500, err ) )
+            Pool.empty program.initialModel Nothing
+                |> reportFailure "Initialization failed" err
 
 
-maybeUpdate : HttpApi model msg -> msg -> Maybe model -> ( Maybe model, Cmd msg )
-maybeUpdate program msg maybeModel =
-    case maybeModel of
-        Just model ->
+type Msg msg
+    = RawRequest J.Value
+    | HandlerMsg Id msg
+
+
+update_ :
+    HttpApi config model msg
+    -> Msg msg
+    -> Pool config model
+    -> ( Pool config model, Cmd (Msg msg) )
+update_ program slsMsg pool =
+    case slsMsg of
+        RawRequest raw ->
+            case raw |> decodeValue requestDecoder of
+                Ok req ->
+                    pool
+                        |> Pool.add req
+                        |> updateChild program req.id program.endpoint
+
+                Err err ->
+                    pool |> reportFailure "Error decoding request" err
+
+        HandlerMsg requestId msg ->
+            updateChild program requestId msg pool
+
+
+updateChild : HttpApi config model msg -> Id -> msg -> Pool config model -> ( Pool config model, Cmd (Msg msg) )
+updateChild program requestId msg pool =
+    case pool |> Pool.get requestId of
+        Just conn ->
             let
-                ( newModel, cmd ) =
-                    program.update msg model
+                ( newConn, cmd ) =
+                    program.update msg conn
             in
-                ( Just newModel, cmd )
+                ( pool |> Pool.replace newConn
+                , Cmd.map (HandlerMsg requestId) cmd
+                )
 
-        Nothing ->
-            ( Nothing, program.responsePort ( 500, "Failed to initialize" ) )
+        _ ->
+            pool |> reportFailure "No connection in pool with id: " requestId
 
 
-maybeSub : HttpApi model msg -> Maybe model -> Sub msg
-maybeSub program maybeModel =
-    case maybeModel of
-        Just model ->
-            program.subscriptions model
+sub_ :
+    HttpApi config model msg
+    -> Pool config model
+    -> Sub (Msg msg)
+sub_ program pool =
+    pool
+        |> Pool.connections
+        |> List.map
+            (\conn ->
+                Sub.map
+                    (HandlerMsg conn.req.id)
+                    (program.subscriptions conn)
+            )
+        |> List.append [ program.requestPort RawRequest ]
+        |> Sub.batch
 
-        Nothing ->
-            Sub.none
+
+reportFailure : String -> value -> Pool config model -> ( Pool config model, Cmd msg )
+reportFailure msg value pool =
+    let
+        _ =
+            Debug.log msg value
+    in
+        ( pool, Cmd.none )

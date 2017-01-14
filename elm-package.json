@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "2.0.0",
     "summary": "Deploy an elm worker to AWS Lambda using serverless",
     "repository": "https://github.com/ktonon/elm-serverless.git",
     "license": "MIT",
@@ -7,9 +7,10 @@
         "elm"
     ],
     "exposed-modules": [
-      "Serverless",
-      "Serverless.Request",
-      "Serverless.Response"
+        "Serverless",
+        "Serverless.Conn",
+        "Serverless.Conn.Request",
+        "Serverless.Conn.Response"
     ],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0"
