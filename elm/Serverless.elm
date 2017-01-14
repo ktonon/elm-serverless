@@ -10,6 +10,8 @@ module Serverless
 
 {-| Define an HTTP API in elm.
 
+__Experimental (WIP): Not for use in production__
+
 @docs httpApi, Flags, HttpApi, Program, RequestPort, ResponsePort
 -}
 
@@ -21,11 +23,7 @@ import Serverless.Conn.PrivateRequest exposing (..)
 import Serverless.Conn.Request exposing (Id)
 
 
-{-| Create an HttpApi.
-
-This program guarantees a decoded Request for your init function. If an error
-happens during decoding, it will send 500 through the responsePort that
-you provide and never call init.
+{-| Create an program for handling HTTP connections.
 -}
 httpApi :
     HttpApi config model msg
@@ -52,11 +50,19 @@ type alias Flags =
 
 {-| Program for an HTTP API.
 
-Differs from Platform.program as follows
+A Serverless.Program is parameterized by your 3 custom types
 
-* endpointPort - port through which the HTTP request begins
-* responsePort - port through which the HTTP request ends
-* init - guaranteed to get a decoded Request
+* Config is a server load-time record of deployment specific values
+* Model is for whatever you need during the processing of a request
+* Msg is your app message type
+
+You must provide the following:
+
+* `configDecoder` decodes a JSON value for your custom config type
+* `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.ResponsePort`, respectively
+* `endpoint` is a message through which connections are first received
+* `initialModel` is a value to which new connections will set their model
+* `update` and `subscriptions` have the usual meaning, but operate on individual connections
 -}
 type alias HttpApi config model msg =
     { configDecoder : Decoder config
@@ -69,13 +75,15 @@ type alias HttpApi config model msg =
     }
 
 
-{-| A port through which the request is received
+{-| Type of port through which the request is received.
+Set your request port to this type.
 -}
 type alias RequestPort msg =
     (J.Value -> msg) -> Sub msg
 
 
-{-| A port through which the request is sent
+{-| Type of port through which the request is sent.
+Set your response port to this type.
 -}
 type alias ResponsePort msg =
     J.Value -> Cmd msg

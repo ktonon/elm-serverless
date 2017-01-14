@@ -1,0 +1,12 @@
+machine:
+  node:
+    version: 4.3
+  pre:
+    - npm install --silent -g elm@0.18.0 elm-test
+
+dependencies:
+  cache_directories:
+    - node_modules
+    - elm-stuff
+  override:
+    - ./scripts/ci-elm-hack.s

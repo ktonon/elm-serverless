@@ -1,6 +1,9 @@
 elm serverless
 ==============
 
+[![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
+[![CircleCI](https://circleci.com/gh/ktonon/elm-serverless.svg?style=svg)](https://circleci.com/gh/ktonon/elm-serverless)
+
 __Experimental (WIP): Not for use in production__
 
 Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][].
