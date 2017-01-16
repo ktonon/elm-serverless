@@ -2,9 +2,8 @@ module Serverless.Conn.PrivateRequest exposing (..)
 
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (decode, required, hardcoded)
-import Maybe.Extra exposing (combine)
 import Serverless.Conn.Request as Request exposing (..)
-import Toolkit.Helpers exposing (take4Tuple)
+import Toolkit.Helpers exposing (maybeList, take4Tuple)
 
 
 requestDecoder : Json.Decode.Decoder Request
@@ -33,7 +32,7 @@ ipDecoder w =
         |> String.split "."
         |> List.map String.toInt
         |> List.map Result.toMaybe
-        |> combine
+        |> maybeList
         |> Maybe.andThen take4Tuple
         |> Maybe.map (Ip4 >> succeed)
         |> Maybe.withDefault ("Unsupported IP address: " ++ w |> fail)
