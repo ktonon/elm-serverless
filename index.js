@@ -29,15 +29,18 @@ const httpApi = (opt) => {
     const rc = event.requestContext || { identity: {} };
     const req = {
       id: Guid.raw(),
+      body: (typeof event.body === 'object'
+        ? event.body && JSON.stringify(event.body)
+        : event.body),
+      headers: headers,
       host: headers.Host || (headers.host && headers.host.split(':')[0]),
       method: event.httpMethod || event.method,
       path: `/${params[0] || params['proxy'] || ''}`,
       port: parseInt(headers['X-Forwarded-Port'] || (headers.host && headers.host.split(':')[1]), 10),
       remoteIp: rc.identity.sourceIp || '127.0.0.1',
-      headers: headers,
       scheme: headers['X-Forwarded-Proto'] || 'http',
       stage: (event.requestContext || {}).stage || 'local',
-      queryParams: event.queryStringParameters,
+      queryParams: event.queryStringParameters || {},
     };
 
     callbacks[req.id] = cb;

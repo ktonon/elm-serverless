@@ -17,10 +17,9 @@ __Experimental (WIP): Not for use in production__
 
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode as J
-import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Pool as Pool exposing (..)
-import Serverless.Conn.PrivateRequest exposing (..)
-import Serverless.Conn.Request exposing (Id)
+import Serverless.Conn.Private exposing (..)
+import Serverless.Conn.Types exposing (..)
 
 
 {-| Create an program for handling HTTP connections.
