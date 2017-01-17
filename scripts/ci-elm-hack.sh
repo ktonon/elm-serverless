@@ -5,6 +5,13 @@ set -e
 SYSCONFCPUS="$HOME/sysconfcpus"
 ELM_MAKE="$HOME/$CIRCLE_PROJECT_REPONAME/node_modules/.bin/elm-make"
 
+# Check if we have already patched it
+if [ -f "${ELM_MAKE}-old" ];
+then
+    echo "Skipping ci-elm-hack"
+    exit 0
+fi
+
 # Workaround for extremely slow elm compilation
 # see https://github.com/elm-lang/elm-compiler/issues/1473#issuecomment-245704142
 if [ ! -d "$SYSCONFCPUS/bin" ];

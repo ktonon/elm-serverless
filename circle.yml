@@ -4,6 +4,7 @@ machine:
 
 dependencies:
   cache_directories:
+    - ~/sysconfcpus
     - node_modules
     - elm-stuff
   override:
