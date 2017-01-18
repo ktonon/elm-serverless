@@ -15,15 +15,30 @@ requestDecoder =
     decode Request
         |> required "id" string
         |> required "body" bodyDecoder
-        |> required "headers" (keyValuePairs string |> map normalizeHeaders)
+        |> required "headers" (paramsDecoder |> map normalizeHeaders)
         |> required "host" string
-        |> required "method" (string |> andThen methodDecoder)
+        |> required "method" methodDecoder
         |> required "path" string
         |> required "port" int
-        |> required "remoteIp" (string |> andThen ipDecoder)
-        |> required "scheme" (string |> andThen schemeDecoder)
+        |> required "remoteIp" ipDecoder
+        |> required "scheme" schemeDecoder
         |> required "stage" string
-        |> required "queryParams" (keyValuePairs string)
+        |> required "queryParams" paramsDecoder
+
+
+paramsDecoder : Decoder (List ( String, String ))
+paramsDecoder =
+    keyValuePairs string
+        |> nullable
+        |> andThen
+            (\maybeParams ->
+                case maybeParams of
+                    Just params ->
+                        succeed params
+
+                    Nothing ->
+                        succeed []
+            )
 
 
 bodyDecoder : Decoder Body
@@ -41,20 +56,56 @@ normalizeHeaders =
     List.map (\( a, b ) -> ( a |> String.toLower, b ))
 
 
-ipDecoder : String -> Decoder IpAddress
-ipDecoder w =
+ipDecoder : Decoder IpAddress
+ipDecoder =
+    string |> andThen ipDecoderHelper
+
+
+ipDecoderHelper : String -> Decoder IpAddress
+ipDecoderHelper w =
     w
         |> String.split "."
-        |> List.map String.toInt
-        |> List.map Result.toMaybe
+        |> List.map toNonNegativeInt
         |> maybeList
+        |> require4
         |> Maybe.andThen take4Tuple
         |> Maybe.map (Ip4 >> succeed)
         |> Maybe.withDefault ("Unsupported IP address: " ++ w |> fail)
 
 
-methodDecoder : String -> Decoder Method
-methodDecoder w =
+toNonNegativeInt : String -> Maybe Int
+toNonNegativeInt val =
+    case val |> String.toInt of
+        Ok i ->
+            if i >= 0 then
+                Just i
+            else
+                Nothing
+
+        Err _ ->
+            Nothing
+
+
+require4 : Maybe (List a) -> Maybe (List a)
+require4 maybeList =
+    case maybeList of
+        Just list ->
+            if (List.length list) == 4 then
+                Just list
+            else
+                Nothing
+
+        Nothing ->
+            Nothing
+
+
+methodDecoder : Decoder Method
+methodDecoder =
+    string |> andThen methodDecoderHelper
+
+
+methodDecoderHelper : String -> Decoder Method
+methodDecoderHelper w =
     case w |> String.toLower of
         "get" ->
             succeed GET
@@ -75,8 +126,13 @@ methodDecoder w =
             fail ("Unsupported method: " ++ w)
 
 
-schemeDecoder : String -> Decoder Scheme
-schemeDecoder w =
+schemeDecoder : Decoder Scheme
+schemeDecoder =
+    string |> andThen schemeDecoderHelper
+
+
+schemeDecoderHelper : String -> Decoder Scheme
+schemeDecoderHelper w =
     case w |> String.toLower of
         "http" ->
             succeed (Http Insecure)
