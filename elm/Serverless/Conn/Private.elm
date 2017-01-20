@@ -151,33 +151,21 @@ schemeDecoderHelper w =
 initResponse : Response
 initResponse =
     Response
-        (InvalidStatusCode)
         NoBody
+        Utf8
+        [ ( "cache-control", "max-age=0, private, must-revalidate" ) ]
+        InvalidStatus
 
 
 encodeResponse : Id -> Response -> J.Value
 encodeResponse id res =
     J.object
         [ ( "id", J.string id )
-        , ( "statusCode", encodeStatusCode res.statusCode )
         , ( "body", encodeBody res.body )
+        , ( "charset", encodeCharset res.charset )
+        , ( "headers", encodeParams res.headers )
+        , ( "statusCode", encodeStatus res.status )
         ]
-
-
-encodeStatusCode : StatusCode -> J.Value
-encodeStatusCode statusCode =
-    case statusCode of
-        InvalidStatusCode ->
-            J.int -1
-
-        NumericStatusCode code ->
-            J.int code
-
-        Ok_200 ->
-            J.int 200
-
-        NotFound_404 ->
-            J.int 404
 
 
 encodeBody : Body -> J.Value
@@ -188,3 +176,25 @@ encodeBody body =
 
         TextBody w ->
             J.string w
+
+
+encodeCharset : Charset -> J.Value
+encodeCharset =
+    toString >> J.string
+
+
+encodeParams : List ( String, String ) -> J.Value
+encodeParams params =
+    params
+        |> List.map (\( a, b ) -> ( a, J.string b ))
+        |> J.object
+
+
+encodeStatus : Status -> J.Value
+encodeStatus status =
+    case status of
+        InvalidStatus ->
+            J.int -1
+
+        Code code ->
+            J.int code

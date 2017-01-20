@@ -2,7 +2,17 @@ module Serverless.Conn.Types exposing (..)
 
 {-| Types defining a serverless connection
 
-@docs Conn, Request, Response, Id, Body, Method, Scheme, Secure, IpAddress, StatusCode
+## Connection
+
+@docs Conn, Id, Body
+
+## Request
+
+@docs Request, Method, Scheme, Secure, IpAddress
+
+## Response
+
+@docs Response, Status, Charset
 -}
 
 
@@ -40,8 +50,10 @@ type alias Request =
 {-| HTTP Response
 -}
 type alias Response =
-    { statusCode : StatusCode
-    , body : Body
+    { body : Body
+    , charset : Charset
+    , headers : List ( String, String )
+    , status : Status
     }
 
 
@@ -89,8 +101,12 @@ type IpAddress
 
 {-| HTTP status code
 -}
-type StatusCode
-    = InvalidStatusCode
-    | NumericStatusCode Int
-    | Ok_200
-    | NotFound_404
+type Status
+    = InvalidStatus
+    | Code Int
+
+
+{-| Only Utf8 is supported at this time
+-}
+type Charset
+    = Utf8

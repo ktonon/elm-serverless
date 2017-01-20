@@ -3,6 +3,7 @@ elm serverless
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
 [![CircleCI](https://circleci.com/gh/ktonon/elm-serverless.svg?style=svg)](https://circleci.com/gh/ktonon/elm-serverless)
+[![Gitter chat](https://badges.gitter.im/ktonon/elm-serverless.png)](https://gitter.im/elm-serverless/Lobby)
 
 __Experimental (WIP): Not for use in production__
 

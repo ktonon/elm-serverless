@@ -1,5 +1,9 @@
 module Conn.PrivateTests exposing (all)
 
+import ElmTestBDDStyle exposing (..)
+import Expect exposing (..)
+import Expect.Extra exposing (contain)
+import Json.Encode as J
 import Serverless.Conn.Private exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Test exposing (..)
@@ -54,6 +58,25 @@ all =
             , ( "\"https\"", DecodesTo (Http Secure) )
             , ( "\"HTTP\"", DecodesTo (Http Insecure) )
             , ( "\"httpsx\"", FailsToDecode )
+            ]
+        , describe "initResponse"
+            [ it "has no body" <|
+                expect initResponse.body to equal NoBody
+            , it "has a default no-cache header" <|
+                expect initResponse.headers
+                    to
+                    contain
+                    ( "cache-control"
+                    , "max-age=0, private, must-revalidate"
+                    )
+            , it "has an invalid status code" <|
+                expect initResponse.status to equal InvalidStatus
+            ]
+        , describe "encodeBody"
+            [ it "encodes NoBody as null" <|
+                expect (encodeBody NoBody) to equal J.null
+            , it "encodes TextBody to plain text" <|
+                expect (TextBody "abc123" |> encodeBody) to equal (J.string "abc123")
             ]
         ]
 
