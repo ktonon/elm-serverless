@@ -1,0 +1,23 @@
+{
+  "name": "elm-serverless-demo",
+  "version": "1.0.0",
+  "description": "Small demonstrative AWS Lambda API written in elm",
+  "main": "api.js",
+  "scripts": {
+    "postinstall": "elm package install",
+    "deploy": "webpack && sls deploy",
+    "start": "webpack && sls webpack serve",
+    "test": "eslint ."
+  },
+  "author": "kevin@betweenconcepts.com",
+  "license": "MIT",
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-webpack-loader": "^4.1.1",
+    "eslint": "^3.13.1",
+    "eslint-config-es2015": "^1.1.0",
+    "serverless-webpack": "git://github.com/ktonon/serverless-webpack.git#cf32a9fe70f1bb38db68b449ef214ceed732caab",
+    "webpack": "^1.14.0",
+    "webpack-loader": "^0.0.1"
+  }
+}
