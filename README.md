@@ -30,8 +30,8 @@ This is a _work in progress_. It is not at all ready for production, but my goal
 
 Even when these are done, much work will remain. For example,
 
-* [AWS SDK for elm][]: an AWS Lambda function would be pretty limited with an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
-* __practial middleware__: the pipelines will make this possible, but we'll still need to define middleware for things like [JWT][], body parsing, and so on...
+* [AWS SDK for elm][]: an AWS Lambda function would be pretty limited without an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
+* __practical middleware__: the pipelines will make this possible, but we'll still need to define middleware for things like [JWT][], body parsing, and so on...
 
 ## Collaboration
 
@@ -45,7 +45,7 @@ So far this is a one person project. I am open to collaboration. Post a message 
 [elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
 [elm]:http://elm-lang.org/
 [evanc/url-parser]:http://package.elm-lang.org/packages/evancz/url-parser/latest
-[gitter]:https://badges.gitter.im/ktonon/elm-serverless.png)](https://gitter.im/elm-serverless/Lobby
+[gitter]:https://gitter.im/elm-serverless/Lobby
 [JWT]:https://jwt.io/
 [ktonon/elm-serverless]:http://package.elm-lang.org/packages/ktonon/elm-serverless/latest
 [serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
