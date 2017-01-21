@@ -9,7 +9,8 @@
     "exposed-modules": [
         "Serverless",
         "Serverless.Conn",
-        "Serverless.Conn.Types"
+        "Serverless.Conn.Types",
+        "Serverless.Plug"
     ],
     "dependencies": {
         "NoRedInk/elm-decode-pipeline": "3.0.0 <= v < 4.0.0",
