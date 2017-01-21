@@ -8,9 +8,9 @@ module Serverless
         , ResponsePort
         )
 
-{-| Define an HTTP API in elm.
+{-| __Experimental (WIP): Not for use in production__
 
-__Experimental (WIP): Not for use in production__
+Define an HTTP API in elm.
 
 @docs httpApi, Flags, HttpApi, Program, RequestPort, ResponsePort
 -}

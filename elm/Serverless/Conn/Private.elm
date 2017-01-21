@@ -157,13 +157,55 @@ initResponse =
         InvalidStatus
 
 
+getEncodedResponse : Conn model config -> Result String Response
+getEncodedResponse conn =
+    conn.resp
+        |> encodeResponse conn.req.id
+        |> decodeValue responseDecoder
+
+
+responseDecoder : Decoder Response
+responseDecoder =
+    decode Response
+        |> required "body" bodyDecoder
+        |> required "charset" charsetDecoder
+        |> required "headers" (paramsDecoder |> map normalizeHeaders)
+        |> required "statusCode" statusDecoder
+
+
+charsetDecoder : Decoder Charset
+charsetDecoder =
+    string |> andThen charsetDecoderHelper
+
+
+charsetDecoderHelper : String -> Decoder Charset
+charsetDecoderHelper w =
+    if (w |> String.toLower) == "utf8" then
+        succeed Utf8
+    else
+        fail ("Unsupported charset: " ++ w)
+
+
+statusDecoder : Decoder Status
+statusDecoder =
+    int |> andThen statusDecoderHelper
+
+
+statusDecoderHelper : Int -> Decoder Status
+statusDecoderHelper c =
+    if c < 200 || c > 599 then
+        succeed InvalidStatus
+    else
+        succeed (Code c)
+
+
 encodeResponse : Id -> Response -> J.Value
 encodeResponse id res =
     J.object
         [ ( "id", J.string id )
         , ( "body", encodeBody res.body )
         , ( "charset", encodeCharset res.charset )
-        , ( "headers", encodeParams res.headers )
+        , ( "headers", res.headers |> List.reverse |> encodeParams )
         , ( "statusCode", encodeStatus res.status )
         ]
 
@@ -180,7 +222,7 @@ encodeBody body =
 
 encodeCharset : Charset -> J.Value
 encodeCharset =
-    toString >> J.string
+    toString >> String.toLower >> J.string
 
 
 encodeParams : List ( String, String ) -> J.Value

@@ -17,6 +17,7 @@ const httpApi = (opt) => {
       cb(null, {
         statusCode: resp.statusCode,
         body: resp.body,
+        headers: resp.headers,
       });
     } else {
       console.error(`resp missing callback: ${resp.id}`);

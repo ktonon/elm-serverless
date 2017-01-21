@@ -1,9 +1,11 @@
 module Conn.PrivateTests exposing (all)
 
+import Conn.Fuzz as Fuzz exposing (testConnWith)
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Json.Encode as J
+import Serverless.Conn as Conn
 import Serverless.Conn.Private exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Test exposing (..)
@@ -77,6 +79,20 @@ all =
                 expect (encodeBody NoBody) to equal J.null
             , it "encodes TextBody to plain text" <|
                 expect (TextBody "abc123" |> encodeBody) to equal (J.string "abc123")
+            ]
+        , describe "encodeResponse"
+            [ testConnWith Fuzz.header "contains the most recent header (when a header is set more than once)" <|
+                \( conn, val ) ->
+                    let
+                        result =
+                            conn |> Conn.header val |> getEncodedResponse
+                    in
+                        case result of
+                            Ok resp ->
+                                expect resp.headers to contain val
+
+                            Err err ->
+                                Expect.fail err
             ]
         ]
 
