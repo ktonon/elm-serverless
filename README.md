@@ -33,6 +33,55 @@ Even when these are done, much work will remain. For example,
 * [AWS SDK for elm][]: an AWS Lambda function would be pretty limited without an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
 * __practical middleware__: the pipelines will make this possible, but we'll still need to define middleware for things like [JWT][], body parsing, and so on...
 
+__January 22, 2017__
+
+Got basic implementation of pipelines working. Pipelines are lists of plugs. Plugs are either:
+
+* A simple `Plug` which just transforms a connection
+* A `Loop` plug, which is an elm update function. I.e. it takes a message, and a connection, and returns a `(Conn, Cmd Msg)`
+* A nested `Pipeline`
+
+Plugs in a pipeline are applied to the connection in the order in which they are defined. If a loop plug returns a side effect (i.e. if `cmd /= Cmd.none`), application of the pipeline will pause until the side effect is completed. Application of the pipeline will resume at the same loop plug which returned the side effect.
+
+The following snippet gives an idea of how plugs will work:
+
+```elm
+pipeline : Pipeline Config Model Msg
+pipeline =
+    Plug.pipeline
+        |> plug (header ( "cache-control", "max-age=guess, preventative, must-reconsider" ))
+        |> plug (header ( "cache-control", "this will override the previous one" ))
+        |> nest otherPipeline
+        |> loop update
+
+
+otherPipeline : Pipeline Config Model Msg
+otherPipeline =
+    Plug.pipeline
+        |> plug (header ( "pipelines", "can" ))
+        |> plug (header ( "be", "nested" ))
+
+
+update : Msg -> Conn -> ( Conn, Cmd Msg )
+update msg conn =
+    case msg of
+        -- The endpoint signals the start of a new connection.
+        -- You don't have to send a response right away, but we do here to
+        -- keep the example simple.
+        Endpoint ->
+            conn
+                |> status (Code 200)
+                |> body ("Got request:\n" ++ (toString conn.req) |> TextBody)
+                |> header ( "content-type", "application/fuzzmangle" )
+                |> Debug.log "conn"
+                |> send responsePort
+```
+
+I've tested application of simple plugs, but not loop plugs. Some issues remain to be resolved:
+
+* What happens if a loop plugs batches more than one command? We will want to wait until all commands complete before allowing the pipeline to continue to the next plug.
+* If any of the plugs send a response, application of the pipeline should terminate. This is unimplemented.
+
 ## Collaboration
 
 So far this is a one person project. I am open to collaboration. Post a message on [gitter][] if you are interested and we can talk about how to factor off a chunk of the work.
