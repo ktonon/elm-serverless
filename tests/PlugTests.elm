@@ -31,8 +31,8 @@ all =
                                     Expect.pass
 
                                 -- TODO: expect func to notEqual simple
-                                Loop func ->
-                                    Expect.fail "expected Plug but got Loop"
+                                _ ->
+                                    Expect.fail "expected Plug but got Loop or Pipeline"
 
                         Nothing ->
                             Expect.fail "pipeline was empty"

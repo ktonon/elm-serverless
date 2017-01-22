@@ -4,6 +4,7 @@ import Json.Decode
 import Serverless
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
+import Serverless.Plug exposing (..)
 
 
 {-| A Serverless.Program is parameterized by your 3 custom types
@@ -20,7 +21,7 @@ main =
         , responsePort = responsePort
         , endpoint = Endpoint
         , initialModel = Model 0
-        , update = update
+        , pipeline = pipeline
         , subscriptions = subscriptions
         }
 
@@ -72,20 +73,23 @@ type Msg
     = Endpoint
 
 
-update : Msg -> Conn -> ( Conn, Cmd Msg )
-update msg conn =
-    case msg of
-        -- The endpoint signals the start of a new connection.
-        -- You don't have to send a response right away, but we do here to
-        -- keep the example simple.
-        Endpoint ->
-            conn
-                |> status (Code 200)
-                |> body ("Got request:\n" ++ (toString conn.req) |> TextBody)
-                |> header ( "content-type", "application/fuzzmangle" )
-                |> header ( "cache-control", "max-age=guess, preventative, must-reconsider" )
-                |> Debug.log "conn"
-                |> send responsePort
+pipeline : Plug Config Model Msg
+pipeline =
+    Loop
+        (\msg conn ->
+            case msg of
+                -- The endpoint signals the start of a new connection.
+                -- You don't have to send a response right away, but we do here to
+                -- keep the example simple.
+                Endpoint ->
+                    conn
+                        |> status (Code 200)
+                        |> body ("Got request:\n" ++ (toString conn.req) |> TextBody)
+                        |> header ( "content-type", "application/fuzzmangle" )
+                        |> header ( "cache-control", "max-age=guess, preventative, must-reconsider" )
+                        |> Debug.log "conn"
+                        |> send responsePort
+        )
 
 
 

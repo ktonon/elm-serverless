@@ -20,6 +20,8 @@ import Json.Encode as J
 import Serverless.Conn.Pool as Pool exposing (..)
 import Serverless.Conn.Private exposing (..)
 import Serverless.Conn.Types exposing (..)
+import Serverless.Plug exposing (..)
+import Serverless.Plug.Private exposing (..)
 
 
 {-| Create an program for handling HTTP connections.
@@ -38,7 +40,7 @@ httpApi program =
 {-| Serverless program type
 -}
 type alias Program config model msg =
-    Platform.Program Flags (Pool config model) (Msg msg)
+    Platform.Program Flags (Model config model msg) (Msg msg)
 
 
 {-| Type of flags for program
@@ -61,7 +63,10 @@ You must provide the following:
 * `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.ResponsePort`, respectively
 * `endpoint` is a message through which connections are first received
 * `initialModel` is a value to which new connections will set their model
-* `update` and `subscriptions` have the usual meaning, but operate on individual connections
+* `pipeline` takes the place of the update function in a traditional elm program
+* `subscriptions` has the usual meaning
+
+See the Plug module for more details on pipelines and plugs.
 -}
 type alias HttpApi config model msg =
     { configDecoder : Decoder config
@@ -69,7 +74,7 @@ type alias HttpApi config model msg =
     , responsePort : ResponsePort (Msg msg)
     , endpoint : msg
     , initialModel : model
-    , update : msg -> Conn config model -> ( Conn config model, Cmd msg )
+    , pipeline : Plug config model msg
     , subscriptions : Conn config model -> Sub msg
     }
 
@@ -92,19 +97,32 @@ type alias ResponsePort msg =
 -- IMPLEMENTATION
 
 
+type alias Model config model msg =
+    { pool : Pool config model
+    , pipeline : BakedPipeline config model msg
+    }
+
+
 init_ :
     HttpApi config model msg
     -> Flags
-    -> ( Pool config model, Cmd (Msg msg) )
+    -> ( Model config model msg, Cmd (Msg msg) )
 init_ program flags =
     case decodeValue program.configDecoder flags of
         Ok config ->
-            ( Debug.log "Initialized" (Pool.empty program.initialModel (Just config))
+            ( (Model
+                (Pool.empty program.initialModel (Just config))
+                (bakePipeline program.pipeline)
+              )
+                |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            Pool.empty program.initialModel Nothing
+            (Model
+                (Pool.empty program.initialModel Nothing)
+                ([] |> Pipeline |> bakePipeline)
+            )
                 |> reportFailure "Initialization failed" err
 
 
@@ -116,46 +134,45 @@ type Msg msg
 update_ :
     HttpApi config model msg
     -> Msg msg
-    -> Pool config model
-    -> ( Pool config model, Cmd (Msg msg) )
-update_ program slsMsg pool =
+    -> Model config model msg
+    -> ( Model config model msg, Cmd (Msg msg) )
+update_ program slsMsg model =
     case slsMsg of
         RawRequest raw ->
             case raw |> decodeValue requestDecoder of
                 Ok req ->
-                    pool
-                        |> Pool.add req
+                    { model | pool = model.pool |> Pool.add req }
                         |> updateChild program req.id program.endpoint
 
                 Err err ->
-                    pool |> reportFailure "Error decoding request" err
+                    model |> reportFailure "Error decoding request" err
 
         HandlerMsg requestId msg ->
-            updateChild program requestId msg pool
+            updateChild program requestId msg model
 
 
-updateChild : HttpApi config model msg -> Id -> msg -> Pool config model -> ( Pool config model, Cmd (Msg msg) )
-updateChild program requestId msg pool =
-    case pool |> Pool.get requestId of
+updateChild : HttpApi config model msg -> Id -> msg -> Model config model msg -> ( Model config model msg, Cmd (Msg msg) )
+updateChild program requestId msg model =
+    case model.pool |> Pool.get requestId of
         Just conn ->
             let
                 ( newConn, cmd ) =
-                    program.update msg conn
+                    applyPipeline model.pipeline msg conn
             in
-                ( pool |> Pool.replace newConn
+                ( { model | pool = model.pool |> Pool.replace newConn }
                 , Cmd.map (HandlerMsg requestId) cmd
                 )
 
         _ ->
-            pool |> reportFailure "No connection in pool with id: " requestId
+            model |> reportFailure "No connection in pool with id: " requestId
 
 
 sub_ :
     HttpApi config model msg
-    -> Pool config model
+    -> Model config model msg
     -> Sub (Msg msg)
-sub_ program pool =
-    pool
+sub_ program model =
+    model.pool
         |> Pool.connections
         |> List.map
             (\conn ->
@@ -167,10 +184,10 @@ sub_ program pool =
         |> Sub.batch
 
 
-reportFailure : String -> value -> Pool config model -> ( Pool config model, Cmd msg )
-reportFailure msg value pool =
+reportFailure : String -> value -> Model config model msg -> ( Model config model msg, Cmd (Msg msg) )
+reportFailure msg value model =
     let
         _ =
             Debug.log msg value
     in
-        ( pool, Cmd.none )
+        ( model, Cmd.none )

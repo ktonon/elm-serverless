@@ -10,16 +10,18 @@ import Serverless.Conn.Types exposing (Conn)
 
 {-| A plug processes the connection in some way.
 
-There are two types:
+There are three types:
 
 * `Plug` a simple plug. It just transforms the connection
 * `Loop` an update plug. It may transform the connection, but it also can
   have side effects. Execution will only flow to the next plug when an
   update plug returns no side effects.
+* `Pipeline` a sequence of zero or more plugs
 -}
 type Plug config model msg
     = Plug (Conn config model -> Conn config model)
     | Loop (msg -> Conn config model -> ( Conn config model, Cmd msg ))
+    | Pipeline (Pipeline config model msg)
 
 
 {-| Represents a list of plugs, each of which processes the connection
