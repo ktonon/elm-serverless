@@ -19,34 +19,57 @@ import Serverless.Conn.Private exposing (..)
 -}
 body : Body -> Conn config model -> Conn config model
 body val conn =
-    { conn | resp = conn.resp |> (\r -> { r | body = val }) }
+    case conn.resp of
+        Unsent resp ->
+            { conn | resp = Unsent { resp | body = val } }
+
+        Sent ->
+            conn
 
 
 {-| Set a response header
 -}
 header : ( String, String ) -> Conn config model -> Conn config model
 header ( key, value ) conn =
-    { conn
-        | resp =
-            (\resp ->
-                { resp | headers = ( key |> String.toLower, value ) :: resp.headers }
-            )
-            <|
-                conn.resp
-    }
+    case conn.resp of
+        Unsent resp ->
+            { conn
+                | resp =
+                    Unsent
+                        { resp
+                            | headers =
+                                ( key |> String.toLower, value )
+                                    :: resp.headers
+                        }
+            }
+
+        Sent ->
+            conn
 
 
 {-| Set the response HTTP status code
 -}
 status : Status -> Conn config model -> Conn config model
 status val conn =
-    { conn | resp = conn.resp |> (\r -> { r | status = val }) }
+    case conn.resp of
+        Unsent resp ->
+            { conn | resp = Unsent { resp | status = val } }
+
+        Sent ->
+            conn
 
 
 {-| Sends a connection response through the given port
 -}
 send : (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 send port_ conn =
-    ( conn
-    , conn.resp |> encodeResponse conn.req.id |> port_
-    )
+    case conn.resp of
+        Unsent resp ->
+            ( { conn | resp = Sent }
+            , resp |> encodeResponse conn.req.id |> port_
+            )
+
+        Sent ->
+            ( conn
+            , Cmd.none
+            )

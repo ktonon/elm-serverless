@@ -148,20 +148,27 @@ schemeDecoderHelper w =
 -- RESPONSE ENCODER
 
 
-initResponse : Response
+initResponse : Sendable Response
 initResponse =
-    Response
-        NoBody
-        Utf8
-        [ ( "cache-control", "max-age=0, private, must-revalidate" ) ]
-        InvalidStatus
+    Unsent
+        (Response
+            NoBody
+            Utf8
+            [ ( "cache-control", "max-age=0, private, must-revalidate" ) ]
+            InvalidStatus
+        )
 
 
 getEncodedResponse : Conn model config -> Result String Response
 getEncodedResponse conn =
-    conn.resp
-        |> encodeResponse conn.req.id
-        |> decodeValue responseDecoder
+    case conn.resp of
+        Unsent resp ->
+            resp
+                |> encodeResponse conn.req.id
+                |> decodeValue responseDecoder
+
+        Sent ->
+            Err "response already sent"
 
 
 responseDecoder : Decoder Response

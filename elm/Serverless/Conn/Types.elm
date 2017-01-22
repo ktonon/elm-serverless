@@ -12,7 +12,7 @@ module Serverless.Conn.Types exposing (..)
 
 ## Response
 
-@docs Response, Status, Charset
+@docs Sendable, Response, Status, Charset
 -}
 
 
@@ -25,7 +25,7 @@ is set to a provided initial value for each incomming request.
 type alias Conn config model =
     { config : config
     , req : Request
-    , resp : Response
+    , resp : Sendable Response
     , model : model
     }
 
@@ -55,6 +55,13 @@ type alias Response =
     , headers : List ( String, String )
     , status : Status
     }
+
+
+{-| A sendable type cannot be accessed after it is sent
+-}
+type Sendable a
+    = Unsent a
+    | Sent
 
 
 {-| Uniquely identifies a connection

@@ -23,7 +23,7 @@ conn =
     Fuzz.map4 Conn
         config
         request
-        response
+        unsentResponse
         model
 
 
@@ -61,6 +61,16 @@ response =
         charset
         headers
         status
+
+
+unsentResponse : Fuzzer (Sendable Response)
+unsentResponse =
+    response |> Fuzz.map Unsent
+
+
+halted : Fuzzer Bool
+halted =
+    False |> constant
 
 
 id : Fuzzer Id

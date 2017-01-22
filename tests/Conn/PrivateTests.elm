@@ -1,6 +1,7 @@
 module Conn.PrivateTests exposing (all)
 
 import Conn.Fuzz as Fuzz exposing (testConnWith)
+import Conn.TestHelpers exposing (..)
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
@@ -62,17 +63,21 @@ all =
             , ( "\"httpsx\"", FailsToDecode )
             ]
         , describe "initResponse"
-            [ it "has no body" <|
-                expect initResponse.body to equal NoBody
-            , it "has a default no-cache header" <|
-                expect initResponse.headers
-                    to
-                    contain
-                    ( "cache-control"
-                    , "max-age=0, private, must-revalidate"
-                    )
-            , it "has an invalid status code" <|
-                expect initResponse.status to equal InvalidStatus
+            [ initResponseTest "is unsent" <|
+                \_ ->
+                    Expect.pass
+            , initResponseTest "has no body" <|
+                \resp -> expect resp.body to equal NoBody
+            , initResponseTest "has a default no-cache header" <|
+                \resp ->
+                    expect resp.headers
+                        to
+                        contain
+                        ( "cache-control"
+                        , "max-age=0, private, must-revalidate"
+                        )
+            , initResponseTest "has an invalid status code" <|
+                \resp -> expect resp.status to equal InvalidStatus
             ]
         , describe "encodeBody"
             [ it "encodes NoBody as null" <|
