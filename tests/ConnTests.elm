@@ -30,18 +30,16 @@ responseTest =
             \( conn, val ) ->
                 conn
                     |> body val
-                    |> expectUnsent
-                        (\resp ->
-                            expect resp.body to equal val
-                        )
+                    |> unsentOrCrash
+                    |> .body
+                    |> Expect.equal val
         , testConnWith Fuzz.status "status sets the response status" <|
             \( conn, val ) ->
                 conn
                     |> status val
-                    |> expectUnsent
-                        (\resp ->
-                            expect resp.status to equal val
-                        )
+                    |> unsentOrCrash
+                    |> .status
+                    |> Expect.equal val
         , testConn "send sets the response to Sent" <|
             \conn ->
                 let
@@ -67,10 +65,9 @@ responseTest =
             \( conn, val ) ->
                 conn
                     |> header val
-                    |> expectUnsent
-                        (\resp ->
-                            expect resp.headers to contain val
-                        )
+                    |> unsentOrCrash
+                    |> .headers
+                    |> Expect.Extra.member val
         , testConnWith Fuzz.header "increases the response headers by 1" <|
             \( conn, val ) ->
                 let
@@ -84,8 +81,8 @@ responseTest =
                 in
                     conn
                         |> header val
-                        |> expectUnsent
-                            (\resp ->
-                                expect (resp.headers |> List.length) to equal (oldLength + 1)
-                            )
+                        |> unsentOrCrash
+                        |> .headers
+                        |> List.length
+                        |> Expect.equal (oldLength + 1)
         ]

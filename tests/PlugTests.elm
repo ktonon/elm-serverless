@@ -3,6 +3,7 @@ module PlugTests exposing (all)
 import Custom
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
+import Plug.PrivateTests
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Plug exposing (..)
@@ -12,7 +13,8 @@ import Test exposing (..)
 all : Test
 all =
     describe "Plug"
-        [ describe "pipeline"
+        [ Plug.PrivateTests.all
+        , describe "pipeline"
             [ it "begins a pipeline" <|
                 expect (pipeline |> List.length) to equal 0
             ]

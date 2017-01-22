@@ -1,8 +1,8 @@
-module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop)
+module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop, nest)
 
 {-| Build pipelines of plugs.
 
-@docs Plug, Pipeline, pipeline, plug, loop
+@docs Plug, Pipeline, pipeline, plug, loop, nest
 -}
 
 import Serverless.Conn.Types exposing (Conn)
@@ -87,3 +87,13 @@ wrapLoop :
     -> Plug config model msg
 wrapLoop index update =
     Loop update
+
+
+{-| Nest a child pipeline into a parent pipeline.
+-}
+nest :
+    Pipeline config model msg
+    -> Pipeline config model msg
+    -> Pipeline config model msg
+nest child parent =
+    Pipeline child :: parent

@@ -7,14 +7,14 @@ import Serverless.Conn.Types exposing (..)
 import Test exposing (Test, test)
 
 
-expectUnsent : (Response -> Expectation) -> Custom.Conn -> Expectation
-expectUnsent e conn =
+unsentOrCrash : Custom.Conn -> Response
+unsentOrCrash conn =
     case conn.resp of
         Unsent resp ->
-            e resp
+            resp
 
         Sent ->
-            Expect.fail "expected sendable to be Unsent, but it was Sent"
+            Debug.crash "expected sendable to be Unsent, but it was Sent"
 
 
 initResponseTest : String -> (Response -> Expectation) -> Test

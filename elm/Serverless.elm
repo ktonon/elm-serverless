@@ -74,7 +74,7 @@ type alias HttpApi config model msg =
     , responsePort : ResponsePort (Msg msg)
     , endpoint : msg
     , initialModel : model
-    , pipeline : Plug config model msg
+    , pipeline : Pipeline config model msg
     , subscriptions : Conn config model -> Sub msg
     }
 
@@ -121,14 +121,14 @@ init_ program flags =
         Err err ->
             (Model
                 (Pool.empty program.initialModel Nothing)
-                ([] |> Pipeline |> bakePipeline)
+                ([] |> bakePipeline)
             )
                 |> reportFailure "Initialization failed" err
 
 
 type Msg msg
     = RawRequest J.Value
-    | HandlerMsg Id msg
+    | HandlerMsg Id (PlugMsg msg)
 
 
 update_ :
@@ -142,7 +142,9 @@ update_ program slsMsg model =
             case raw |> decodeValue requestDecoder of
                 Ok req ->
                     { model | pool = model.pool |> Pool.add req }
-                        |> updateChild program req.id program.endpoint
+                        |> updateChild program
+                            req.id
+                            (PlugMsg 0 program.endpoint)
 
                 Err err ->
                     model |> reportFailure "Error decoding request" err
@@ -151,13 +153,17 @@ update_ program slsMsg model =
             updateChild program requestId msg model
 
 
-updateChild : HttpApi config model msg -> Id -> msg -> Model config model msg -> ( Model config model msg, Cmd (Msg msg) )
+updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model msg -> ( Model config model msg, Cmd (Msg msg) )
 updateChild program requestId msg model =
     case model.pool |> Pool.get requestId of
         Just conn ->
             let
                 ( newConn, cmd ) =
-                    applyPipeline model.pipeline msg conn
+                    applyPipeline
+                        program.endpoint
+                        model.pipeline
+                        msg
+                        conn
             in
                 ( { model | pool = model.pool |> Pool.replace newConn }
                 , Cmd.map (HandlerMsg requestId) cmd
@@ -176,9 +182,9 @@ sub_ program model =
         |> Pool.connections
         |> List.map
             (\conn ->
-                Sub.map
-                    (HandlerMsg conn.req.id)
-                    (program.subscriptions conn)
+                program.subscriptions conn
+                    |> Sub.map (PlugMsg 0)
+                    |> Sub.map (HandlerMsg conn.req.id)
             )
         |> List.append [ program.requestPort RawRequest ]
         |> Sub.batch
