@@ -20,11 +20,17 @@ testConnWith otherFuzzer label =
 
 conn : Fuzzer Custom.Conn
 conn =
-    Fuzz.map4 Conn
+    Fuzz.map5 Conn
+        pipelineState
         config
         request
         unsentResponse
         model
+
+
+pipelineState : Fuzzer PipelineState
+pipelineState =
+    Processing |> constant
 
 
 config : Fuzzer Config

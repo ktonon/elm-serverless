@@ -4,6 +4,9 @@
   "description": "Deploy an Elm worker to AWS Lambda using serverless",
   "main": "index.js",
   "scripts": {
+    "demo:install": "cd demo && npm install",
+    "demo:deploy": "cd demo && npm run deploy",
+    "demo": "cd demo && npm start",
     "postinstall": "elm package install -y",
     "test": "elm test",
     "posttest": "eslint ."
@@ -11,7 +14,8 @@
   "author": "Kevin Tonon <kevin@betweenconcepts.com>",
   "license": "MIT",
   "dependencies": {
-    "guid": "0.0.12"
+    "guid": "0.0.12",
+    "xmlhttprequest": "git://github.com/ktonon/node-XMLHttpRequest.git#bdd9e5c75a3c0f8f4038697234e8612270cec799"
   },
   "devDependencies": {
     "elm": "^0.18.0",

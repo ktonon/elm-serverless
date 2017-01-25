@@ -163,6 +163,7 @@ updateChild program requestId msg model =
                         program.endpoint
                         model.pipeline
                         msg
+                        []
                         conn
             in
                 ( { model | pool = model.pool |> Pool.replace newConn }

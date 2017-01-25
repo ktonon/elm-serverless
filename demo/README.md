@@ -10,16 +10,11 @@ __NOTE__: This project uses forked [serverless-webpack][], but there is an open 
 ## Try it
 
 * clone this repo
-* `cd demo`
 * `npm install`
-* `npm start`
-* [http://localhost:8000/foo/bar?what=this](http://localhost:8000/foo/bar?what=this)
-
-Then deploy it to [AWS Lambda][] by running
-
-```shell
-npm run deploy
-```
+* `npm run demo:install`
+* `npm run demo`
+  * [http://localhost:8000/](http://localhost:8000/) will respond with quotes which it fetches from another service
+* `npm run demo:deploy` to test deploying it to [AWS Lambda][]
 
 ## The break down
 

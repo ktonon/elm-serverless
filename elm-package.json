@@ -4,7 +4,7 @@
     "repository": "https://github.com/ktonon/elm-serverless.git",
     "license": "MIT",
     "source-directories": [
-        "elm"
+        "src"
     ],
     "exposed-modules": [
         "Serverless",

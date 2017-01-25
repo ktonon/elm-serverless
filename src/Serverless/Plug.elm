@@ -2,7 +2,32 @@ module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop, nest)
 
 {-| Build pipelines of plugs.
 
-@docs Plug, Pipeline, pipeline, plug, loop, nest
+## Table of Contents
+
+* [Types](#types)
+* [Building Pipelines](#building-pipelines)
+
+## Types
+
+The following types are used to define a pipeline, but do not deal with these
+directly. Use the functions under [Building Pipelines](#building-pipelines)
+instead.
+
+@docs Plug, Pipeline
+
+## Building Pipelines
+
+Use these functions to build your pipelines. For example,
+
+    myPipeline =
+        pipeline
+            |> plug simplePlugA
+            |> plug simplePlugB
+            |> loop loadSomeDatabaseStuff
+            |> nest anotherPipeline
+            |> loop finalUpdate
+
+@docs pipeline, plug, loop, nest
 -}
 
 import Serverless.Conn.Types exposing (Conn)
@@ -45,7 +70,7 @@ pipeline =
 A plug just transforms the connection. For example,
 
     pipeline
-        |> plug (body TextBody "foo")
+        |> plug (body (TextBody "foo"))
 -}
 plug :
     (Conn config model -> Conn config model)
@@ -65,11 +90,10 @@ wrapPlug plug =
 {-| Extends the pipeline with an update plug.
 
 An update plug can transform the connection and or return a side effect (`Cmd`).
-Execution will only flow to the next plug when an update plug returns no side
-effects.
+Loop plugs should use `pipelinePause` and `pipelineResume` when working with side
+effects. They are defined in the `Serverless.Conn` module.
 
-For example,
-
+    -- Loop plug which does nothing
     pipeline
         |> loop (\msg conn -> (conn, Cmd.none))
 -}

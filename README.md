@@ -10,85 +10,59 @@ __Experimental (WIP): Not for use in production__
 
 Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][].
 
+## Demo
+
+Clone this project, then run:
+
+```shell
+$ npm install -g elm@0.18
+$ npm install
+$ npm run demo:install
+$ npm run demo
+```
+
+Your server will be running locally at [http://localhost:8000][]
+See the [demo/README][] for more.
+
 ## What is it?
 
 * an npm package [elm-serverless][] which bridges the interface between an [AWS Lambda handler][] and your elm program
 * an elm package [ktonon/elm-serverless][] which provides a framework for writing simple HTTP APIs
 
-## Demo
+## How it works
 
-Visit the [demo/](https://github.com/ktonon/elm-serverless/blob/master/demo/) folder for a simple demonstration of using `elm-serverless`.
+Learn by example. Take a look at [demo/src/API.elm][].
 
-## Project timeline
+Here is a quick summary:
 
-__January 21, 2017__
+* you define a `Serverless.Program` which among other things, is configured with a `Pipeline`
+* pipelines are lists of `Plug`s
+* each plug receives a connection (called `Conn`) and transforms it in some way
+* connections contain the HTTP request, the as yet unsent response, and some other stuff which is specific to your application
 
-This is a _work in progress_. It is not at all ready for production, but my goal is to get minimum viable functionality working in about a months time (i.e. late-February). This minimum functionality includes:
+Basically, the pipeline takes the place of the usual `update` function in a traditional elm app. And instead of transforming your `Model`, you transform a `Conn`, which contains your `Model`, but also has the request and response stuff.
 
-* __pipelines__: chains of functions which transform the connection
-* __routers__: basic routing based on HTTP method and request path. Going to try and use [evanc/url-parser][] for some of this
+## Roadmap
 
-Even when these are done, much work will remain. For example,
+__Updated: January 24, 2017__
 
+This is a _work in progress_. It is missing basic functionality required for a server framework. My goal is to get minimum viable functionality working in about a months time (i.e. late-February). What remains to be implemented:
+
+* __Routers__: basic routing based on HTTP method and request path. Going to try and use [evanc/url-parser][] for some of this
+* __Basic middleware__: the pipelines already make this possible, but we'll still need to define middleware for things like [CORS][], [JWT][], body parsing, and so on...
 * [AWS SDK for elm][]: an AWS Lambda function would be pretty limited without an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
-* __practical middleware__: the pipelines will make this possible, but we'll still need to define middleware for things like [JWT][], body parsing, and so on...
-
-__January 22, 2017__
-
-Got basic implementation of pipelines working. Pipelines are lists of plugs. Plugs are either:
-
-* A simple `Plug` which just transforms a connection
-* A `Loop` plug, which is an elm update function. I.e. it takes a message, and a connection, and returns a `(Conn, Cmd Msg)`
-* A nested `Pipeline`
-
-Plugs in a pipeline are applied to the connection in the order in which they are defined. If a loop plug returns a side effect (i.e. if `cmd /= Cmd.none`), application of the pipeline will pause until the side effect is completed. Application of the pipeline will resume at the same loop plug which returned the side effect.
-
-The following snippet gives an idea of how plugs will work:
-
-```elm
-pipeline : Pipeline Config Model Msg
-pipeline =
-    Plug.pipeline
-        |> plug (header ( "cache-control", "max-age=guess, preventative, must-reconsider" ))
-        |> plug (header ( "cache-control", "this will override the previous one" ))
-        |> nest otherPipeline
-        |> loop update
-
-
-otherPipeline : Pipeline Config Model Msg
-otherPipeline =
-    Plug.pipeline
-        |> plug (header ( "pipelines", "can" ))
-        |> plug (header ( "be", "nested" ))
-
-
-update : Msg -> Conn -> ( Conn, Cmd Msg )
-update msg conn =
-    case msg of
-        -- The endpoint signals the start of a new connection.
-        -- You don't have to send a response right away, but we do here to
-        -- keep the example simple.
-        Endpoint ->
-            conn
-                |> status (Code 200)
-                |> body ("Got request:\n" ++ (toString conn.req) |> TextBody)
-                |> header ( "content-type", "application/fuzzmangle" )
-                |> Debug.log "conn"
-                |> send responsePort
-```
-
-I've tested application of simple plugs, but not loop plugs. Some issues remain to be resolved:
-
-* What happens if a loop plugs batches more than one command? We will want to wait until all commands complete before allowing the pipeline to continue to the next plug.
-* If any of the plugs send a response, application of the pipeline should terminate. This is unimplemented.
 
 ## Collaboration
 
 So far this is a one person project. I am open to collaboration. Post a message on [gitter][] if you are interested and we can talk about how to factor off a chunk of the work.
 
+[http://localhost:8000]:http://localhost:8000
 [AWS Lambda]:https://aws.amazon.com/lambda
 [AWS Lambda handler]:http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
 [AWS SDK for elm]:https://github.com/ktonon/aws-sdk-elm
+[CORS]:https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
+[demo/README]:https://github.com/ktonon/elm-serverless/blob/master/demo/README.md
+[demo/src/API.elm]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm
 [elm-serverless]:https://www.npmjs.com/package/elm-serverless
 [elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
 [elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader

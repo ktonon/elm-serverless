@@ -48,9 +48,10 @@ applyPipeline :
     msg
     -> BakedPipeline config model msg
     -> PlugMsg msg
+    -> List (Cmd (PlugMsg msg))
     -> Conn config model
     -> ( Conn config model, Cmd (PlugMsg msg) )
-applyPipeline endpoint pipeline plugMsg conn =
+applyPipeline endpoint pipeline plugMsg plugCmdAcc conn =
     case plugMsg of
         PlugMsg index msg ->
             case pipeline |> Array.get index of
@@ -58,18 +59,32 @@ applyPipeline endpoint pipeline plugMsg conn =
                     let
                         ( newConn, cmd ) =
                             conn |> applyPlug plug index msg
+
+                        plugCmd =
+                            cmd |> Cmd.map (PlugMsg index)
+
+                        newPlugCmdAcc =
+                            plugCmd :: plugCmdAcc
                     in
-                        if cmd == Cmd.none then
-                            newConn
-                                |> applyPipeline
-                                    endpoint
-                                    pipeline
-                                    (PlugMsg (index + 1) endpoint)
-                        else
-                            ( newConn, cmd |> Cmd.map (PlugMsg index) )
+                        case newConn.resp of
+                            Unsent _ ->
+                                case newConn.pipelineState of
+                                    Processing ->
+                                        newConn
+                                            |> applyPipeline
+                                                endpoint
+                                                pipeline
+                                                (PlugMsg (index + 1) endpoint)
+                                                newPlugCmdAcc
+
+                                    Paused _ ->
+                                        ( newConn, Cmd.batch newPlugCmdAcc )
+
+                            Sent ->
+                                ( newConn, Cmd.batch newPlugCmdAcc )
 
                 Nothing ->
-                    ( conn, Cmd.none )
+                    ( conn, Cmd.batch plugCmdAcc )
 
 
 applyPlug :

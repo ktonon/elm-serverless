@@ -1,6 +1,8 @@
 const Guid = require('guid');
 const requiredParams = ['handler', 'config', 'requestPort', 'responsePort'];
 
+global.XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+
 const httpApi = (opt) => {
   if (!opt || !requiredParams.every(param => opt[param])) {
     throw new Error(`httpApi requires named parameters: ${requiredParams.join(', ')}`);

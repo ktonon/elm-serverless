@@ -4,7 +4,7 @@ module Serverless.Conn.Types exposing (..)
 
 ## Connection
 
-@docs Conn, Id, Body
+@docs Conn, Id, Body, PipelineState
 
 ## Request
 
@@ -23,11 +23,19 @@ specific to the application. Config is loaded once on app startup, while model
 is set to a provided initial value for each incomming request.
 -}
 type alias Conn config model =
-    { config : config
+    { pipelineState : PipelineState
+    , config : config
     , req : Request
     , resp : Sendable Response
     , model : model
     }
+
+
+{-| State of the pipeline for this connection.
+-}
+type PipelineState
+    = Processing
+    | Paused Int
 
 
 {-| HTTP Request

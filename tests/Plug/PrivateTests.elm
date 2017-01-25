@@ -34,7 +34,7 @@ all =
                     in
                         conn
                             |> body (TextBody "")
-                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp)
+                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp) []
                             |> Tuple.first
                             |> unsentOrCrash
                             |> .body
@@ -60,7 +60,7 @@ all =
                     in
                         conn
                             |> body (TextBody "")
-                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp)
+                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp) []
                             |> Tuple.first
                             |> unsentOrCrash
                             |> .body

@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './api.js',
+  entry: './src/api.js',
   noParse: /\.elm$/,
   target: 'node',
 

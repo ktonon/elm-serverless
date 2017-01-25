@@ -9,7 +9,7 @@
 // but this demo is nested in the `elm-serverless` repo, so we just
 // require it relative to the current module's location
 //
-const elmServerless = require('..');
+const elmServerless = require('../..');
 
 const elm = require('./API.elm');
 
@@ -22,7 +22,7 @@ module.exports.handler = elmServerless.httpApi({
   // It should be deployment data that is constant, perhaps loaded from
   // an environment variable.
   config: {
-    something: 'testing config loader',
+    languages: ['en', 'ru'],
   },
 
   // Because elm libraries cannot expose ports, you have to define them.

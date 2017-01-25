@@ -4,7 +4,7 @@
   "description": "Small demonstrative AWS Lambda API written in elm",
   "main": "api.js",
   "scripts": {
-    "postinstall": "elm package install",
+    "postinstall": "elm package install -y",
     "deploy": "webpack && sls deploy",
     "start": "webpack && sls webpack serve",
     "test": "eslint ."

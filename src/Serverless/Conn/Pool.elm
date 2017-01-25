@@ -21,7 +21,7 @@ add : Request -> Pool config model -> Pool config model
 add req pool =
     case pool.config of
         Just config ->
-            pool |> replace (Conn config req initResponse pool.initialModel)
+            pool |> replace (Conn Processing config req initResponse pool.initialModel)
 
         _ ->
             Debug.log "Failed to add request! Pool has no config" pool
