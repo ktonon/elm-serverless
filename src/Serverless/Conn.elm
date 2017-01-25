@@ -219,7 +219,7 @@ internalError val port_ conn =
 {-| Respond with an unexpected message error.
 
 Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
-not respect to receive in a loop plug.
+not expect to receive in a loop plug.
 -}
 unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 unexpectedMsg msg =

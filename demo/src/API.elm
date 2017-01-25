@@ -122,7 +122,7 @@ loadQuotes msg conn =
                     pipelinePause
                         (List.length conn.config.languages)
                         (conn.config.languages
-                            |> List.foldl (\lang acc -> (quoteRequest lang) :: acc) []
+                            |> List.map quoteRequest
                             |> List.map (Http.send QuoteResult)
                             |> Cmd.batch
                         )
