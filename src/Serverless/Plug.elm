@@ -1,4 +1,4 @@
-module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop, nest, fork)
+module Serverless.Plug exposing (..)
 
 {-| Build pipelines of plugs.
 
@@ -27,7 +27,7 @@ Use these functions to build your pipelines. For example,
             |> nest anotherPipeline
             |> fork router
 
-@docs pipeline, plug, loop, nest, fork
+@docs pipeline, toPipeline, plug, loop, nest, fork
 -}
 
 import Array exposing (Array)
@@ -64,6 +64,23 @@ Build the pipeline by chaining simple and update plugs with
 pipeline : Pipeline config model msg
 pipeline =
     Array.empty
+
+
+{-| Converts a single function to a pipeline.
+
+For creating a simple pipeline from a responder function when a pipeline is
+expected.
+
+    status (Code 404)
+        >> body (TextBody "Not found")
+        >> send responsePort
+        |> toPipeline
+-}
+toPipeline :
+    (Conn config model -> ( Conn config model, Cmd msg ))
+    -> Pipeline config model msg
+toPipeline responder =
+    pipeline |> loop (\msg conn -> conn |> responder)
 
 
 {-| Extend the pipeline with a simple plug.

@@ -75,7 +75,7 @@ increment is negative. A pause increment of zero will have no effect.
 pipelinePause : Int -> Cmd msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 pipelinePause i cmd port_ conn =
     if i < 0 then
-        conn |> internalError "pause pipeline called with negative value" port_
+        conn |> internalError (TextBody "pause pipeline called with negative value") port_
     else
         ( case conn.pipelineState of
             Processing ->
@@ -113,7 +113,7 @@ count goes below zero. A resume increment of zero will have no effect.
 pipelineResume : Int -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 pipelineResume i port_ conn =
     if i < 0 then
-        conn |> internalError "resume pipeline called with negative value" port_
+        conn |> internalError (TextBody "resume pipeline called with negative value") port_
     else
         case conn.pipelineState of
             Processing ->
@@ -122,7 +122,7 @@ pipelineResume i port_ conn =
                         ( conn, Cmd.none )
 
                     _ ->
-                        conn |> internalError "resume pipeline called, but processing was not paused" port_
+                        conn |> internalError (TextBody "resume pipeline called, but processing was not paused") port_
 
             Paused j ->
                 if j - i > 0 then
@@ -130,7 +130,7 @@ pipelineResume i port_ conn =
                 else if j - i == 0 then
                     ( { conn | pipelineState = Processing }, Cmd.none )
                 else
-                    conn |> internalError "resume pipeline underflow" port_
+                    conn |> internalError (TextBody "resume pipeline underflow") port_
 
 
 
@@ -217,13 +217,11 @@ send port_ conn =
 
 The given value is converted to a string and set to the response body.
 -}
-internalError : a -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
-internalError val port_ conn =
-    conn
-        |> status (Code 500)
-        |> header ( "content-type", "text/text" )
-        |> body (val |> toString |> TextBody)
-        |> send port_
+internalError : Body -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+internalError val port_ =
+    status (Code 500)
+        >> body val
+        >> send port_
 
 
 {-| Respond with an unexpected message error.
@@ -233,4 +231,4 @@ not expect to receive in a loop plug.
 -}
 unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 unexpectedMsg msg =
-    internalError ("unexpected msg: " ++ (msg |> toString))
+    internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)

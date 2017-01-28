@@ -100,20 +100,16 @@ pipeline =
 
 router : Conn -> Pipeline Config Model Msg
 router conn =
-    -- This router uses parses the `conn.req.path` into elm data thanks to
-    -- evancz/url-route parser (modified for use outside of the browser).
-    -- We can then match on the HTTP method and route, returning custom pipelines
-    -- for each combination.
+    -- This router parses `conn.req.path` into elm data thanks to
+    -- evancz/url-parser (modified for use outside of the browser).
+    -- We can then match on the HTTP method and route, returning custom
+    -- pipelines for each combination.
     case ( conn.req.method, conn |> parseRoute route NotFound ) of
         ( GET, Home ) ->
-            Plug.pipeline
-                |> loop
-                    (\msg conn ->
-                        conn
-                            |> body (TextBody "Home")
-                            |> status (Code 200)
-                            |> send responsePort
-                    )
+            status (Code 200)
+                >> body (TextBody "Home")
+                >> send responsePort
+                |> toPipeline
 
         ( GET, Quote lang ) ->
             Plug.pipeline
@@ -133,14 +129,10 @@ router conn =
                     loop respondWithQuotes
 
         _ ->
-            Plug.pipeline
-                |> loop
-                    (\msg conn ->
-                        conn
-                            |> status (Code 404)
-                            |> body ("404 not found" |> TextBody)
-                            |> send responsePort
-                    )
+            status (Code 404)
+                >> body (TextBody "Nothing here")
+                >> send responsePort
+                |> toPipeline
 
 
 langFilter : Route.Lang -> List String -> List String
@@ -163,8 +155,8 @@ loadQuotes lang msg conn =
             (case conn.config.languages |> langFilter lang of
                 [] ->
                     conn
-                        |> body (TextBody "Could not find language")
                         |> status (Code 404)
+                        |> body (TextBody "Could not find language")
                         |> send responsePort
 
                 langs ->
@@ -211,7 +203,7 @@ loadQuotes lang msg conn =
                     -- from processing and removes the connection from the
                     -- connection pool
                     conn
-                        |> internalError err responsePort
+                        |> internalError (err |> toString |> TextBody) responsePort
 
 
 respondWithQuotes : Msg -> Conn -> ( Conn, Cmd Msg )
