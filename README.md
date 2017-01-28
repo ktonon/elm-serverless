@@ -42,19 +42,23 @@ Here is a quick summary:
 
 Basically, the pipeline takes the place of the usual `update` function in a traditional elm app. And instead of transforming your `Model`, you transform a `Conn`, which contains your `Model`, but also has the request and response stuff.
 
+__Routing__
+
+We use a [modified version](http://package.elm-lang.org/packages/ktonon/url-parser/latest/) of `evancz/url-parser`, adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
+
 ## Roadmap
 
-__Updated: January 24, 2017__
+__Updated: January 27, 2017__
 
 This is a _work in progress_. It is missing basic functionality required for a server framework. My goal is to get minimum viable functionality working in about a months time (i.e. late-February). What remains to be implemented:
 
-* __Routers__: basic routing based on HTTP method and request path. Going to try and use [evanc/url-parser][] for some of this
+* __Routers__: basic routing is implemented now, but needs lots of testing and likely refactoring.
 * __Basic middleware__: the pipelines already make this possible, but we'll still need to define middleware for things like [CORS][], [JWT][], body parsing, and so on...
 * [AWS SDK for elm][]: an AWS Lambda function would be pretty limited without an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
 
 ## Collaboration
 
-So far this is a one person project. I am open to collaboration. Post a message on [gitter][] if you are interested and we can talk about how to factor off a chunk of the work.
+I am open to collaboration. Post a message on [gitter][] if you are interested and we can talk about how to factor off a chunk of the work.
 
 [http://localhost:8000]:http://localhost:8000
 [AWS Lambda]:https://aws.amazon.com/lambda
