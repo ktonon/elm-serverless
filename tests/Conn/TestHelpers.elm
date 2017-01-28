@@ -1,10 +1,14 @@
-module Conn.TestHelpers exposing (..)
+port module Conn.TestHelpers exposing (..)
 
 import Custom
 import Expect exposing (Expectation)
+import Json.Encode as J
 import Serverless.Conn.Private exposing (initResponse)
 import Serverless.Conn.Types exposing (..)
 import Test exposing (Test, test)
+
+
+port fakeResponsePort : J.Value -> Cmd msg
 
 
 unsentOrCrash : Custom.Conn -> Response

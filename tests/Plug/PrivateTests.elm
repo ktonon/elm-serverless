@@ -1,15 +1,15 @@
 module Plug.PrivateTests exposing (all)
 
-import Array
 import Conn.Fuzz as Fuzz exposing (testConnWith, testConn)
 import Conn.TestHelpers exposing (..)
-import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
+import Serverless.Msg exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Plug exposing (..)
 import Serverless.Plug.Private exposing (..)
 import Test exposing (..)
+import Conn.TestHelpers exposing (fakeResponsePort)
 import Tuple
 
 
@@ -20,29 +20,11 @@ type Msg
 all : Test
 all =
     describe "Private"
-        [ describe "bakePipeline"
-            [ it "converts the list into an array" <|
-                expect ([] |> bakePipeline) to equal Array.empty
-            , testConn "reverses the order of elements" <|
+        [ describe "applyPipeline"
+            [ testConn "flattens nested pipelines in the correct order" <|
                 \conn ->
                     let
-                        raw =
-                            pipeline
-                                |> plug (appendToBody "1")
-                                |> plug (appendToBody "2")
-                                |> plug (appendToBody "3")
-                    in
-                        conn
-                            |> body (TextBody "")
-                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp) []
-                            |> Tuple.first
-                            |> unsentOrCrash
-                            |> .body
-                            |> Expect.equal (TextBody "123")
-            , testConn "flattens nested pipelines in the correct order" <|
-                \conn ->
-                    let
-                        raw =
+                        pl =
                             pipeline
                                 |> plug (appendToBody "1")
                                 |> nest
@@ -60,7 +42,7 @@ all =
                     in
                         conn
                             |> body (TextBody "")
-                            |> applyPipeline NoOp (bakePipeline raw) (PlugMsg 0 NoOp) []
+                            |> applyPipeline (Options NoOp fakeResponsePort pl) (PlugMsg firstIndexPath NoOp) 0 []
                             |> Tuple.first
                             |> unsentOrCrash
                             |> .body
@@ -69,7 +51,7 @@ all =
         ]
 
 
-appendToBody : String -> Conn config model -> Conn config model
+appendToBody : String -> Conn config model route -> Conn config model route
 appendToBody x conn =
     case conn.resp of
         Unsent resp ->

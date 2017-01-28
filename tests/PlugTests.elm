@@ -1,5 +1,6 @@
 module PlugTests exposing (all)
 
+import Array
 import Custom
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
@@ -16,15 +17,15 @@ all =
         [ Plug.PrivateTests.all
         , describe "pipeline"
             [ it "begins a pipeline" <|
-                expect (pipeline |> List.length) to equal 0
+                expect (pipeline |> Array.length) to equal 0
             ]
         , describe "plug"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> plug simple |> List.length) to equal 1
+                expect (pipeline |> plug simple |> Array.length) to equal 1
             , it "wraps a simple conn transformation as a Plug" <|
                 let
                     result =
-                        pipeline |> plug simple |> List.head
+                        pipeline |> plug simple |> Array.get 0
                 in
                     case result of
                         Just wrapped ->

@@ -5,10 +5,12 @@ import Http
 import Json.Decode exposing (Decoder, list, string)
 import Json.Decode.Pipeline exposing (required, decode, hardcoded)
 import Quote exposing (..)
+import Route exposing (..)
 import Serverless
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Plug as Plug exposing (..)
+import Serverless.Route exposing (parseRoute)
 
 
 {-| A Serverless.Program is parameterized by your 3 custom types
@@ -17,7 +19,7 @@ import Serverless.Plug as Plug exposing (..)
 * Model is for whatever you need during the processing of a request
 * Msg is your app message type
 -}
-main : Serverless.Program Config Model Msg
+main : Serverless.Program Config Model Route Msg
 main =
     Serverless.httpApi
         { configDecoder = configDecoder
@@ -40,7 +42,7 @@ It is parameterized by the Config and Model record types.
 For convenience we create an alias.
 -}
 type alias Conn =
-    Serverless.Conn.Types.Conn Config Model
+    Serverless.Conn.Types.Conn Config Model Route
 
 
 {-| Can be anything you want, you just need to provide a decoder
@@ -84,49 +86,102 @@ type Msg
 A pipeline is a sequence of plugs, each of which transforms the connection
 in some way.
 -}
-pipeline : Pipeline Config Model Msg
+pipeline : Pipeline Config Model Route Msg
 pipeline =
     Plug.pipeline
         -- Simple plugs just transform the connection.
         -- For example, this cors plug just adds some headers to the response.
         |>
             plug (cors "*" [ GET, OPTIONS ])
-        -- Loop pipelines are like elm update functions.
-        -- They can be used to wait for the results of side effects.
-        -- For example, loadQuotes makes a few http requests and collects the
-        -- results in the model.
+        -- Provide a UrlParser.Parser to Serverless.Route.parseRoute.
+        -- It will populate `conn.route` with `Just route` if successful
+        -- (or leave it as `Nothing` if unsuccessful)
         |>
-            loop loadQuotes
-        -- You can have multiple loop plugs. The last one in the pipeline
-        -- must send a respnose, or an internal server error will automatically
-        -- be sent by the framework
+            plug (parseRoute route)
+        -- After parsing a route, you can apply a router.
+        -- A router takes a route and returns a pipeline that will handle that
+        -- route. Applying a router when `conn.route` is `Nothing` automatically
+        -- responds with a 404.
         |>
-            loop update
+            fork router
 
 
-loadQuotes : Msg -> Conn -> ( Conn, Cmd Msg )
-loadQuotes msg conn =
+router : Route -> Pipeline Config Model Route Msg
+router route =
+    -- Our route parser gives us back nicely structured data, thanks to
+    -- evancz/url-route parser (modified for use outside of the browser)
+    case route of
+        Home ->
+            Plug.pipeline
+                |> loop
+                    (\msg conn ->
+                        conn
+                            |> body (TextBody "Home")
+                            |> status (Code 200)
+                            |> send responsePort
+                    )
+
+        Quote lang ->
+            Plug.pipeline
+                -- Loop pipelines are like elm update functions.
+                -- They can be used to wait for the results of side effects.
+                -- For example, loadQuotes makes a few http requests and collects the
+                -- results in the model.
+                --
+                -- Notice that we are passing part of the router result
+                -- (i.e. `lang`) into `loadQuotes`.
+                |>
+                    loop (loadQuotes lang)
+                -- You can have multiple loop plugs. The last one in the pipeline
+                -- must send a respnose, or an internal server error will automatically
+                -- be sent by the framework
+                |>
+                    loop respondWithQuotes
+
+
+langFilter : Route.Lang -> List String -> List String
+langFilter filt langs =
+    case filt of
+        LangAll ->
+            langs
+
+        Lang string ->
+            if langs |> List.member string then
+                [ string ]
+            else
+                []
+
+
+loadQuotes : Route.Lang -> Msg -> Conn -> ( Conn, Cmd Msg )
+loadQuotes lang msg conn =
     case msg of
         Endpoint ->
-            (conn
-                -- Whenever you return a side effect for which you want to
-                -- wait for the response, you should pause the connection.
-                -- In this case, we are going to wait for X http requests (one
-                -- for each supported language), so we increment the pause count
-                -- by X
-                --
-                -- Pausing the connection prevents the pipeline from continuing
-                -- past this plug. At least, until resume reduces the pause count
-                -- back to zero.
-                |>
-                    pipelinePause
-                        (List.length conn.config.languages)
-                        (conn.config.languages
-                            |> List.map quoteRequest
-                            |> List.map (Http.send QuoteResult)
-                            |> Cmd.batch
-                        )
-                        responsePort
+            (case conn.config.languages |> langFilter lang of
+                [] ->
+                    conn
+                        |> body (TextBody "Could not find language")
+                        |> status (Code 404)
+                        |> send responsePort
+
+                langs ->
+                    -- Whenever you return a side effect for which you want to
+                    -- wait for the response, you should pause the connection.
+                    -- In this case, we are going to wait for X http requests (one
+                    -- for each supported language), so we increment the pause count
+                    -- by X
+                    --
+                    -- Pausing the connection prevents the pipeline from continuing
+                    -- past this plug. At least, until resume reduces the pause count
+                    -- back to zero.
+                    conn
+                        |> pipelinePause
+                            (langs |> List.length)
+                            (langs
+                                |> List.map quoteRequest
+                                |> List.map (Http.send QuoteResult)
+                                |> Cmd.batch
+                            )
+                            responsePort
             )
 
         QuoteResult result ->
@@ -155,8 +210,8 @@ loadQuotes msg conn =
                         |> internalError err responsePort
 
 
-update : Msg -> Conn -> ( Conn, Cmd Msg )
-update msg conn =
+respondWithQuotes : Msg -> Conn -> ( Conn, Cmd Msg )
+respondWithQuotes msg conn =
     case msg of
         -- Each time a plug is processed for the first time, it will get the
         -- endpoint message.

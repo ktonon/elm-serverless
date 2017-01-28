@@ -1,4 +1,4 @@
-module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop, nest)
+module Serverless.Plug exposing (Plug(..), Pipeline, pipeline, plug, loop, nest, fork)
 
 {-| Build pipelines of plugs.
 
@@ -25,11 +25,12 @@ Use these functions to build your pipelines. For example,
             |> plug simplePlugB
             |> loop loadSomeDatabaseStuff
             |> nest anotherPipeline
-            |> loop finalUpdate
+            |> fork router
 
-@docs pipeline, plug, loop, nest
+@docs pipeline, plug, loop, nest, fork
 -}
 
+import Array exposing (Array)
 import Serverless.Conn.Types exposing (Conn)
 
 
@@ -43,16 +44,16 @@ There are three types:
   update plug returns no side effects.
 * `Pipeline` a sequence of zero or more plugs
 -}
-type Plug config model msg
-    = Plug (Conn config model -> Conn config model)
-    | Loop (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    | Pipeline (Pipeline config model msg)
+type Plug config model route msg
+    = Plug (Conn config model route -> Conn config model route)
+    | Loop (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
+    | Router (route -> Pipeline config model route msg)
 
 
 {-| Represents a list of plugs, each of which processes the connection
 -}
-type alias Pipeline config model msg =
-    List (Plug config model msg)
+type alias Pipeline config model route msg =
+    Array (Plug config model route msg)
 
 
 {-| Begins a pipeline.
@@ -60,9 +61,9 @@ type alias Pipeline config model msg =
 Build the pipeline by chaining simple and update plugs with
 `|> plug` and `|> loop` respectively.
 -}
-pipeline : Pipeline config model msg
+pipeline : Pipeline config model route msg
 pipeline =
-    []
+    Array.empty
 
 
 {-| Extend the pipeline with a simple plug.
@@ -73,18 +74,11 @@ A plug just transforms the connection. For example,
         |> plug (body (TextBody "foo"))
 -}
 plug :
-    (Conn config model -> Conn config model)
-    -> Pipeline config model msg
-    -> Pipeline config model msg
+    (Conn config model route -> Conn config model route)
+    -> Pipeline config model route msg
+    -> Pipeline config model route msg
 plug plug pipeline =
-    (wrapPlug plug) :: pipeline
-
-
-wrapPlug :
-    (Conn config model -> Conn config model)
-    -> Plug config model msg
-wrapPlug plug =
-    Plug plug
+    pipeline |> Array.push (Plug plug)
 
 
 {-| Extends the pipeline with an update plug.
@@ -98,26 +92,31 @@ effects. They are defined in the `Serverless.Conn` module.
         |> loop (\msg conn -> (conn, Cmd.none))
 -}
 loop :
-    (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    -> Pipeline config model msg
-    -> Pipeline config model msg
+    (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
+    -> Pipeline config model route msg
+    -> Pipeline config model route msg
 loop update pipeline =
-    (wrapLoop (List.length pipeline) update) :: pipeline
-
-
-wrapLoop :
-    Int
-    -> (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    -> Plug config model msg
-wrapLoop index update =
-    Loop update
+    pipeline |> Array.push (Loop update)
 
 
 {-| Nest a child pipeline into a parent pipeline.
 -}
 nest :
-    Pipeline config model msg
-    -> Pipeline config model msg
-    -> Pipeline config model msg
+    Pipeline config model route msg
+    -> Pipeline config model route msg
+    -> Pipeline config model route msg
 nest child parent =
-    Pipeline child :: parent
+    Array.append parent child
+
+
+{-| Adds a router to the pipeline.
+
+A router can branch a pipeline into many smaller pipelines depending on the
+route message passed in.
+-}
+fork :
+    (route -> Pipeline config model route msg)
+    -> Pipeline config model route msg
+    -> Pipeline config model route msg
+fork router pipeline =
+    pipeline |> Array.push (Router router)

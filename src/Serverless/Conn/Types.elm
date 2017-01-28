@@ -22,12 +22,13 @@ Connections are parameterized with config and model record types which are
 specific to the application. Config is loaded once on app startup, while model
 is set to a provided initial value for each incomming request.
 -}
-type alias Conn config model =
+type alias Conn config model route =
     { pipelineState : PipelineState
     , config : config
     , req : Request
     , resp : Sendable Response
     , model : model
+    , route : Maybe route
     }
 
 

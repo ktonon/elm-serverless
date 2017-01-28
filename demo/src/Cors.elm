@@ -4,7 +4,7 @@ import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 
 
-cors : String -> List Method -> Conn config model -> Conn config model
+cors : String -> List Method -> Conn config model route -> Conn config model route
 cors origin methods =
     (header ( "access-control-allow-origin", origin ))
         >> (header

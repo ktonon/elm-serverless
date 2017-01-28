@@ -1,4 +1,4 @@
-port module ConnTests exposing (all)
+module ConnTests exposing (all)
 
 import Conn.Fuzz as Fuzz exposing (testConn, testConnWith)
 import Conn.PrivateTests
@@ -6,10 +6,10 @@ import Conn.TestHelpers exposing (..)
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
-import Json.Encode as J
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (Sendable(..))
 import Test exposing (..)
+import Conn.TestHelpers exposing (fakeResponsePort)
 
 
 all : Test
@@ -18,9 +18,6 @@ all =
         [ Conn.PrivateTests.all
         , responseTest
         ]
-
-
-port fakeResponsePort : J.Value -> Cmd msg
 
 
 responseTest : Test
