@@ -93,20 +93,19 @@ pipeline =
         -- For example, this cors plug just adds some headers to the response.
         |>
             plug (cors "*" [ GET, OPTIONS ])
-        -- After parsing a route, you can apply a router.
-        -- A router takes a route and returns a pipeline that will handle that
-        -- route. Applying a router when `conn.route` is `Nothing` automatically
-        -- responds with a 404.
+        -- A router takes a `Conn` and returns a new pipeline.
         |>
             fork router
 
 
 router : Conn -> Pipeline Config Model Msg
 router conn =
-    -- Our route parser gives us back nicely structured data, thanks to
-    -- evancz/url-route parser (modified for use outside of the browser)
-    case conn |> parseRoute route NotFound of
-        Home ->
+    -- This router uses parses the `conn.req.path` into elm data thanks to
+    -- evancz/url-route parser (modified for use outside of the browser).
+    -- We can then match on the HTTP method and route, returning custom pipelines
+    -- for each combination.
+    case ( conn.req.method, conn |> parseRoute route NotFound ) of
+        ( GET, Home ) ->
             Plug.pipeline
                 |> loop
                     (\msg conn ->
@@ -116,7 +115,7 @@ router conn =
                             |> send responsePort
                     )
 
-        Quote lang ->
+        ( GET, Quote lang ) ->
             Plug.pipeline
                 -- Loop pipelines are like elm update functions.
                 -- They can be used to wait for the results of side effects.
@@ -133,7 +132,7 @@ router conn =
                 |>
                     loop respondWithQuotes
 
-        NotFound ->
+        _ ->
             Plug.pipeline
                 |> loop
                     (\msg conn ->
