@@ -44,16 +44,16 @@ There are three types:
   update plug returns no side effects.
 * `Pipeline` a sequence of zero or more plugs
 -}
-type Plug config model route msg
-    = Plug (Conn config model route -> Conn config model route)
-    | Loop (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
-    | Router (route -> Pipeline config model route msg)
+type Plug config model msg
+    = Plug (Conn config model -> Conn config model)
+    | Loop (msg -> Conn config model -> ( Conn config model, Cmd msg ))
+    | Router (Conn config model -> Pipeline config model msg)
 
 
 {-| Represents a list of plugs, each of which processes the connection
 -}
-type alias Pipeline config model route msg =
-    Array (Plug config model route msg)
+type alias Pipeline config model msg =
+    Array (Plug config model msg)
 
 
 {-| Begins a pipeline.
@@ -61,7 +61,7 @@ type alias Pipeline config model route msg =
 Build the pipeline by chaining simple and update plugs with
 `|> plug` and `|> loop` respectively.
 -}
-pipeline : Pipeline config model route msg
+pipeline : Pipeline config model msg
 pipeline =
     Array.empty
 
@@ -74,9 +74,9 @@ A plug just transforms the connection. For example,
         |> plug (body (TextBody "foo"))
 -}
 plug :
-    (Conn config model route -> Conn config model route)
-    -> Pipeline config model route msg
-    -> Pipeline config model route msg
+    (Conn config model -> Conn config model)
+    -> Pipeline config model msg
+    -> Pipeline config model msg
 plug plug pipeline =
     pipeline |> Array.push (Plug plug)
 
@@ -92,9 +92,9 @@ effects. They are defined in the `Serverless.Conn` module.
         |> loop (\msg conn -> (conn, Cmd.none))
 -}
 loop :
-    (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
-    -> Pipeline config model route msg
-    -> Pipeline config model route msg
+    (msg -> Conn config model -> ( Conn config model, Cmd msg ))
+    -> Pipeline config model msg
+    -> Pipeline config model msg
 loop update pipeline =
     pipeline |> Array.push (Loop update)
 
@@ -102,9 +102,9 @@ loop update pipeline =
 {-| Nest a child pipeline into a parent pipeline.
 -}
 nest :
-    Pipeline config model route msg
-    -> Pipeline config model route msg
-    -> Pipeline config model route msg
+    Pipeline config model msg
+    -> Pipeline config model msg
+    -> Pipeline config model msg
 nest child parent =
     Array.append parent child
 
@@ -115,8 +115,8 @@ A router can branch a pipeline into many smaller pipelines depending on the
 route message passed in.
 -}
 fork :
-    (route -> Pipeline config model route msg)
-    -> Pipeline config model route msg
-    -> Pipeline config model route msg
+    (Conn config model -> Pipeline config model msg)
+    -> Pipeline config model msg
+    -> Pipeline config model msg
 fork router pipeline =
     pipeline |> Array.push (Router router)

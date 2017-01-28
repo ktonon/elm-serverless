@@ -159,7 +159,7 @@ initResponse =
         )
 
 
-getEncodedResponse : Conn config model result -> Result String Response
+getEncodedResponse : Conn config model -> Result String Response
 getEncodedResponse conn =
     case conn.resp of
         Unsent resp ->

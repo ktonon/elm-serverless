@@ -51,7 +51,7 @@ all =
         ]
 
 
-appendToBody : String -> Conn config model route -> Conn config model route
+appendToBody : String -> Conn config model -> Conn config model
 appendToBody x conn =
     case conn.resp of
         Unsent resp ->

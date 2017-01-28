@@ -20,14 +20,12 @@ testConnWith otherFuzzer label =
 
 conn : Fuzzer Custom.Conn
 conn =
-    (Fuzz.map5 Conn
+    Fuzz.map5 Conn
         pipelineState
         config
         request
         unsentResponse
         model
-    )
-        |> andMap nothing
 
 
 pipelineState : Fuzzer PipelineState
@@ -43,11 +41,6 @@ config =
 model : Fuzzer Model
 model =
     0 |> constant |> Fuzz.map Model
-
-
-nothing : Fuzzer (Maybe a)
-nothing =
-    Nothing |> constant
 
 
 request : Fuzzer Request

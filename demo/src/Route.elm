@@ -6,6 +6,7 @@ import UrlParser exposing (..)
 type Route
     = Home
     | Quote Lang
+    | NotFound
 
 
 type Lang

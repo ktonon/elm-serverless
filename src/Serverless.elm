@@ -28,8 +28,8 @@ import Serverless.Plug.Private exposing (..)
 {-| Create an program for handling HTTP connections.
 -}
 httpApi :
-    HttpApi config model route msg
-    -> Program config model route msg
+    HttpApi config model msg
+    -> Program config model msg
 httpApi program =
     Platform.programWithFlags
         { init = init_ program
@@ -40,8 +40,8 @@ httpApi program =
 
 {-| Serverless program type
 -}
-type alias Program config model route msg =
-    Platform.Program Flags (Model config model route) (Msg msg)
+type alias Program config model msg =
+    Platform.Program Flags (Model config model) (Msg msg)
 
 
 {-| Type of flags for program
@@ -69,7 +69,7 @@ You must provide the following:
 
 See the Plug module for more details on pipelines and plugs.
 -}
-type alias HttpApi config model route msg =
+type alias HttpApi config model msg =
     { configDecoder : Decoder config
     , requestPort : RequestPort (Msg msg)
     , responsePort :
@@ -77,8 +77,8 @@ type alias HttpApi config model route msg =
         --ResponsePort (Msg msg)
     , endpoint : msg
     , initialModel : model
-    , pipeline : Pipeline config model route msg
-    , subscriptions : Conn config model route -> Sub msg
+    , pipeline : Pipeline config model msg
+    , subscriptions : Conn config model -> Sub msg
     }
 
 
@@ -100,15 +100,15 @@ type alias ResponsePort msg =
 -- IMPLEMENTATION
 
 
-type alias Model config model route =
-    { pool : Pool config model route
+type alias Model config model =
+    { pool : Pool config model
     }
 
 
 init_ :
-    HttpApi config model route msg
+    HttpApi config model msg
     -> Flags
-    -> ( Model config model route, Cmd (Msg msg) )
+    -> ( Model config model, Cmd (Msg msg) )
 init_ program flags =
     case decodeValue program.configDecoder flags of
         Ok config ->
@@ -125,10 +125,10 @@ init_ program flags =
 
 
 update_ :
-    HttpApi config model route msg
+    HttpApi config model msg
     -> Msg msg
-    -> Model config model route
-    -> ( Model config model route, Cmd (Msg msg) )
+    -> Model config model
+    -> ( Model config model, Cmd (Msg msg) )
 update_ program slsMsg model =
     case slsMsg of
         RawRequest raw ->
@@ -146,7 +146,7 @@ update_ program slsMsg model =
             updateChild program requestId msg model
 
 
-updateChild : HttpApi config model route msg -> Id -> PlugMsg msg -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
+updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model -> ( Model config model, Cmd (Msg msg) )
 updateChild program requestId msg model =
     case model.pool |> Pool.get requestId of
         Just conn ->
@@ -171,8 +171,8 @@ updateChild program requestId msg model =
 
 
 sub_ :
-    HttpApi config model route msg
-    -> Model config model route
+    HttpApi config model msg
+    -> Model config model
     -> Sub (Msg msg)
 sub_ program model =
     model.pool
@@ -182,14 +182,14 @@ sub_ program model =
         |> Sub.batch
 
 
-connSub : HttpApi config model route msg -> Conn config model route -> Sub (Msg msg)
+connSub : HttpApi config model msg -> Conn config model -> Sub (Msg msg)
 connSub program conn =
     program.subscriptions conn
         |> Sub.map (PlugMsg firstIndexPath)
         |> Sub.map (HandlerMsg conn.req.id)
 
 
-reportFailure : String -> value -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
+reportFailure : String -> value -> Model config model -> ( Model config model, Cmd (Msg msg) )
 reportFailure msg value model =
     let
         _ =

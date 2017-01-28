@@ -72,7 +72,7 @@ same amount for pipeline processing to continue onto the next plug.
 An internal server error will be sent through the responsePort if the pause
 increment is negative. A pause increment of zero will have no effect.
 -}
-pipelinePause : Int -> Cmd msg -> (J.Value -> Cmd msg) -> Conn config model route -> ( Conn config model route, Cmd msg )
+pipelinePause : Int -> Cmd msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 pipelinePause i cmd port_ conn =
     if i < 0 then
         conn |> internalError "pause pipeline called with negative value" port_
@@ -110,7 +110,7 @@ multiple calls, as long as the sum of pauses equals the sum of resumes.
 An internal server error will be sent through the responsePort if the pause
 count goes below zero. A resume increment of zero will have no effect.
 -}
-pipelineResume : Int -> (J.Value -> Cmd msg) -> Conn config model route -> ( Conn config model route, Cmd msg )
+pipelineResume : Int -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 pipelineResume i port_ conn =
     if i < 0 then
         conn |> internalError "resume pipeline called with negative value" port_
@@ -139,7 +139,7 @@ pipelineResume i port_ conn =
 
 {-| Transform and update the application defined model stored in the connection.
 -}
-updateModel : (model -> model) -> Conn config model route -> Conn config model route
+updateModel : (model -> model) -> Conn config model -> Conn config model
 updateModel update conn =
     { conn | model = update conn.model }
 
@@ -151,7 +151,7 @@ updateModel update conn =
 
 {-| Set the response body
 -}
-body : Body -> Conn config model route -> Conn config model route
+body : Body -> Conn config model -> Conn config model
 body val conn =
     case conn.resp of
         Unsent resp ->
@@ -163,7 +163,7 @@ body val conn =
 
 {-| Set a response header
 -}
-header : ( String, String ) -> Conn config model route -> Conn config model route
+header : ( String, String ) -> Conn config model -> Conn config model
 header ( key, value ) conn =
     case conn.resp of
         Unsent resp ->
@@ -183,7 +183,7 @@ header ( key, value ) conn =
 
 {-| Set the response HTTP status code
 -}
-status : Status -> Conn config model route -> Conn config model route
+status : Status -> Conn config model -> Conn config model
 status val conn =
     case conn.resp of
         Unsent resp ->
@@ -195,7 +195,7 @@ status val conn =
 
 {-| Sends a connection response through the given port
 -}
-send : (J.Value -> Cmd msg) -> Conn config model route -> ( Conn config model route, Cmd msg )
+send : (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 send port_ conn =
     case conn.resp of
         Unsent resp ->
@@ -217,7 +217,7 @@ send port_ conn =
 
 The given value is converted to a string and set to the response body.
 -}
-internalError : a -> (J.Value -> Cmd msg) -> Conn config model route -> ( Conn config model route, Cmd msg )
+internalError : a -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 internalError val port_ conn =
     conn
         |> status (Code 500)
@@ -231,6 +231,6 @@ internalError val port_ conn =
 Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
 not expect to receive in a loop plug.
 -}
-unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model route -> ( Conn config model route, Cmd msg )
+unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
 unexpectedMsg msg =
     internalError ("unexpected msg: " ++ (msg |> toString))

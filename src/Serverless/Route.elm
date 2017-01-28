@@ -36,7 +36,7 @@ import Serverless.Conn.Types exposing (..)
 After the middleware is applied, your `Conn` will have a `route` set to
 `Just route` if the parsing succeeded, or `Nothing` if parsing failed.
 -}
-parseRoute : Parser (route -> route) route -> Conn config model route -> Conn config model route
-parseRoute router conn =
+parseRoute : Parser (route -> route) route -> route -> Conn config model -> route
+parseRoute router defaultRoute conn =
     UrlParser.parse router conn.req.path empty
-        |> (\route -> { conn | route = route })
+        |> Maybe.withDefault defaultRoute

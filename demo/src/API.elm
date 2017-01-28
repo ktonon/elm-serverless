@@ -19,7 +19,7 @@ import Serverless.Route exposing (parseRoute)
 * Model is for whatever you need during the processing of a request
 * Msg is your app message type
 -}
-main : Serverless.Program Config Model Route Msg
+main : Serverless.Program Config Model Msg
 main =
     Serverless.httpApi
         { configDecoder = configDecoder
@@ -42,7 +42,7 @@ It is parameterized by the Config and Model record types.
 For convenience we create an alias.
 -}
 type alias Conn =
-    Serverless.Conn.Types.Conn Config Model Route
+    Serverless.Conn.Types.Conn Config Model
 
 
 {-| Can be anything you want, you just need to provide a decoder
@@ -86,18 +86,13 @@ type Msg
 A pipeline is a sequence of plugs, each of which transforms the connection
 in some way.
 -}
-pipeline : Pipeline Config Model Route Msg
+pipeline : Pipeline Config Model Msg
 pipeline =
     Plug.pipeline
         -- Simple plugs just transform the connection.
         -- For example, this cors plug just adds some headers to the response.
         |>
             plug (cors "*" [ GET, OPTIONS ])
-        -- Provide a UrlParser.Parser to Serverless.Route.parseRoute.
-        -- It will populate `conn.route` with `Just route` if successful
-        -- (or leave it as `Nothing` if unsuccessful)
-        |>
-            plug (parseRoute route)
         -- After parsing a route, you can apply a router.
         -- A router takes a route and returns a pipeline that will handle that
         -- route. Applying a router when `conn.route` is `Nothing` automatically
@@ -106,11 +101,11 @@ pipeline =
             fork router
 
 
-router : Route -> Pipeline Config Model Route Msg
-router route =
+router : Conn -> Pipeline Config Model Msg
+router conn =
     -- Our route parser gives us back nicely structured data, thanks to
     -- evancz/url-route parser (modified for use outside of the browser)
-    case route of
+    case conn |> parseRoute route NotFound of
         Home ->
             Plug.pipeline
                 |> loop
@@ -137,6 +132,16 @@ router route =
                 -- be sent by the framework
                 |>
                     loop respondWithQuotes
+
+        NotFound ->
+            Plug.pipeline
+                |> loop
+                    (\msg conn ->
+                        conn
+                            |> status (Code 404)
+                            |> body ("404 not found" |> TextBody)
+                            |> send responsePort
+                    )
 
 
 langFilter : Route.Lang -> List String -> List String

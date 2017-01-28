@@ -13,20 +13,20 @@ firstIndexPath =
     Array.empty |> Array.push 0
 
 
-type alias Options config model route msg =
+type alias Options config model msg =
     { endpoint : msg
     , responsePort : J.Value -> Cmd (Msg msg)
-    , pipeline : Pipeline config model route msg
+    , pipeline : Pipeline config model msg
     }
 
 
 applyPipeline :
-    Options config model route msg
+    Options config model msg
     -> PlugMsg msg
     -> IndexDepth
     -> List (Cmd (Msg msg))
-    -> Conn config model route
-    -> ( Conn config model route, Cmd (Msg msg) )
+    -> Conn config model
+    -> ( Conn config model, Cmd (Msg msg) )
 applyPipeline opt plugMsg depth appCmdAcc conn =
     case plugMsg of
         PlugMsg indexPath msg ->
@@ -58,15 +58,15 @@ applyPipeline opt plugMsg depth appCmdAcc conn =
 
 
 applyPipelineHelper :
-    Options config model route msg
+    Options config model msg
     -> List (Cmd (Msg msg))
-    -> Plug config model route msg
+    -> Plug config model msg
     -> Index
     -> IndexPath
     -> IndexDepth
     -> msg
-    -> Conn config model route
-    -> ( Conn config model route, Cmd (Msg msg) )
+    -> Conn config model
+    -> ( Conn config model, Cmd (Msg msg) )
 applyPipelineHelper opt appCmdAcc plug index indexPath depth msg conn =
     let
         ( newConn, cmd, appCmd ) =
@@ -112,15 +112,15 @@ applyPipelineHelper opt appCmdAcc plug index indexPath depth msg conn =
 
 
 applyPlug :
-    Options config model route msg
+    Options config model msg
     -> List (Cmd (Msg msg))
     -> Index
     -> IndexPath
     -> IndexDepth
-    -> Plug config model route msg
+    -> Plug config model msg
     -> msg
-    -> Conn config model route
-    -> ( Conn config model route, Cmd msg, Cmd (Msg msg) )
+    -> Conn config model
+    -> ( Conn config model, Cmd msg, Cmd (Msg msg) )
 applyPlug opt appCmdAcc index indexPath depth plug msg conn =
     case plug of
         Plug transform ->
@@ -138,49 +138,35 @@ applyPlug opt appCmdAcc index indexPath depth plug msg conn =
                 ( newConn, cmd, Cmd.none )
 
         Router router ->
-            case conn.route of
-                Just route ->
-                    let
-                        ( newConn, appCmd ) =
-                            conn
-                                |> applyRouter
-                                    opt
-                                    appCmdAcc
-                                    index
-                                    indexPath
-                                    depth
-                                    route
-                                    router
-                                    msg
-                    in
-                        ( newConn, Cmd.none, appCmd )
-
-                Nothing ->
-                    let
-                        ( newConn, cmd ) =
-                            conn
-                                |> status (Code 404)
-                                |> body ("404 not found" |> TextBody)
-                                |> send opt.responsePort
-                    in
-                        ( newConn, Cmd.none, cmd )
+            let
+                ( newConn, appCmd ) =
+                    conn
+                        |> applyRouter
+                            opt
+                            appCmdAcc
+                            index
+                            indexPath
+                            depth
+                            router
+                            msg
+            in
+                ( newConn, Cmd.none, appCmd )
 
 
 applyRouter :
-    Options config model route msg
+    Options config model msg
     -> List (Cmd (Msg msg))
     -> Index
     -> IndexPath
     -> IndexDepth
-    -> route
-    -> (route -> Pipeline config model route msg)
+    -> (Conn config model -> Pipeline config model msg)
     -> msg
-    -> Conn config model route
-    -> ( Conn config model route, Cmd (Msg msg) )
-applyRouter opt appCmdAcc index indexPath depth route router msg conn =
+    -> Conn config model
+    -> ( Conn config model, Cmd (Msg msg) )
+applyRouter opt appCmdAcc index indexPath depth router msg conn =
     let
         newOpt =
-            route
+            conn
                 |> router
                 |> Options opt.endpoint opt.responsePort
     in
@@ -214,9 +200,9 @@ cmdReduce =
 
 
 lostIt :
-    Options config model route msg
-    -> Conn config model route
-    -> ( Conn config model route, Cmd (Msg msg) )
+    Options config model msg
+    -> Conn config model
+    -> ( Conn config model, Cmd (Msg msg) )
 lostIt opt conn =
     conn
         |> status (Code 500)
