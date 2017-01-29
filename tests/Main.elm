@@ -1,13 +1,22 @@
 port module Main exposing (..)
 
-import Tests
-import Test.Runner.Node exposing (run, TestProgram)
+import ConnTests
 import Json.Encode exposing (Value)
+import PipelineTests
+import PoolTests
+import Test exposing (..)
+import Test.Runner.Node exposing (run, TestProgram)
 
 
 main : TestProgram
 main =
-    run emit Tests.all
+    run emit
+        (describe "Serverless"
+            [ ConnTests.all
+            , PoolTests.all
+            , PipelineTests.all
+            ]
+        )
 
 
 port emit : ( String, Value ) -> Cmd msg

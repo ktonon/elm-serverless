@@ -1,4 +1,4 @@
-module Conn.Fuzz exposing (..)
+module ConnFuzz exposing (..)
 
 import Custom exposing (..)
 import Expect exposing (Expectation)

@@ -1,13 +1,13 @@
 module PipelineTests exposing (all)
 
-import Conn.Fuzz as Fuzz exposing (testConnWith, testConn)
-import Conn.TestHelpers exposing (..)
+import ConnFuzz as Fuzz exposing (testConnWith, testConn)
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline exposing (..)
 import Serverless.Types exposing (Conn, Sendable(..))
 import Test exposing (..)
+import TestHelpers exposing (..)
 import Tuple
 
 

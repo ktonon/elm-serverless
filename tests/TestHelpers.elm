@@ -1,4 +1,4 @@
-port module Conn.TestHelpers exposing (..)
+port module TestHelpers exposing (..)
 
 import Custom
 import Expect exposing (Expectation)
