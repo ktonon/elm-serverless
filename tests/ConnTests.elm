@@ -7,9 +7,8 @@ import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Serverless.Conn exposing (..)
-import Serverless.Conn.Types exposing (Sendable(..))
+import Serverless.Types exposing (Sendable(..))
 import Test exposing (..)
-import Conn.TestHelpers exposing (fakeResponsePort)
 
 
 all : Test

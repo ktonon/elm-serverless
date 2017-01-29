@@ -1,6 +1,7 @@
 module Serverless
     exposing
-        ( httpApi
+        ( cors
+        , httpApi
         , Flags
         , HttpApi
         , Program
@@ -8,19 +9,55 @@ module Serverless
 
 {-| __Experimental (WIP): Not for use in production__
 
-Define an HTTP API in elm.
+## Table of Contents
 
-@docs httpApi, Flags, HttpApi, Program
+* [Defining a Program](#defining-a-program)
+* [Built-in Middleware](#built-in-middleware)
+
+## Defining a Program
+
+Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
+at the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm)
+for a usage example. Then read about [Building Pipelines](./Conn#building-pipelines)
+to get an idea of how an `elm-serverless Program` works.
+
+@docs Program, Flags, httpApi, HttpApi
+
+## Built-in Middleware
+
+The following middleware comes built-in. Insert these functions into your
+pipelines to easily add functionality. See
+[Building Pipelines](./Conn#building-pipelines) for more details.
+
+@docs cors
 -}
 
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode as J
-import Serverless.Conn.Pool as Pool exposing (..)
-import Serverless.Conn.Private exposing (..)
+import Serverless.Conn as Conn
+import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Msg exposing (..)
-import Serverless.Plug.Private exposing (..)
+import Serverless.Pipeline exposing (..)
 import Serverless.Types exposing (..)
+
+
+{-| Serverless program type.
+
+This maps to a headless elm
+[Platform.Program](http://package.elm-lang.org/packages/elm-lang/core/latest/Platform#Program).
+-}
+type alias Program config model msg =
+    Platform.Program Flags (Model config model) (Msg msg)
+
+
+{-| Type of flags for program.
+
+`Value` is a
+[Json.Encode.Value](http://package.elm-lang.org/packages/elm-lang/core/latest/Json-Encode#Value).
+The program configuration (`config`) is passed in as flags.
+-}
+type alias Flags =
+    J.Value
 
 
 {-| Create an program for handling HTTP connections.
@@ -34,18 +71,6 @@ httpApi program =
         , update = update_ program
         , subscriptions = sub_ program
         }
-
-
-{-| Serverless program type
--}
-type alias Program config model msg =
-    Platform.Program Flags (Model config model) (Msg msg)
-
-
-{-| Type of flags for program
--}
-type alias Flags =
-    J.Value
 
 
 {-| Program for an HTTP API.
@@ -70,13 +95,33 @@ See the Plug module for more details on pipelines and plugs.
 type alias HttpApi config model msg =
     { configDecoder : Decoder config
     , requestPort : RequestPort (Msg msg)
-    , responsePort :
-        ResponsePort (Msg msg)
+    , responsePort : ResponsePort (Msg msg)
     , endpoint : msg
     , initialModel : model
     , pipeline : Pipeline config model msg
     , subscriptions : Conn config model -> Sub msg
     }
+
+
+
+-- MIDDLEWARE
+
+
+{-| Add cors headers to the response.
+
+    pipeline
+        |> plug (cors "*" [ GET, OPTIONS ])
+-}
+cors : String -> List Method -> Conn config model -> Conn config model
+cors origin methods =
+    (Conn.header ( "access-control-allow-origin", origin ))
+        >> (Conn.header
+                ( "access-control-allow-headers"
+                , methods
+                    |> List.map toString
+                    |> String.join ", "
+                )
+           )
 
 
 
@@ -95,14 +140,14 @@ init_ :
 init_ program flags =
     case decodeValue program.configDecoder flags of
         Ok config ->
-            ( Pool.empty program.initialModel (Just config)
+            ( emptyPool program.initialModel (Just config)
                 |> Model
                 |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            Pool.empty program.initialModel Nothing
+            emptyPool program.initialModel Nothing
                 |> Model
                 |> reportFailure "Initialization failed" err
 
@@ -117,7 +162,7 @@ update_ program slsMsg model =
         RawRequest raw ->
             case raw |> decodeValue requestDecoder of
                 Ok req ->
-                    { model | pool = model.pool |> Pool.add req }
+                    { model | pool = model.pool |> addToPool req }
                         |> updateChild program
                             req.id
                             (PlugMsg firstIndexPath program.endpoint)
@@ -131,7 +176,7 @@ update_ program slsMsg model =
 
 updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model -> ( Model config model, Cmd (Msg msg) )
 updateChild program requestId msg model =
-    case model.pool |> Pool.get requestId of
+    case model.pool |> getFromPool requestId of
         Just conn ->
             let
                 ( newConn, cmd ) =
@@ -145,7 +190,7 @@ updateChild program requestId msg model =
                         []
                         conn
             in
-                ( { model | pool = model.pool |> Pool.replace newConn }
+                ( { model | pool = model.pool |> replaceInPool newConn }
                 , cmd
                 )
 
@@ -159,7 +204,7 @@ sub_ :
     -> Sub (Msg msg)
 sub_ program model =
     model.pool
-        |> Pool.connections
+        |> poolConnections
         |> List.map (connSub program)
         |> List.append [ program.requestPort RawRequest ]
         |> Sub.batch

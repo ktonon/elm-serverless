@@ -1,11 +1,31 @@
-module Serverless.Plug.Private exposing (..)
+module Serverless.Pipeline exposing (..)
 
 import Array exposing (Array)
 import Json.Encode as J
 import Serverless.Conn exposing (body, send, status)
-import Serverless.Conn.Types exposing (Body(..), Sendable(..), Status(..))
-import Serverless.Msg exposing (..)
-import Serverless.Types exposing (Conn, Pipeline, PipelineState(..), Plug(..))
+import Serverless.Conn.Types exposing (Id, Body(..), Status(..))
+import Serverless.Types exposing (Conn, Pipeline, PipelineState(..), Plug(..), Sendable(..))
+
+
+type Msg msg
+    = RawRequest J.Value
+    | HandlerMsg Id (PlugMsg msg)
+
+
+type PlugMsg msg
+    = PlugMsg IndexPath msg
+
+
+type alias IndexPath =
+    Array Index
+
+
+type alias Index =
+    Int
+
+
+type alias IndexDepth =
+    Int
 
 
 firstIndexPath : IndexPath

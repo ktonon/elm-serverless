@@ -1,14 +1,12 @@
-module Plug.PrivateTests exposing (all)
+module PipelineTests exposing (all)
 
 import Conn.Fuzz as Fuzz exposing (testConnWith, testConn)
 import Conn.TestHelpers exposing (..)
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
-import Serverless.Msg exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Plug exposing (..)
-import Serverless.Plug.Private exposing (..)
-import Serverless.Types exposing (Conn)
+import Serverless.Pipeline exposing (..)
+import Serverless.Types exposing (Conn, Sendable(..))
 import Test exposing (..)
 import Tuple
 

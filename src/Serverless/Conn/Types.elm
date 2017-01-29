@@ -12,7 +12,7 @@ module Serverless.Conn.Types exposing (..)
 
 ## Response
 
-@docs Sendable, Response, Status, Charset
+@docs Response, Status, Charset
 -}
 
 
@@ -41,13 +41,6 @@ type alias Response =
     , headers : List ( String, String )
     , status : Status
     }
-
-
-{-| A sendable type cannot be accessed after it is sent
--}
-type Sendable a
-    = Unsent a
-    | Sent
 
 
 {-| Uniquely identifies a connection

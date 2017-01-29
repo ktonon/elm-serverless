@@ -1,13 +1,10 @@
 module API exposing (..)
 
-import Middleware.Cors exposing (..)
 import Pipelines.Quote as Quote
 import Route exposing (..)
-import Serverless
-import Serverless.Conn exposing (..)
+import Serverless exposing (..)
+import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Plug as Plug exposing (..)
-import Serverless.Route exposing (parseRoute)
 import Types exposing (..)
 
 
@@ -37,7 +34,7 @@ in some way.
 -}
 pipeline : Pipeline
 pipeline =
-    Plug.pipeline
+    Conn.pipeline
         -- Simple plugs just transform the connection.
         -- For example, this cors plug just adds some headers to the response.
         |>

@@ -1,11 +1,67 @@
-module Serverless.Conn.Private exposing (..)
+module Serverless.Pool exposing (..)
 
+import Dict exposing (Dict)
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (decode, required, optional)
 import Json.Encode as J
 import Serverless.Conn.Types exposing (..)
-import Serverless.Types exposing (Conn)
+import Serverless.Types exposing (Conn, PipelineState(..), Sendable(..))
 import Toolkit.Helpers exposing (maybeList, take4Tuple)
+
+
+-- CONNECTION POOL
+
+
+type alias Pool config model =
+    { conn : Dict Id (Conn config model)
+    , initialModel : model
+    , config : Maybe config
+    }
+
+
+emptyPool : model -> Maybe config -> Pool config model
+emptyPool =
+    Pool Dict.empty
+
+
+addToPool : Request -> Pool config model -> Pool config model
+addToPool req pool =
+    case pool.config of
+        Just config ->
+            pool
+                |> replaceInPool
+                    (Conn Processing
+                        config
+                        req
+                        initResponse
+                        pool.initialModel
+                    )
+
+        _ ->
+            Debug.log "Failed to add request! Pool has no config" pool
+
+
+getFromPool : Id -> Pool config model -> Maybe (Conn config model)
+getFromPool requestId pool =
+    pool.conn |> Dict.get requestId
+
+
+replaceInPool :
+    Conn config model
+    -> Pool config model
+    -> Pool config model
+replaceInPool conn pool =
+    let
+        newConn =
+            pool.conn |> Dict.insert conn.req.id conn
+    in
+        { pool | conn = newConn }
+
+
+poolConnections : Pool config model -> List (Conn config model)
+poolConnections pool =
+    pool.conn |> Dict.values
+
 
 
 -- REQUEST DECODER

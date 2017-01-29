@@ -5,11 +5,13 @@ module Serverless.Types exposing (..)
 These are all types which are parameterized by specific types which you define.
 
 To make your program more readable, you should consider defining your own `Types`
-module which provides concrete types for each of the type variables.
+module which provides concrete types for each of the type variables. See the
+[demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Types.elm)
+for an example.
 
 ## Pipeline
 
-@docs Pipeline, Plug, Conn, PipelineState
+@docs Pipeline, Plug, Conn, Sendable, PipelineState
 
 ## Ports
 
@@ -42,7 +44,8 @@ There are three types:
 * `Loop` an update plug. It may transform the connection, but it also can
   have side effects. Execution will only flow to the next plug when an
   update plug returns no side effects.
-* `Pipeline` a sequence of zero or more plugs
+* `Router` a function which accepts a connection and returns a new pipeline
+  which is a specialized handler for that type of connection.
 -}
 type Plug config model msg
     = Plug (Conn config model -> Conn config model)
@@ -63,6 +66,13 @@ type alias Conn config model =
     , resp : Sendable Response
     , model : model
     }
+
+
+{-| A sendable type cannot be accessed after it is sent
+-}
+type Sendable a
+    = Unsent a
+    | Sent
 
 
 {-| State of the pipeline for this connection.

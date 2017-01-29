@@ -3,15 +3,14 @@ module Pipelines.Quote exposing (..)
 import Http
 import Models.Quote exposing (..)
 import Route exposing (..)
-import Serverless.Conn exposing (..)
+import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Plug as Plug exposing (..)
 import Types exposing (..)
 
 
 pipeline : Lang -> Pipeline
 pipeline lang =
-    Plug.pipeline
+    Conn.pipeline
         -- Loop pipelines are like elm update functions.
         -- They can be used to wait for the results of side effects.
         -- For example, loadQuotes makes a few http requests and collects the

@@ -4,10 +4,9 @@ import Array
 import Custom
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
-import Plug.PrivateTests
+import PipelineTests
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Plug exposing (..)
 import Serverless.Types exposing (Plug(..))
 import Test exposing (..)
 
@@ -15,7 +14,7 @@ import Test exposing (..)
 all : Test
 all =
     describe "Plug"
-        [ Plug.PrivateTests.all
+        [ PipelineTests.all
         , describe "pipeline"
             [ it "begins a pipeline" <|
                 expect (pipeline |> Array.length) to equal 0

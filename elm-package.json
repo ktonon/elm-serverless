@@ -10,8 +10,6 @@
         "Serverless",
         "Serverless.Conn",
         "Serverless.Conn.Types",
-        "Serverless.Plug",
-        "Serverless.Route",
         "Serverless.Types"
     ],
     "dependencies": {

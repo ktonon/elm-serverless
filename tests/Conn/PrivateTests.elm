@@ -7,7 +7,7 @@ import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Json.Encode as J
 import Serverless.Conn as Conn
-import Serverless.Conn.Private exposing (..)
+import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Test exposing (..)
 import Test.Extra exposing (..)

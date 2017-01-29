@@ -1,15 +1,47 @@
 module Serverless.Conn exposing (..)
 
-{-| Functions for transforming a connection.
+{-| Functions for building pipelines and processing connections.
+
+## Terminology
+
+`Conn` stands for __connection__. A connection contains:
+
+* An HTTP request
+* An HTTP response, unsent, and waiting for you to provide meaningful values
+* Your custom deployment configuration data
+* Your custom appliation `Model`
+
+A __pipeline__ is a sequence of functions which transform the connection,
+eventually sending back the HTTP response. We use the term __plug__ to mean a
+single function that is part of the pipeline.
 
 ## Table of Contents
 
+* [Building Pipelines](#building-pipelines)
+* [Routing](#routing)
 * [Response](#response)
 * [Responding with Errors](#responding-with-errors)
 * [Pipeline Processing](#pipeline-processing)
 * [Application Specific](#application-specific)
 
-Most of these functions can be curried and used directly as simple plugs. For
+## Building Pipelines
+
+Use these functions to build your pipelines. For example,
+
+    myPipeline =
+        pipeline
+            |> plug simplePlugA
+            |> plug simplePlugB
+            |> loop loadSomeDatabaseStuff
+            |> nest anotherPipeline
+            |> fork router
+
+@docs pipeline, toPipeline, plug, loop, nest, fork
+
+## Response
+
+The following functions are used to transform and send the HTTP response. Most
+of these functions can be curried and used directly as simple plugs. For
 example
 
     pipeline
@@ -23,10 +55,6 @@ transformations. For example,
         |> header ( "content-type", "text/text" )
         |> body (TextBody "hello world")
 
-## Response
-
-The following functions are used to transform and send the HTTP response.
-
 @docs body, header, status, send
 
 ## Responding with Errors
@@ -35,6 +63,10 @@ The following functions set the HTTP status code to 500 and send a response
 with an error message.
 
 @docs internalError, unexpectedMsg
+
+## Routing
+
+@docs parseRoute
 
 ## Pipeline Processing
 
@@ -48,13 +80,234 @@ the results of a side effect.
 @docs updateModel
 -}
 
+import Array
+import Dict
 import Json.Encode as J
+import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Conn.Private exposing (..)
-import Serverless.Types exposing (Conn, PipelineState(..))
+import Serverless.Types exposing (..)
+import UrlParser exposing (Parser, (</>), oneOf, parse, map, int, s)
 
 
--- CONTROL FLOW
+-- BUILDING PIPELINES
+
+
+{-| Begins a pipeline.
+
+Build the pipeline by chaining simple and update plugs with
+`|> plug` and `|> loop` respectively.
+-}
+pipeline : Pipeline config model msg
+pipeline =
+    Array.empty
+
+
+{-| Converts a single function to a pipeline.
+
+For creating a simple pipeline from a responder function when a pipeline is
+expected.
+
+    status (Code 404)
+        >> body (TextBody "Not found")
+        >> send responsePort
+        |> toPipeline
+-}
+toPipeline :
+    (Conn config model -> ( Conn config model, Cmd msg ))
+    -> Pipeline config model msg
+toPipeline responder =
+    pipeline |> loop (\msg conn -> conn |> responder)
+
+
+{-| Extend the pipeline with a simple plug.
+
+A plug just transforms the connection. For example,
+
+    pipeline
+        |> plug (body (TextBody "foo"))
+-}
+plug :
+    (Conn config model -> Conn config model)
+    -> Pipeline config model msg
+    -> Pipeline config model msg
+plug plug pipeline =
+    pipeline |> Array.push (Plug plug)
+
+
+{-| Extends the pipeline with an update plug.
+
+An update plug can transform the connection and or return a side effect (`Cmd`).
+Loop plugs should use `pipelinePause` and `pipelineResume` when working with side
+effects. They are defined in the `Serverless.Conn` module.
+
+    -- Loop plug which does nothing
+    pipeline
+        |> loop (\msg conn -> (conn, Cmd.none))
+-}
+loop :
+    (msg -> Conn config model -> ( Conn config model, Cmd msg ))
+    -> Pipeline config model msg
+    -> Pipeline config model msg
+loop update pipeline =
+    pipeline |> Array.push (Loop update)
+
+
+{-| Nest a child pipeline into a parent pipeline.
+-}
+nest :
+    Pipeline config model msg
+    -> Pipeline config model msg
+    -> Pipeline config model msg
+nest child parent =
+    Array.append parent child
+
+
+{-| Adds a router to the pipeline.
+
+A router can branch a pipeline into many smaller pipelines depending on the
+route message passed in.
+-}
+fork :
+    (Conn config model -> Pipeline config model msg)
+    -> Pipeline config model msg
+    -> Pipeline config model msg
+fork router pipeline =
+    pipeline |> Array.push (Router router)
+
+
+
+-- RESPONSE
+
+
+{-| Set the response body
+-}
+body : Body -> Conn config model -> Conn config model
+body val conn =
+    case conn.resp of
+        Unsent resp ->
+            { conn | resp = Unsent { resp | body = val } }
+
+        Sent ->
+            conn
+
+
+{-| Set a response header
+-}
+header : ( String, String ) -> Conn config model -> Conn config model
+header ( key, value ) conn =
+    case conn.resp of
+        Unsent resp ->
+            { conn
+                | resp =
+                    Unsent
+                        { resp
+                            | headers =
+                                ( key |> String.toLower, value )
+                                    :: resp.headers
+                        }
+            }
+
+        Sent ->
+            conn
+
+
+{-| Set the response HTTP status code
+-}
+status : Status -> Conn config model -> Conn config model
+status val conn =
+    case conn.resp of
+        Unsent resp ->
+            { conn | resp = Unsent { resp | status = val } }
+
+        Sent ->
+            conn
+
+
+{-| Sends a connection response through the given port
+-}
+send : (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+send port_ conn =
+    case conn.resp of
+        Unsent resp ->
+            ( { conn | resp = Sent }
+            , resp |> encodeResponse conn.req.id |> port_
+            )
+
+        Sent ->
+            ( conn
+            , Cmd.none
+            )
+
+
+
+-- RESPONDING WITH ERRORS
+
+
+{-| Respond with a 500 internal server error.
+
+The given value is converted to a string and set to the response body.
+-}
+internalError : Body -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+internalError val port_ =
+    status (Code 500)
+        >> body val
+        >> send port_
+
+
+{-| Respond with an unexpected message error.
+
+Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
+not expect to receive in a loop plug.
+-}
+unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+unexpectedMsg msg =
+    internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)
+
+
+
+-- ROUTING
+
+
+{-| Parse a connection request path into nicely formatted elm data.
+
+    import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)
+    import Serverless.Conn exposing (parseRoute)
+
+
+    type Route
+        = Home
+        | Cheers Int
+        | NotFound
+
+
+    route : Parser (Route -> a) a
+    route =
+        oneOf
+            [ map Home top
+            , map Cheers (s "cheers" </> int)
+            ]
+
+
+    myRouter : Conn -> Pipeline
+    myRouter conn =
+        case (conn.req.method, conn |> parseRoute route NotFound ) of
+            ( GET, Home ) ->
+                -- pipeline for home...
+
+            ( GET, Cheers numTimes ) ->
+                -- pipeline for cheers...
+
+            _ ->
+                -- pipeline for 404 not found...
+-}
+parseRoute : Parser (route -> route) route -> route -> Conn config model -> route
+parseRoute router defaultRoute conn =
+    UrlParser.parse router conn.req.path Dict.empty
+        |> Maybe.withDefault defaultRoute
+
+
+
+-- Pipeline Processing
 
 
 {-| Pause the connection at the current loop plug.
@@ -135,7 +388,7 @@ pipelineResume i port_ conn =
 
 
 
--- MODEL
+-- APPLICATION SPECIFIC
 
 
 {-| Transform and update the application defined model stored in the connection.
@@ -143,93 +396,3 @@ pipelineResume i port_ conn =
 updateModel : (model -> model) -> Conn config model -> Conn config model
 updateModel update conn =
     { conn | model = update conn.model }
-
-
-
--- REQUEST
--- RESPONSE
-
-
-{-| Set the response body
--}
-body : Body -> Conn config model -> Conn config model
-body val conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn | resp = Unsent { resp | body = val } }
-
-        Sent ->
-            conn
-
-
-{-| Set a response header
--}
-header : ( String, String ) -> Conn config model -> Conn config model
-header ( key, value ) conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn
-                | resp =
-                    Unsent
-                        { resp
-                            | headers =
-                                ( key |> String.toLower, value )
-                                    :: resp.headers
-                        }
-            }
-
-        Sent ->
-            conn
-
-
-{-| Set the response HTTP status code
--}
-status : Status -> Conn config model -> Conn config model
-status val conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn | resp = Unsent { resp | status = val } }
-
-        Sent ->
-            conn
-
-
-{-| Sends a connection response through the given port
--}
-send : (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
-send port_ conn =
-    case conn.resp of
-        Unsent resp ->
-            ( { conn | resp = Sent }
-            , resp |> encodeResponse conn.req.id |> port_
-            )
-
-        Sent ->
-            ( conn
-            , Cmd.none
-            )
-
-
-
--- ERRORS
-
-
-{-| Respond with a 500 internal server error.
-
-The given value is converted to a string and set to the response body.
--}
-internalError : Body -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
-internalError val port_ =
-    status (Code 500)
-        >> body val
-        >> send port_
-
-
-{-| Respond with an unexpected message error.
-
-Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
-not expect to receive in a loop plug.
--}
-unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
-unexpectedMsg msg =
-    internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)
