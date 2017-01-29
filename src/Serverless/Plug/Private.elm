@@ -2,10 +2,10 @@ module Serverless.Plug.Private exposing (..)
 
 import Array exposing (Array)
 import Json.Encode as J
-import Serverless.Conn exposing (..)
-import Serverless.Conn.Types exposing (..)
+import Serverless.Conn exposing (body, send, status)
+import Serverless.Conn.Types exposing (Body(..), Sendable(..), Status(..))
 import Serverless.Msg exposing (..)
-import Serverless.Plug exposing (..)
+import Serverless.Types exposing (Conn, Pipeline, PipelineState(..), Plug(..))
 
 
 firstIndexPath : IndexPath

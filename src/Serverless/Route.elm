@@ -7,7 +7,7 @@ module Serverless.Route exposing (..)
 
 import Dict exposing (empty)
 import UrlParser exposing (Parser, (</>), oneOf, parse, map, int, s)
-import Serverless.Conn.Types exposing (..)
+import Serverless.Types exposing (Conn)
 
 
 {-| Converts a UrlParser.Parser into middleware.

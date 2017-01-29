@@ -1,15 +1,21 @@
-module Quote exposing (..)
+module Models.Quote exposing (..)
 
 import Http
 import Json.Decode exposing (Decoder, string)
 import Json.Decode.Pipeline exposing (required, decode, hardcoded)
+import Types exposing (..)
 
 
-type alias Quote =
-    { lang : String
-    , text : String
-    , author : String
-    }
+-- MODEL
+
+
+formatQuote : String -> Quote -> String
+formatQuote lineBreak quote =
+    quote.text ++ lineBreak ++ "--" ++ quote.author
+
+
+
+-- DECODER
 
 
 quoteDecoder : String -> Decoder Quote
@@ -27,8 +33,3 @@ quoteRequest lang =
             ("http://api.forismatic.com/api/1.0/?method=getQuote&format=json&lang="
                 ++ lang
             )
-
-
-formatQuote : String -> Quote -> String
-formatQuote lineBreak quote =
-    quote.text ++ lineBreak ++ "--" ++ quote.author

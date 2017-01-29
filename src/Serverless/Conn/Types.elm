@@ -2,9 +2,9 @@ module Serverless.Conn.Types exposing (..)
 
 {-| Types defining a serverless connection
 
-## Connection
+## General
 
-@docs Conn, Id, Body, PipelineState
+@docs Id, Body
 
 ## Request
 
@@ -14,28 +14,6 @@ module Serverless.Conn.Types exposing (..)
 
 @docs Sendable, Response, Status, Charset
 -}
-
-
-{-| A connection with a request and response.
-
-Connections are parameterized with config and model record types which are
-specific to the application. Config is loaded once on app startup, while model
-is set to a provided initial value for each incomming request.
--}
-type alias Conn config model =
-    { pipelineState : PipelineState
-    , config : config
-    , req : Request
-    , resp : Sendable Response
-    , model : model
-    }
-
-
-{-| State of the pipeline for this connection.
--}
-type PipelineState
-    = Processing
-    | Paused Int
 
 
 {-| HTTP Request

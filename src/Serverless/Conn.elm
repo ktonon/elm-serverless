@@ -51,6 +51,7 @@ the results of a side effect.
 import Json.Encode as J
 import Serverless.Conn.Types exposing (..)
 import Serverless.Conn.Private exposing (..)
+import Serverless.Types exposing (Conn, PipelineState(..))
 
 
 -- CONTROL FLOW

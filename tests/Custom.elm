@@ -1,6 +1,6 @@
 module Custom exposing (..)
 
-import Serverless.Conn.Types as Types
+import Serverless.Types as Types
 
 
 type alias Conn =

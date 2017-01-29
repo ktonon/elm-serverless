@@ -4,15 +4,13 @@ module Serverless
         , Flags
         , HttpApi
         , Program
-        , RequestPort
-        , ResponsePort
         )
 
 {-| __Experimental (WIP): Not for use in production__
 
 Define an HTTP API in elm.
 
-@docs httpApi, Flags, HttpApi, Program, RequestPort, ResponsePort
+@docs httpApi, Flags, HttpApi, Program
 -}
 
 import Json.Decode exposing (Decoder, decodeValue)
@@ -21,8 +19,8 @@ import Serverless.Conn.Pool as Pool exposing (..)
 import Serverless.Conn.Private exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Msg exposing (..)
-import Serverless.Plug exposing (..)
 import Serverless.Plug.Private exposing (..)
+import Serverless.Types exposing (..)
 
 
 {-| Create an program for handling HTTP connections.
@@ -73,27 +71,12 @@ type alias HttpApi config model msg =
     { configDecoder : Decoder config
     , requestPort : RequestPort (Msg msg)
     , responsePort :
-        J.Value -> Cmd (Msg msg)
-        --ResponsePort (Msg msg)
+        ResponsePort (Msg msg)
     , endpoint : msg
     , initialModel : model
     , pipeline : Pipeline config model msg
     , subscriptions : Conn config model -> Sub msg
     }
-
-
-{-| Type of port through which the request is received.
-Set your request port to this type.
--}
-type alias RequestPort msg =
-    (J.Value -> msg) -> Sub msg
-
-
-{-| Type of port through which the request is sent.
-Set your response port to this type.
--}
-type alias ResponsePort msg =
-    J.Value -> Cmd msg
 
 
 

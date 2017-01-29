@@ -4,6 +4,7 @@ import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (decode, required, optional)
 import Json.Encode as J
 import Serverless.Conn.Types exposing (..)
+import Serverless.Types exposing (Conn)
 import Toolkit.Helpers exposing (maybeList, take4Tuple)
 
 

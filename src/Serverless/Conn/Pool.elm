@@ -3,6 +3,7 @@ module Serverless.Conn.Pool exposing (..)
 import Dict exposing (Dict)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Conn.Private exposing (initResponse)
+import Serverless.Types exposing (Conn, PipelineState(..))
 
 
 type alias Pool config model =

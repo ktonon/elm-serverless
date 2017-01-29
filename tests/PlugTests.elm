@@ -8,6 +8,7 @@ import Plug.PrivateTests
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Plug exposing (..)
+import Serverless.Types exposing (Plug(..))
 import Test exposing (..)
 
 

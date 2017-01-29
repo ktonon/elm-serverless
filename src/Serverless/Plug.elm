@@ -2,21 +2,6 @@ module Serverless.Plug exposing (..)
 
 {-| Build pipelines of plugs.
 
-## Table of Contents
-
-* [Types](#types)
-* [Building Pipelines](#building-pipelines)
-
-## Types
-
-The following types are used to define a pipeline, but do not deal with these
-directly. Use the functions under [Building Pipelines](#building-pipelines)
-instead.
-
-@docs Plug, Pipeline
-
-## Building Pipelines
-
 Use these functions to build your pipelines. For example,
 
     myPipeline =
@@ -30,30 +15,8 @@ Use these functions to build your pipelines. For example,
 @docs pipeline, toPipeline, plug, loop, nest, fork
 -}
 
-import Array exposing (Array)
-import Serverless.Conn.Types exposing (Conn)
-
-
-{-| A plug processes the connection in some way.
-
-There are three types:
-
-* `Plug` a simple plug. It just transforms the connection
-* `Loop` an update plug. It may transform the connection, but it also can
-  have side effects. Execution will only flow to the next plug when an
-  update plug returns no side effects.
-* `Pipeline` a sequence of zero or more plugs
--}
-type Plug config model msg
-    = Plug (Conn config model -> Conn config model)
-    | Loop (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    | Router (Conn config model -> Pipeline config model msg)
-
-
-{-| Represents a list of plugs, each of which processes the connection
--}
-type alias Pipeline config model msg =
-    Array (Plug config model msg)
+import Array
+import Serverless.Types exposing (..)
 
 
 {-| Begins a pipeline.

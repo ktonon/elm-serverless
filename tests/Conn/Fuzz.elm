@@ -5,6 +5,7 @@ import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, map, andMap, andThen, constant)
 import Fuzz.Extra exposing (..)
 import Serverless.Conn.Types exposing (..)
+import Serverless.Types exposing (Conn, PipelineState(..))
 import Test exposing (Test)
 
 

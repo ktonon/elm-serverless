@@ -8,8 +8,8 @@ import Serverless.Msg exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Plug exposing (..)
 import Serverless.Plug.Private exposing (..)
+import Serverless.Types exposing (Conn)
 import Test exposing (..)
-import Conn.TestHelpers exposing (fakeResponsePort)
 import Tuple
 
 
