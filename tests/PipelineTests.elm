@@ -5,9 +5,10 @@ import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline exposing (..)
-import Serverless.Types exposing (Conn, Sendable(..))
+import Serverless.Types exposing (Sendable(..))
 import Test exposing (..)
 import TestHelpers exposing (..)
+import TestTypes exposing (..)
 import Tuple
 
 
@@ -40,7 +41,7 @@ all =
                     in
                         conn
                             |> body (TextBody "")
-                            |> applyPipeline (Options NoOp fakeResponsePort pl) (PlugMsg firstIndexPath NoOp) 0 []
+                            |> applyPipeline (Options NoOp responsePort pl) (PlugMsg firstIndexPath NoOp) 0 []
                             |> Tuple.first
                             |> unsentOrCrash
                             |> .body
@@ -49,7 +50,7 @@ all =
         ]
 
 
-appendToBody : String -> Conn config model -> Conn config model
+appendToBody : String -> Conn -> Conn
 appendToBody x conn =
     case conn.resp of
         Unsent resp ->

@@ -2,15 +2,15 @@ module ConnTests exposing (all)
 
 import Array
 import ConnFuzz as Fuzz exposing (testConn, testConnWith)
-import Custom
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Types exposing (Plug(..), Sendable(..))
+import Serverless.Types exposing (PipelineState(..), Plug(..), Sendable(..))
 import Test exposing (..)
 import TestHelpers exposing (..)
+import TestTypes exposing (..)
 
 
 all : Test
@@ -23,6 +23,30 @@ all =
         ]
 
 
+
+-- BUILDING PIPELINES TESTS
+
+
+simplePlug : Conn -> Conn
+simplePlug =
+    body (TextBody "simple")
+
+
+simpleLoop : Msg -> Conn -> ( Conn, Cmd Msg )
+simpleLoop msg =
+    send responsePort
+
+
+simpleFork : Conn -> Pipeline
+simpleFork conn =
+    case conn.req.method of
+        GET ->
+            pipeline |> plug simplePlug
+
+        _ ->
+            simpleLoop NoOp |> toPipeline
+
+
 buildingPipelinesTests : Test
 buildingPipelinesTests =
     describe "Building Pipelines"
@@ -30,38 +54,92 @@ buildingPipelinesTests =
             [ it "begins a pipeline" <|
                 expect (pipeline |> Array.length) to equal 0
             ]
+        , describe "toPipeline"
+            [ it "makes a pipeline of length 1" <|
+                expect (simpleLoop NoOp |> toPipeline |> Array.length) to equal 1
+            ]
         , describe "plug"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> plug simple |> Array.length) to equal 1
+                expect (pipeline |> plug simplePlug |> Array.length) to equal 1
             , it "wraps a simple conn transformation as a Plug" <|
-                let
-                    result =
-                        pipeline |> plug simple |> Array.get 0
-                in
-                    case result of
-                        Just wrapped ->
-                            case wrapped of
-                                Plug func ->
-                                    Expect.pass
-
-                                -- TODO: expect func to notEqual simple
-                                _ ->
-                                    Expect.fail "expected Plug but got Loop or Pipeline"
-
-                        Nothing ->
-                            Expect.fail "pipeline was empty"
+                expect (pipeline |> plug simplePlug |> Array.get 0)
+                    to
+                    equal
+                    (Just (Plug simplePlug))
+            ]
+        , describe "loop"
+            [ it "extends the pipeline by 1" <|
+                expect (pipeline |> loop simpleLoop |> Array.length) to equal 1
+            , it "wraps an update function as a Plug" <|
+                expect (pipeline |> loop simpleLoop |> Array.get 0)
+                    to
+                    equal
+                    (Just (Loop simpleLoop))
+            ]
+        , describe "nest"
+            [ it "extends the pipeline by the length of the nested pipeline" <|
+                expect
+                    (pipeline
+                        |> plug simplePlug
+                        |> loop simpleLoop
+                        |> nest
+                            (pipeline
+                                |> plug simplePlug
+                                |> plug simplePlug
+                                |> loop simpleLoop
+                            )
+                        |> Array.length
+                    )
+                    to
+                    equal
+                    5
+            ]
+        , describe "fork"
+            [ it "extends the pipeline by 1" <|
+                expect (pipeline |> fork simpleFork |> Array.length) to equal 1
+            , it "wraps a router function as a Router" <|
+                expect (pipeline |> fork simpleFork |> Array.get 0)
+                    to
+                    equal
+                    (Just (Router simpleFork))
             ]
         ]
 
 
-simple : Custom.Conn -> Custom.Conn
-simple =
-    body (TextBody "simple")
+
+-- ROUTING TESTS
 
 
 routingTests : Test
 routingTests =
-    describe "Routing" []
+    describe "Routing"
+        [ describe "parseRoute"
+            [ testConn "parses the request path" <|
+                \conn ->
+                    expect
+                        (conn
+                            |> updateReq (\req -> { req | path = "/foody/bar" })
+                            |> parseRoute route NoCanFind
+                        )
+                        to
+                        equal
+                        (Foody "bar")
+            , testConn "uses the provided default if it fails to parse" <|
+                \conn ->
+                    expect
+                        (conn
+                            |> updateReq (\req -> { req | path = "/foozy/bar" })
+                            |> parseRoute route NoCanFind
+                        )
+                        to
+                        equal
+                        NoCanFind
+            ]
+        ]
+
+
+
+-- RESPONSE TESTS
 
 
 responseTests : Test
@@ -85,21 +163,21 @@ responseTests =
             \conn ->
                 let
                     ( newConn, _ ) =
-                        conn |> send fakeResponsePort
+                        conn |> send responsePort
                 in
                     expect newConn.resp to equal Sent
         , testConn "send issues a side effect" <|
             \conn ->
                 let
                     ( _, cmd ) =
-                        conn |> send fakeResponsePort
+                        conn |> send responsePort
                 in
                     expect cmd to notEqual Cmd.none
         , testConn "send fails if the conn is already halted" <|
             \conn ->
                 let
                     ( _, cmd ) =
-                        { conn | resp = Sent } |> send fakeResponsePort
+                        { conn | resp = Sent } |> send responsePort
                 in
                     expect cmd to equal Cmd.none
         , testConnWith Fuzz.header "headers adds a response header" <|
@@ -129,6 +207,87 @@ responseTests =
         ]
 
 
+
+-- PIPELINE PROCESSING TESTS
+
+
 pipelineProcessingTests : Test
 pipelineProcessingTests =
-    describe "Pipeline Processing" []
+    describe "Pipeline Processing"
+        [ describe "pipelinePause"
+            [ testConn "it sets pipelineState to Paused" <|
+                \conn ->
+                    case pipelinePause 3 (Cmd.none) responsePort conn of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Paused 3)
+            , testConn "it increments paused by the correct amount" <|
+                \conn ->
+                    case
+                        { conn | pipelineState = Paused 2 }
+                            |> pipelinePause 3 (Cmd.none) responsePort
+                    of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Paused 5)
+            , testConn "it fails if the increment is negative" <|
+                \conn ->
+                    case pipelinePause -1 (Cmd.none) responsePort conn of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Processing)
+            , testConn "it sends a failure response if the increment is negative" <|
+                \conn ->
+                    case pipelinePause -1 (Cmd.none) responsePort conn of
+                        ( _, cmd ) ->
+                            expect cmd to notEqual (Cmd.none)
+            , testConn "it does nothing if the pause increment is zero" <|
+                \conn ->
+                    case pipelinePause 0 (Cmd.none) responsePort conn of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Processing)
+            , testConn "it does not send a failure response if the increment is zero" <|
+                \conn ->
+                    case pipelinePause 0 (Cmd.none) responsePort conn of
+                        ( _, cmd ) ->
+                            expect cmd to equal (Cmd.none)
+            ]
+        , describe "pipelineResume"
+            [ testConn "it sets pipelineState to Processing if the increment is equal to the current pause count" <|
+                \conn ->
+                    case
+                        { conn | pipelineState = Paused 2 }
+                            |> pipelineResume 2 responsePort
+                    of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Processing)
+            , testConn "it decrements paused by the correct amount" <|
+                \conn ->
+                    case
+                        { conn | pipelineState = Paused 5 }
+                            |> pipelineResume 4 responsePort
+                    of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Paused 1)
+            , testConn "it fails if the increment is negative" <|
+                \conn ->
+                    case
+                        { conn | pipelineState = Paused 2 }
+                            |> pipelineResume -1 responsePort
+                    of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Paused 2)
+            , testConn "it sends a failure response if the increment is negative" <|
+                \conn ->
+                    case pipelineResume -1 responsePort conn of
+                        ( _, cmd ) ->
+                            expect cmd to notEqual (Cmd.none)
+            , testConn "it does nothing if the resume increment is zero" <|
+                \conn ->
+                    case pipelineResume 0 responsePort conn of
+                        ( newConn, _ ) ->
+                            expect newConn.pipelineState to equal (Processing)
+            , testConn "it does not send a failure response if the increment is zero" <|
+                \conn ->
+                    case pipelineResume 0 responsePort conn of
+                        ( _, cmd ) ->
+                            expect cmd to equal (Cmd.none)
+            ]
+        ]

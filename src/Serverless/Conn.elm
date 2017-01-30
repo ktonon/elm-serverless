@@ -82,7 +82,6 @@ the results of a side effect.
 
 import Array
 import Dict
-import Json.Encode as J
 import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (..)
@@ -176,6 +175,48 @@ fork router pipeline =
 
 
 
+-- ROUTING
+
+
+{-| Parse a connection request path into nicely formatted elm data.
+
+    import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)
+    import Serverless.Conn exposing (parseRoute)
+
+
+    type Route
+        = Home
+        | Cheers Int
+        | NotFound
+
+
+    route : Parser (Route -> a) a
+    route =
+        oneOf
+            [ map Home top
+            , map Cheers (s "cheers" </> int)
+            ]
+
+
+    myRouter : Conn -> Pipeline
+    myRouter conn =
+        case (conn.req.method, conn |> parseRoute route NotFound ) of
+            ( GET, Home ) ->
+                -- pipeline for home...
+
+            ( GET, Cheers numTimes ) ->
+                -- pipeline for cheers...
+
+            _ ->
+                -- pipeline for 404 not found...
+-}
+parseRoute : Parser (route -> route) route -> route -> Conn config model -> route
+parseRoute router defaultRoute conn =
+    UrlParser.parse router conn.req.path Dict.empty
+        |> Maybe.withDefault defaultRoute
+
+
+
 -- RESPONSE
 
 
@@ -225,7 +266,7 @@ status val conn =
 
 {-| Sends a connection response through the given port
 -}
-send : (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+send : ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
 send port_ conn =
     case conn.resp of
         Unsent resp ->
@@ -247,7 +288,7 @@ send port_ conn =
 
 The given value is converted to a string and set to the response body.
 -}
-internalError : Body -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+internalError : Body -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
 internalError val port_ =
     status (Code 500)
         >> body val
@@ -259,51 +300,9 @@ internalError val port_ =
 Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
 not expect to receive in a loop plug.
 -}
-unexpectedMsg : msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+unexpectedMsg : msg -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
 unexpectedMsg msg =
     internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)
-
-
-
--- ROUTING
-
-
-{-| Parse a connection request path into nicely formatted elm data.
-
-    import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)
-    import Serverless.Conn exposing (parseRoute)
-
-
-    type Route
-        = Home
-        | Cheers Int
-        | NotFound
-
-
-    route : Parser (Route -> a) a
-    route =
-        oneOf
-            [ map Home top
-            , map Cheers (s "cheers" </> int)
-            ]
-
-
-    myRouter : Conn -> Pipeline
-    myRouter conn =
-        case (conn.req.method, conn |> parseRoute route NotFound ) of
-            ( GET, Home ) ->
-                -- pipeline for home...
-
-            ( GET, Cheers numTimes ) ->
-                -- pipeline for cheers...
-
-            _ ->
-                -- pipeline for 404 not found...
--}
-parseRoute : Parser (route -> route) route -> route -> Conn config model -> route
-parseRoute router defaultRoute conn =
-    UrlParser.parse router conn.req.path Dict.empty
-        |> Maybe.withDefault defaultRoute
 
 
 
@@ -326,7 +325,7 @@ same amount for pipeline processing to continue onto the next plug.
 An internal server error will be sent through the responsePort if the pause
 increment is negative. A pause increment of zero will have no effect.
 -}
-pipelinePause : Int -> Cmd msg -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+pipelinePause : Int -> Cmd msg -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
 pipelinePause i cmd port_ conn =
     if i < 0 then
         conn |> internalError (TextBody "pause pipeline called with negative value") port_
@@ -364,7 +363,7 @@ multiple calls, as long as the sum of pauses equals the sum of resumes.
 An internal server error will be sent through the responsePort if the pause
 count goes below zero. A resume increment of zero will have no effect.
 -}
-pipelineResume : Int -> (J.Value -> Cmd msg) -> Conn config model -> ( Conn config model, Cmd msg )
+pipelineResume : Int -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
 pipelineResume i port_ conn =
     if i < 0 then
         conn |> internalError (TextBody "resume pipeline called with negative value") port_

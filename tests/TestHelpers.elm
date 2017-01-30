@@ -1,17 +1,15 @@
-port module TestHelpers exposing (..)
+module TestHelpers exposing (..)
 
-import Custom
+import TestTypes exposing (..)
 import Expect exposing (Expectation)
 import Serverless.Pool exposing (initResponse)
-import Serverless.Conn.Types exposing (Response)
+import Serverless.Conn.Types exposing (Response, Request)
 import Serverless.Types exposing (Sendable(..), ResponsePort)
 import Test exposing (Test, test)
+import UrlParser exposing (Parser, (</>), map, oneOf, s, string, top)
 
 
-port fakeResponsePort : ResponsePort msg
-
-
-unsentOrCrash : Custom.Conn -> Response
+unsentOrCrash : Conn -> Response
 unsentOrCrash conn =
     case conn.resp of
         Unsent resp ->
@@ -31,3 +29,26 @@ initResponseTest label e =
 
                 Sent ->
                     Expect.fail "initResponse was already Sent"
+
+
+updateReq : (Request -> Request) -> Conn -> Conn
+updateReq update conn =
+    { conn | req = update conn.req }
+
+
+
+-- ROUTING
+
+
+type Route
+    = Home
+    | Foody String
+    | NoCanFind
+
+
+route : Parser (Route -> a) a
+route =
+    oneOf
+        [ map Home top
+        , map Foody (s "foody" </> string)
+        ]

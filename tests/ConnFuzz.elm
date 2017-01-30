@@ -1,27 +1,27 @@
 module ConnFuzz exposing (..)
 
-import Custom exposing (..)
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, map, andMap, andThen, constant)
 import Fuzz.Extra exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Types exposing (Conn, PipelineState(..), Sendable(..))
+import Serverless.Types exposing (PipelineState(..), Sendable(..))
 import Test exposing (Test)
+import TestTypes exposing (..)
 
 
-testConn : String -> (Custom.Conn -> Expectation) -> Test
+testConn : String -> (Conn -> Expectation) -> Test
 testConn label =
     Test.fuzz conn label
 
 
-testConnWith : Fuzzer a -> String -> (( Custom.Conn, a ) -> Expectation) -> Test
+testConnWith : Fuzzer a -> String -> (( Conn, a ) -> Expectation) -> Test
 testConnWith otherFuzzer label =
     Test.fuzz (Fuzz.tuple ( conn, otherFuzzer )) label
 
 
-conn : Fuzzer Custom.Conn
+conn : Fuzzer Conn
 conn =
-    Fuzz.map5 Conn
+    Fuzz.map5 Serverless.Types.Conn
         pipelineState
         config
         request
