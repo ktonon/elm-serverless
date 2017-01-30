@@ -19,6 +19,11 @@ testConnWith otherFuzzer label =
     Test.fuzz (Fuzz.tuple ( conn, otherFuzzer )) label
 
 
+testReq : String -> (Request -> Expectation) -> Test
+testReq label =
+    Test.fuzz request label
+
+
 conn : Fuzzer Conn
 conn =
     Fuzz.map5 Serverless.Types.Conn

@@ -1,16 +1,19 @@
 module PoolTests exposing (all)
 
-import ConnFuzz as Fuzz exposing (testConnWith)
+import ConnFuzz as Fuzz exposing (testConnWith, testReq)
+import Dict
 import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Json.Encode as J
+import Logging exposing (nullLogger)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pool exposing (..)
 import Test exposing (..)
 import Test.Extra exposing (..)
 import TestHelpers exposing (..)
+import TestTypes exposing (..)
 
 
 all : Test
@@ -25,7 +28,35 @@ all =
 connectionPoolTests : Test
 connectionPoolTests =
     describe "Managing the Connection Pool"
-        []
+        [ describe "emptyPool"
+            [ it "creates a pool with no connections" <|
+                expect
+                    (emptyPool (Model 1) (Config "secret" |> Just)
+                        |> .conn
+                        |> Dict.size
+                    )
+                    to
+                    equal
+                    0
+            ]
+        , describe "addToPool"
+            [ testReq "fails if the pool has no config" <|
+                \req ->
+                    expect
+                        (emptyPool (Model 1) Nothing
+                            |> addToPool nullLogger req
+                            |> .conn
+                            |> Dict.size
+                        )
+                        to
+                        equal
+                        0
+            ]
+        , describe "getFromPool"
+            []
+        , describe "replaceInPool"
+            []
+        ]
 
 
 requestDecoderTests : Test

@@ -4,6 +4,7 @@ import Dict exposing (Dict)
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (decode, required, optional)
 import Json.Encode as J
+import Logging exposing (Logger, LogLevel(..))
 import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (Conn, PipelineState(..), Sendable(..))
 import Toolkit.Helpers exposing (maybeList, take4Tuple)
@@ -24,8 +25,8 @@ emptyPool =
     Pool Dict.empty
 
 
-addToPool : Request -> Pool config model -> Pool config model
-addToPool req pool =
+addToPool : Logger (Pool config model) -> Request -> Pool config model -> Pool config model
+addToPool logger req pool =
     case pool.config of
         Just config ->
             pool
@@ -38,7 +39,7 @@ addToPool req pool =
                     )
 
         _ ->
-            Debug.log "Failed to add request! Pool has no config" pool
+            logger LogError "Failed to add request! Pool has no config" pool
 
 
 getFromPool : Id -> Pool config model -> Maybe (Conn config model)

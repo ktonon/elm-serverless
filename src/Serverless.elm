@@ -34,6 +34,7 @@ pipelines to easily add functionality. See
 
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode as J
+import Logging exposing (defaultLogger)
 import Serverless.Conn as Conn
 import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
@@ -162,7 +163,7 @@ update_ program slsMsg model =
         RawRequest raw ->
             case raw |> decodeValue requestDecoder of
                 Ok req ->
-                    { model | pool = model.pool |> addToPool req }
+                    { model | pool = model.pool |> addToPool defaultLogger req }
                         |> updateChild program
                             req.id
                             (PlugMsg firstIndexPath program.endpoint)
