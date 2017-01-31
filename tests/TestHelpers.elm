@@ -1,22 +1,28 @@
 module TestHelpers exposing (..)
 
-import TestTypes exposing (..)
 import Expect exposing (Expectation)
+import Serverless.Conn exposing (body, pipeline, plug, toPipeline)
+import Serverless.Conn.Types exposing (Body(..), Method(..), Response, Request)
 import Serverless.Pool exposing (initResponse)
-import Serverless.Conn.Types exposing (Response, Request)
 import Serverless.Types exposing (Sendable(..), ResponsePort)
 import Test exposing (Test, test)
+import TestTypes exposing (..)
 import UrlParser exposing (Parser, (</>), map, oneOf, s, string, top)
 
 
-unsentOrCrash : Conn -> Response
-unsentOrCrash conn =
+appendToBody : String -> Conn -> Conn
+appendToBody x conn =
     case conn.resp of
         Unsent resp ->
-            resp
+            case resp.body of
+                TextBody y ->
+                    conn |> body (TextBody (y ++ x))
+
+                NoBody ->
+                    conn |> body (TextBody x)
 
         Sent ->
-            Debug.crash "expected sendable to be Unsent, but it was Sent"
+            conn
 
 
 initResponseTest : String -> (Response -> Expectation) -> Test
@@ -31,9 +37,48 @@ initResponseTest label e =
                     Expect.fail "initResponse was already Sent"
 
 
+unsentOrCrash : Conn -> Response
+unsentOrCrash conn =
+    case conn.resp of
+        Unsent resp ->
+            resp
+
+        Sent ->
+            Debug.crash "expected sendable to be Unsent, but it was Sent"
+
+
 updateReq : (Request -> Request) -> Conn -> Conn
 updateReq update conn =
     { conn | req = update conn.req }
+
+
+simplePlug : String -> Conn -> Conn
+simplePlug =
+    appendToBody
+
+
+simpleLoop : String -> Msg -> Conn -> ( Conn, Cmd Msg )
+simpleLoop label msg conn =
+    ( conn |> appendToBody label, Cmd.none )
+
+
+simpleFork : String -> Conn -> Pipeline
+simpleFork label conn =
+    case conn.req.method of
+        GET ->
+            pipeline |> plug (simplePlug ("GET" ++ label))
+
+        POST ->
+            pipeline |> plug (simplePlug ("POST" ++ label))
+
+        PUT ->
+            pipeline |> plug (simplePlug ("PUT" ++ label))
+
+        DELETE ->
+            pipeline |> plug (simplePlug ("DELETE" ++ label))
+
+        OPTIONS ->
+            pipeline |> plug (simplePlug ("OPTIONS" ++ label))
 
 
 

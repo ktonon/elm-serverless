@@ -6,7 +6,6 @@ import ElmTestBDDStyle exposing (..)
 import Expect exposing (..)
 import Expect.Extra exposing (contain)
 import Serverless.Conn exposing (..)
-import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (PipelineState(..), Plug(..), Sendable(..))
 import Test exposing (..)
 import TestHelpers exposing (..)
@@ -27,24 +26,19 @@ all =
 -- BUILDING PIPELINES TESTS
 
 
-simplePlug : Conn -> Conn
-simplePlug =
-    body (TextBody "simple")
+sp : Conn -> Conn
+sp =
+    simplePlug ""
 
 
-simpleLoop : Msg -> Conn -> ( Conn, Cmd Msg )
-simpleLoop msg =
-    send responsePort
+sl : Msg -> Conn -> ( Conn, Cmd Msg )
+sl =
+    simpleLoop ""
 
 
-simpleFork : Conn -> Pipeline
-simpleFork conn =
-    case conn.req.method of
-        GET ->
-            pipeline |> plug simplePlug
-
-        _ ->
-            simpleLoop NoOp |> toPipeline
+sf : Conn -> Pipeline
+sf =
+    simpleFork ""
 
 
 buildingPipelinesTests : Test
@@ -56,37 +50,37 @@ buildingPipelinesTests =
             ]
         , describe "toPipeline"
             [ it "makes a pipeline of length 1" <|
-                expect (simpleLoop NoOp |> toPipeline |> Array.length) to equal 1
+                expect (simpleLoop "" NoOp |> toPipeline |> Array.length) to equal 1
             ]
         , describe "plug"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> plug simplePlug |> Array.length) to equal 1
+                expect (pipeline |> plug sp |> Array.length) to equal 1
             , it "wraps a simple conn transformation as a Plug" <|
-                expect (pipeline |> plug simplePlug |> Array.get 0)
+                expect (pipeline |> plug sp |> Array.get 0)
                     to
                     equal
-                    (Just (Plug simplePlug))
+                    (Just (Plug sp))
             ]
         , describe "loop"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> loop simpleLoop |> Array.length) to equal 1
+                expect (pipeline |> loop sl |> Array.length) to equal 1
             , it "wraps an update function as a Plug" <|
-                expect (pipeline |> loop simpleLoop |> Array.get 0)
+                expect (pipeline |> loop sl |> Array.get 0)
                     to
                     equal
-                    (Just (Loop simpleLoop))
+                    (Just (Loop sl))
             ]
         , describe "nest"
             [ it "extends the pipeline by the length of the nested pipeline" <|
                 expect
                     (pipeline
-                        |> plug simplePlug
-                        |> loop simpleLoop
+                        |> plug sp
+                        |> loop sl
                         |> nest
                             (pipeline
-                                |> plug simplePlug
-                                |> plug simplePlug
-                                |> loop simpleLoop
+                                |> plug sp
+                                |> plug sp
+                                |> loop sl
                             )
                         |> Array.length
                     )
@@ -96,12 +90,12 @@ buildingPipelinesTests =
             ]
         , describe "fork"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> fork simpleFork |> Array.length) to equal 1
+                expect (pipeline |> fork sf |> Array.length) to equal 1
             , it "wraps a router function as a Router" <|
-                expect (pipeline |> fork simpleFork |> Array.get 0)
+                expect (pipeline |> fork sf |> Array.get 0)
                     to
                     equal
-                    (Just (Router simpleFork))
+                    (Just (Router sf))
             ]
         ]
 
