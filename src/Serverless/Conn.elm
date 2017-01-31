@@ -55,7 +55,7 @@ transformations. For example,
         |> header ( "content-type", "text/text" )
         |> body (TextBody "hello world")
 
-@docs body, header, status, send
+@docs body, textBody, jsonBody, header, status, send
 
 ## Responding with Errors
 
@@ -82,6 +82,7 @@ the results of a side effect.
 
 import Array
 import Dict
+import Json.Encode as J
 import Serverless.Pool exposing (..)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (..)
@@ -230,6 +231,26 @@ body val conn =
 
         Sent ->
             conn
+
+
+{-| Sets the given string as the response body.
+
+Also sets the `Content-Type` to `text/text`.
+-}
+textBody : String -> Conn config model -> Conn config model
+textBody val =
+    body (TextBody val)
+        >> header ( "content-type", "text/text" )
+
+
+{-| Sets the given JSON value as the response body.
+
+Also sets the `Content-Type` to `application/json`.
+-}
+jsonBody : J.Value -> Conn config model -> Conn config model
+jsonBody val =
+    body (JsonBody val)
+        >> header ( "content-type", "application/json" )
 
 
 {-| Set a response header

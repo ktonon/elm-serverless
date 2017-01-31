@@ -284,6 +284,9 @@ encodeBody body =
         TextBody w ->
             J.string w
 
+        JsonBody j ->
+            j
+
 
 encodeCharset : Charset -> J.Value
 encodeCharset =

@@ -109,12 +109,10 @@ respondWithQuotes msg conn =
                 -- successfully loaded all the quotes, so we can sort, format,
                 -- and send them in the response body.
                 |>
-                    body
+                    jsonBody
                         (conn.model.quotes
                             |> List.sortBy .lang
-                            |> List.map (formatQuote "<br/>")
-                            |> String.join "<br/><br/>"
-                            |> TextBody
+                            |> encodeQuotes
                         )
                 |> send responsePort
 

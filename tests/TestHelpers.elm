@@ -18,6 +18,9 @@ appendToBody x conn =
                 TextBody y ->
                     conn |> body (TextBody (y ++ x))
 
+                JsonBody _ ->
+                    Debug.crash "appendToBody only works with TextBody"
+
                 NoBody ->
                     conn |> body (TextBody x)
 
