@@ -13,7 +13,8 @@ module Serverless.Conn exposing (..)
 
 A __pipeline__ is a sequence of functions which transform the connection,
 eventually sending back the HTTP response. We use the term __plug__ to mean a
-single function that is part of the pipeline.
+single function that is part of the pipeline. But a pipeline is also just a plug
+and so pipelines can be composed from other pipelines.
 
 ## Table of Contents
 
@@ -36,7 +37,11 @@ Use these functions to build your pipelines. For example,
             |> nest anotherPipeline
             |> fork router
 
-@docs pipeline, toPipeline, plug, loop, nest, fork
+@docs pipeline, plug, loop, fork, nest
+
+## Routing
+
+@docs parseRoute
 
 ## Response
 
@@ -55,18 +60,14 @@ transformations. For example,
         |> header ( "content-type", "text/text" )
         |> body (TextBody "hello world")
 
-@docs body, textBody, jsonBody, header, status, send
+@docs body, textBody, jsonBody, header, status, statusCode, send, toResponder
 
 ## Responding with Errors
 
-The following functions set the HTTP status code to 500 and send a response
-with an error message.
+The following functions set the HTTP status code to 500 and set the body to
+an error response.
 
 @docs internalError, unexpectedMsg
-
-## Routing
-
-@docs parseRoute
 
 ## Pipeline Processing
 
@@ -94,29 +95,36 @@ import UrlParser exposing (Parser, (</>), oneOf, parse, map, int, s)
 
 {-| Begins a pipeline.
 
-Build the pipeline by chaining simple and update plugs with
-`|> plug` and `|> loop` respectively.
+Build the pipeline by chaining plugs with plug, loop, fork, and nest.
 -}
-pipeline : Pipeline config model msg
+pipeline : Plug config model msg
 pipeline =
-    Array.empty
+    Pipeline Array.empty
 
 
-{-| Converts a single function to a pipeline.
+{-| Extends the pipeline with a plug.
 
-For creating a simple pipeline from a responder function when a pipeline is
-expected.
-
-    status (Code 404)
-        >> body (TextBody "Not found")
-        >> send responsePort
-        |> toPipeline
+This is the most general of the pipeline building functions. Since it just
+accepts a plug, and since a plug can be a pipeline, it can be used to extend a
+pipeline with a group of plugs.
 -}
-toPipeline :
-    (Conn config model -> ( Conn config model, Cmd msg ))
-    -> Pipeline config model msg
-toPipeline responder =
-    pipeline |> loop (\msg conn -> conn |> responder)
+nest :
+    Plug config model msg
+    -> Plug config model msg
+    -> Plug config model msg
+nest plug pipeline =
+    case ( pipeline, plug ) of
+        ( Pipeline begin, Pipeline end ) ->
+            Array.append begin end |> Pipeline
+
+        ( Pipeline begin, _ ) ->
+            begin |> Array.push plug |> Pipeline
+
+        ( _, Pipeline end ) ->
+            Array.append (Array.fromList [ pipeline ]) end |> Pipeline
+
+        _ ->
+            Array.fromList [ pipeline, plug ] |> Pipeline
 
 
 {-| Extend the pipeline with a simple plug.
@@ -128,17 +136,17 @@ A plug just transforms the connection. For example,
 -}
 plug :
     (Conn config model -> Conn config model)
-    -> Pipeline config model msg
-    -> Pipeline config model msg
-plug plug pipeline =
-    pipeline |> Array.push (Plug plug)
+    -> Plug config model msg
+    -> Plug config model msg
+plug func =
+    nest (Simple func)
 
 
 {-| Extends the pipeline with an update plug.
 
 An update plug can transform the connection and or return a side effect (`Cmd`).
 Loop plugs should use `pipelinePause` and `pipelineResume` when working with side
-effects. They are defined in the `Serverless.Conn` module.
+effects. See [Pipeline Processing](#pipeline-processing) for more.
 
     -- Loop plug which does nothing
     pipeline
@@ -146,33 +154,23 @@ effects. They are defined in the `Serverless.Conn` module.
 -}
 loop :
     (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    -> Pipeline config model msg
-    -> Pipeline config model msg
-loop update pipeline =
-    pipeline |> Array.push (Loop update)
-
-
-{-| Nest a child pipeline into a parent pipeline.
--}
-nest :
-    Pipeline config model msg
-    -> Pipeline config model msg
-    -> Pipeline config model msg
-nest child parent =
-    Array.append parent child
+    -> Plug config model msg
+    -> Plug config model msg
+loop func =
+    nest (Update func)
 
 
 {-| Adds a router to the pipeline.
 
 A router can branch a pipeline into many smaller pipelines depending on the
-route message passed in.
+route message passed in. See [Routing](#routing) for more.
 -}
 fork :
-    (Conn config model -> Pipeline config model msg)
-    -> Pipeline config model msg
-    -> Pipeline config model msg
-fork router pipeline =
-    pipeline |> Array.push (Router router)
+    (Conn config model -> Plug config model msg)
+    -> Plug config model msg
+    -> Plug config model msg
+fork func =
+    nest (Router func)
 
 
 
@@ -199,9 +197,13 @@ fork router pipeline =
             ]
 
 
-    myRouter : Conn -> Pipeline
+    myRouter : Conn -> Plug
     myRouter conn =
-        case (conn.req.method, conn |> parseRoute route NotFound ) of
+        case
+            ( conn.req.method
+            , conn |> parseRoute route NotFound
+            )
+        of
             ( GET, Home ) ->
                 -- pipeline for home...
 
@@ -253,7 +255,10 @@ jsonBody val =
         >> header ( "content-type", "application/json" )
 
 
-{-| Set a response header
+{-| Set a response header.
+
+If you set the same response header more than once, the second value will
+override the first.
 -}
 header : ( String, String ) -> Conn config model -> Conn config model
 header ( key, value ) conn =
@@ -285,6 +290,13 @@ status val conn =
             conn
 
 
+{-| Alias for `status (Code value)`
+-}
+statusCode : Int -> Conn config model -> Conn config model
+statusCode value =
+    status (Code value)
+
+
 {-| Sends a connection response through the given port
 -}
 send : ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
@@ -301,6 +313,31 @@ send port_ conn =
             )
 
 
+{-| Convert a connection transformer into a plug which sends the response.
+
+Good for quickly creating a pipeline inside a router.
+
+    router : Conn -> Plug
+    router conn =
+        case
+            ( conn.req.method
+            , conn |> parseRoute route NotFound
+            )
+        of
+            -- other cases...
+
+            _ ->
+                toResponder responsePort <|
+                    \conn ->
+                        conn
+                            |> statusCode 404
+                            |> textBody ("Nothing at: " ++ conn.req.path)
+-}
+toResponder : ResponsePort msg -> (Conn config model -> Conn config model) -> Plug config model msg
+toResponder port_ func =
+    Update (\msg -> func >> send port_)
+
+
 
 -- RESPONDING WITH ERRORS
 
@@ -309,11 +346,10 @@ send port_ conn =
 
 The given value is converted to a string and set to the response body.
 -}
-internalError : Body -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
-internalError val port_ =
+internalError : Body -> Conn config model -> Conn config model
+internalError val =
     status (Code 500)
         >> body val
-        >> send port_
 
 
 {-| Respond with an unexpected message error.
@@ -321,7 +357,7 @@ internalError val port_ =
 Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
 not expect to receive in a loop plug.
 -}
-unexpectedMsg : msg -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
+unexpectedMsg : msg -> Conn config model -> Conn config model
 unexpectedMsg msg =
     internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)
 
@@ -346,10 +382,17 @@ same amount for pipeline processing to continue onto the next plug.
 An internal server error will be sent through the responsePort if the pause
 increment is negative. A pause increment of zero will have no effect.
 -}
-pipelinePause : Int -> Cmd msg -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
+pipelinePause :
+    Int
+    -> Cmd msg
+    -> ResponsePort msg
+    -> Conn config model
+    -> ( Conn config model, Cmd msg )
 pipelinePause i cmd port_ conn =
     if i < 0 then
-        conn |> internalError (TextBody "pause pipeline called with negative value") port_
+        conn
+            |> internalError (TextBody "pause pipeline called with negative value")
+            |> send port_
     else
         ( case conn.pipelineState of
             Processing ->
@@ -384,10 +427,16 @@ multiple calls, as long as the sum of pauses equals the sum of resumes.
 An internal server error will be sent through the responsePort if the pause
 count goes below zero. A resume increment of zero will have no effect.
 -}
-pipelineResume : Int -> ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
+pipelineResume :
+    Int
+    -> ResponsePort msg
+    -> Conn config model
+    -> ( Conn config model, Cmd msg )
 pipelineResume i port_ conn =
     if i < 0 then
-        conn |> internalError (TextBody "resume pipeline called with negative value") port_
+        conn
+            |> internalError (TextBody "resume pipeline called with negative value")
+            |> send port_
     else
         case conn.pipelineState of
             Processing ->
@@ -396,7 +445,10 @@ pipelineResume i port_ conn =
                         ( conn, Cmd.none )
 
                     _ ->
-                        conn |> internalError (TextBody "resume pipeline called, but processing was not paused") port_
+                        conn
+                            |> internalError
+                                (TextBody "resume pipeline called, but processing was not paused")
+                            |> send port_
 
             Paused j ->
                 if j - i > 0 then
@@ -404,7 +456,9 @@ pipelineResume i port_ conn =
                 else if j - i == 0 then
                     ( { conn | pipelineState = Processing }, Cmd.none )
                 else
-                    conn |> internalError (TextBody "resume pipeline underflow") port_
+                    conn
+                        |> internalError (TextBody "resume pipeline underflow")
+                        |> send port_
 
 
 

@@ -1,7 +1,8 @@
 module TestHelpers exposing (..)
 
+import Array
 import Expect exposing (Expectation)
-import Serverless.Conn exposing (body, pipeline, plug, toPipeline)
+import Serverless.Conn exposing (body, pipeline, plug)
 import Serverless.Conn.Types exposing (Body(..), Method(..), Response, Request)
 import Serverless.Pool exposing (initResponse)
 import Serverless.Types exposing (Sendable(..), ResponsePort)
@@ -50,6 +51,18 @@ unsentOrCrash conn =
             Debug.crash "expected sendable to be Unsent, but it was Sent"
 
 
+{-| The number of plugs in the pipeline.
+-}
+pipelineCount : Plug -> Int
+pipelineCount plug =
+    case plug of
+        Serverless.Types.Pipeline pipeline ->
+            pipeline |> Array.length
+
+        _ ->
+            1
+
+
 updateReq : (Request -> Request) -> Conn -> Conn
 updateReq update conn =
     { conn | req = update conn.req }
@@ -65,7 +78,7 @@ simpleLoop label msg conn =
     ( conn |> appendToBody label, Cmd.none )
 
 
-simpleFork : String -> Conn -> Pipeline
+simpleFork : String -> Conn -> Plug
 simpleFork label conn =
     case conn.req.method of
         GET ->

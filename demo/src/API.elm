@@ -32,7 +32,7 @@ main =
 A pipeline is a sequence of plugs, each of which transforms the connection
 in some way.
 -}
-pipeline : Pipeline
+pipeline : Plug
 pipeline =
     Conn.pipeline
         -- Simple plugs just transform the connection.
@@ -44,29 +44,56 @@ pipeline =
             fork router
 
 
-router : Conn -> Pipeline
+{-| This is an example of middleware.
+
+Normally this would be defined in an external module, or package, but we include
+it here as a demonstration.
+-}
+cors : String -> List Method -> Conn -> Conn
+cors origin methods =
+    (Conn.header ( "access-control-allow-origin", origin ))
+        >> (Conn.header
+                ( "access-control-allow-headers"
+                , methods
+                    |> List.map toString
+                    |> String.join ", "
+                )
+           )
+
+
+router : Conn -> Plug
 router conn =
     -- This router parses `conn.req.path` into elm data thanks to
     -- evancz/url-parser (modified for use outside of the browser).
     -- We can then match on the HTTP method and route, returning custom
     -- pipelines for each combination.
-    case ( conn.req.method, conn |> parseRoute route NotFound ) of
+    case
+        ( conn.req.method
+        , conn |> parseRoute route NotFound
+        )
+    of
         ( GET, Home ) ->
-            status (Code 200)
-                >> body (TextBody "Home")
-                >> send responsePort
-                |> toPipeline
+            -- toResponder can quickly create a loop plug which sends a response
+            statusCode 200
+                >> textBody "Home"
+                |> toResponder responsePort
 
-        ( GET, Quote lang ) ->
+        ( _, Quote lang ) ->
             -- Notice that we are passing part of the router result
             -- (i.e. `lang`) into `loadQuotes`.
-            Quote.pipeline lang
+            Quote.router conn.req.method lang
+
+        ( GET, Buggy ) ->
+            internalError (TextBody "bugs, bugs, bugs")
+                |> toResponder responsePort
 
         _ ->
-            status (Code 404)
-                >> body (TextBody "Nothing here")
-                >> send responsePort
-                |> toPipeline
+            -- use this form of toResponder when you need to access the conn
+            toResponder responsePort <|
+                \conn ->
+                    conn
+                        |> statusCode 404
+                        |> textBody ("Nothing at: " ++ conn.req.path)
 
 
 

@@ -17,10 +17,6 @@ type Msg
     = NoOp
 
 
-type alias Pipeline =
-    Types.Pipeline Config Model Msg
-
-
 type alias Plug =
     Types.Plug Config Model Msg
 

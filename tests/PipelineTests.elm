@@ -10,14 +10,16 @@ import TestHelpers exposing (..)
 import TestTypes exposing (..)
 
 
-testApplyPipeline : String -> Pipeline -> (Conn -> Bool -> Expectation) -> Test
+testApplyPipeline : String -> Plug -> (Conn -> Bool -> Expectation) -> Test
 testApplyPipeline label pl tester =
     testConn label <|
         \conn ->
             case
                 (conn
                     |> body (TextBody "")
-                    |> applyPipeline (Options NoOp responsePort pl) (PlugMsg firstIndexPath NoOp) 0 []
+                    |> applyPipeline
+                        (Serverless.Pipeline.newOptions NoOp responsePort pl)
+                        (PlugMsg firstIndexPath NoOp)
                 )
             of
                 ( newConn, cmd ) ->

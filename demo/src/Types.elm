@@ -58,10 +58,6 @@ type Msg
 -- then import this module instead, to make your code more readable.
 
 
-type alias Pipeline =
-    Types.Pipeline Config Model Msg
-
-
 type alias Plug =
     Types.Plug Config Model Msg
 

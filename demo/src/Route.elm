@@ -6,6 +6,7 @@ import UrlParser exposing (..)
 type Route
     = Home
     | Quote Lang
+    | Buggy
     | NotFound
 
 
@@ -19,6 +20,7 @@ route =
     oneOf
         [ map Home top
         , map Quote (s "quote" </> lang)
+        , map Buggy (s "buggy")
         ]
 
 

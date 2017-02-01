@@ -2,9 +2,12 @@ module Serverless.Pipeline exposing (..)
 
 import Array exposing (Array)
 import Json.Encode as J
-import Serverless.Conn exposing (body, send, status)
-import Serverless.Conn.Types exposing (Id, Body(..), Status(..))
-import Serverless.Types exposing (Conn, Pipeline, PipelineState(..), Plug(..), Sendable(..))
+import Serverless.Conn exposing (body, send, status, internalError)
+import Serverless.Conn.Types exposing (Body(..), Id, Status(..))
+import Serverless.Types exposing (Conn, PipelineState(..), Plug(..), ResponsePort, Sendable(..))
+
+
+-- MODEL
 
 
 type Msg msg
@@ -16,6 +19,14 @@ type PlugMsg msg
     = PlugMsg IndexPath msg
 
 
+type alias UnwrappedPlugMsg config model msg =
+    { msg : msg
+    , indexPath : IndexPath
+    , index : Index
+    , plug : Plug config model msg
+    }
+
+
 type alias IndexPath =
     Array Index
 
@@ -24,85 +35,49 @@ type alias Index =
     Int
 
 
+type alias Options config model msg =
+    { appCmdAcc : Cmd (Msg msg)
+    , indexDepth : IndexDepth
+    , endpoint : msg
+    , responsePort : ResponsePort (Msg msg)
+    , pipeline : Plug config model msg
+    }
+
+
 type alias IndexDepth =
     Int
 
 
-firstIndexPath : IndexPath
-firstIndexPath =
-    Array.empty |> Array.push 0
 
-
-type alias Options config model msg =
-    { endpoint : msg
-    , responsePort : J.Value -> Cmd (Msg msg)
-    , pipeline : Pipeline config model msg
-    }
+-- PIPELINE PROCESSING
 
 
 applyPipeline :
     Options config model msg
     -> PlugMsg msg
-    -> IndexDepth
-    -> List (Cmd (Msg msg))
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
-applyPipeline opt plugMsg depth appCmdAcc conn =
-    case plugMsg of
-        PlugMsg indexPath msg ->
-            case indexPath |> Array.get depth of
-                Nothing ->
-                    if appCmdAcc |> List.isEmpty then
-                        conn |> lostIt opt
-                    else
-                        ( conn, Cmd.batch appCmdAcc )
+applyPipeline opt plugMsg conn =
+    case plugMsg |> unwrapPlugMsg opt of
+        Nothing ->
+            ( conn, opt.appCmdAcc )
 
-                Just index ->
-                    case opt.pipeline |> Array.get index of
-                        Just plug ->
-                            applyPipelineHelper
-                                opt
-                                appCmdAcc
-                                plug
-                                index
-                                indexPath
-                                depth
-                                msg
-                                conn
-
-                        Nothing ->
-                            if appCmdAcc |> List.isEmpty then
-                                conn |> lostIt opt
-                            else
-                                ( conn, Cmd.batch appCmdAcc )
+        Just upm ->
+            conn |> applyUnwrappedPlugMsg opt upm
 
 
-applyPipelineHelper :
+applyUnwrappedPlugMsg :
     Options config model msg
-    -> List (Cmd (Msg msg))
-    -> Plug config model msg
-    -> Index
-    -> IndexPath
-    -> IndexDepth
-    -> msg
+    -> UnwrappedPlugMsg config model msg
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
-applyPipelineHelper opt appCmdAcc plug index indexPath depth msg conn =
+applyUnwrappedPlugMsg opt upm conn =
     let
-        ( newConn, cmd, appCmd ) =
-            conn |> applyPlug opt appCmdAcc index indexPath depth plug msg
+        ( newConn, appCmd ) =
+            conn |> applyPlug opt upm
 
-        newAppCmds =
-            [ cmd
-                |> Cmd.map (PlugMsg indexPath)
-                |> Cmd.map (HandlerMsg conn.req.id)
-            , appCmd
-            ]
-                |> cmdReduce
-
-        newAppCmdAcc =
-            List.append appCmdAcc newAppCmds
-                |> cmdReduce
+        newOpt =
+            opt |> addAppCmd appCmd
     in
         case newConn.resp of
             Unsent _ ->
@@ -110,121 +85,135 @@ applyPipelineHelper opt appCmdAcc plug index indexPath depth msg conn =
                     Processing ->
                         newConn
                             |> applyPipeline
-                                opt
+                                newOpt
                                 (PlugMsg
-                                    (indexPath |> Array.set depth (index + 1))
-                                    opt.endpoint
+                                    -- Move on to the next plug in the pipeline
+                                    -- at the same depth
+                                    (upm.indexPath
+                                        |> Array.set
+                                            newOpt.indexDepth
+                                            (upm.index + 1)
+                                    )
+                                    -- New plugs always receive the endpoint
+                                    -- as the first message
+                                    newOpt.endpoint
                                 )
-                                depth
-                                newAppCmdAcc
 
                     Paused _ ->
-                        if newAppCmdAcc |> List.isEmpty then
-                            conn |> lostIt opt
-                        else
-                            ( newConn, Cmd.batch newAppCmdAcc )
+                        ( newConn, newOpt.appCmdAcc )
 
             Sent ->
-                if newAppCmdAcc |> List.isEmpty then
-                    conn |> lostIt opt
-                else
-                    ( newConn, Cmd.batch newAppCmdAcc )
+                ( newConn, newOpt.appCmdAcc )
 
 
 applyPlug :
     Options config model msg
-    -> List (Cmd (Msg msg))
-    -> Index
-    -> IndexPath
-    -> IndexDepth
-    -> Plug config model msg
-    -> msg
+    -> UnwrappedPlugMsg config model msg
     -> Conn config model
-    -> ( Conn config model, Cmd msg, Cmd (Msg msg) )
-applyPlug opt appCmdAcc index indexPath depth plug msg conn =
-    case plug of
-        Plug transform ->
-            let
-                ( newConn, cmd ) =
-                    ( conn |> transform, Cmd.none )
-            in
-                ( newConn, cmd, Cmd.none )
+    -> ( Conn config model, Cmd (Msg msg) )
+applyPlug opt upm conn =
+    case upm.plug of
+        Simple transform ->
+            ( conn |> transform
+            , Cmd.none
+            )
 
-        Loop update ->
+        Update update ->
             let
                 ( newConn, cmd ) =
-                    conn |> update msg
+                    conn |> update upm.msg
             in
-                ( newConn, cmd, Cmd.none )
+                ( newConn
+                , cmd
+                    |> Cmd.map (PlugMsg upm.indexPath)
+                    |> Cmd.map (HandlerMsg conn.req.id)
+                )
 
         Router router ->
-            let
-                ( newConn, appCmd ) =
-                    conn
-                        |> applyRouter
-                            opt
-                            appCmdAcc
-                            index
-                            indexPath
-                            depth
-                            router
-                            msg
-            in
-                ( newConn, Cmd.none, appCmd )
-
-
-applyRouter :
-    Options config model msg
-    -> List (Cmd (Msg msg))
-    -> Index
-    -> IndexPath
-    -> IndexDepth
-    -> (Conn config model -> Pipeline config model msg)
-    -> msg
-    -> Conn config model
-    -> ( Conn config model, Cmd (Msg msg) )
-applyRouter opt appCmdAcc index indexPath depth router msg conn =
-    let
-        newOpt =
             conn
-                |> router
-                |> Options opt.endpoint opt.responsePort
-    in
-        if newOpt.pipeline |> Array.isEmpty then
-            conn
-                |> status (Code 500)
-                |> body (TextBody "router yielded empty pipeline")
-                |> send opt.responsePort
-        else
+                -- Increase the pipeline depth, updates the index path to make
+                -- sure it is long enough given the new depth, and changes the
+                -- active pipeline to that which is returned from the router.
+                |>
+                    incrementIndexDepth
+                        (opt |> updatePipelineFromRouter router conn)
+                        upm
+
+        Pipeline nested ->
             let
-                newIndexPath =
-                    if (indexPath |> Array.length) < depth + 2 then
-                        indexPath |> Array.push 0
-                    else
-                        indexPath
+                _ =
+                    Debug.log "pipeline was not flatted" nested
             in
                 conn
-                    |> applyPipeline
-                        newOpt
-                        (PlugMsg
-                            newIndexPath
-                            msg
-                        )
-                        (depth + 1)
-                        appCmdAcc
+                    |> internalError (TextBody "pipelines was not flattened")
+                    |> send opt.responsePort
 
 
-cmdReduce : List (Cmd msg) -> List (Cmd msg)
-cmdReduce =
-    List.filter (\cmd -> cmd /= Cmd.none)
+updatePipelineFromRouter :
+    (Conn config model -> Plug config model msg)
+    -> Conn config model
+    -> Options config model msg
+    -> Options config model msg
+updatePipelineFromRouter router conn opt =
+    conn
+        |> router
+        |> (\pl -> { opt | pipeline = pl })
 
 
-lostIt :
+incrementIndexDepth :
     Options config model msg
+    -> UnwrappedPlugMsg config model msg
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
-lostIt opt conn =
+incrementIndexDepth opt upm conn =
     conn
-        |> status (Code 500)
-        |> body (TextBody "processing fell off the pipeline, ouch")
-        |> send opt.responsePort
+        |> applyPipeline
+            { opt | indexDepth = opt.indexDepth + 1 }
+            (PlugMsg
+                (if (upm.indexPath |> Array.length) < opt.indexDepth + 2 then
+                    upm.indexPath |> Array.push 0
+                 else
+                    upm.indexPath
+                )
+                upm.msg
+            )
+
+
+firstIndexPath : IndexPath
+firstIndexPath =
+    Array.empty |> Array.push 0
+
+
+newOptions : msg -> ResponsePort (Msg msg) -> Plug config model msg -> Options config model msg
+newOptions =
+    Options Cmd.none 0
+
+
+addAppCmd : Cmd (Msg msg) -> Options config model msg -> Options config model msg
+addAppCmd cmd opt =
+    { opt | appCmdAcc = Cmd.batch [ cmd, opt.appCmdAcc ] }
+
+
+unwrapPlugMsg : Options config model msg -> PlugMsg msg -> Maybe (UnwrappedPlugMsg config model msg)
+unwrapPlugMsg opt plugMsg =
+    case plugMsg of
+        PlugMsg indexPath msg ->
+            indexPath
+                |> Array.get opt.indexDepth
+                |> Maybe.andThen
+                    (\index ->
+                        case opt.pipeline of
+                            Pipeline pipeline ->
+                                case pipeline |> Array.get index of
+                                    Nothing ->
+                                        Nothing
+
+                                    Just plug ->
+                                        Just (UnwrappedPlugMsg msg indexPath index plug)
+
+                            _ ->
+                                if index == 0 then
+                                    Just (UnwrappedPlugMsg msg indexPath index opt.pipeline)
+                                else
+                                    Nothing
+                    )

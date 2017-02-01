@@ -18,7 +18,7 @@ const httpApi = (opt) => {
       delete callbacks[resp.id];
       cb(null, {
         statusCode: resp.statusCode,
-        body: resp.body,
+        body: encodeBody(resp.body),
         headers: resp.headers,
       });
     } else {
@@ -51,5 +51,9 @@ const httpApi = (opt) => {
     app.ports[opt.requestPort].send(req);
   };
 };
+
+const encodeBody = (raw) => (typeof raw === 'string'
+  ? raw
+  : JSON.stringify(raw));
 
 module.exports.httpApi = httpApi;

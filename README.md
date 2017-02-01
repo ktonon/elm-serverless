@@ -1,64 +1,102 @@
-elm serverless
-==============
+# elm serverless
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![npm version](https://badge.fury.io/js/elm-serverless.svg)](https://badge.fury.io/js/elm-serverless)
-[![Gitter chat](https://badges.gitter.im/ktonon/elm-serverless.png)](https://gitter.im/elm-serverless/Lobby)
-[![CircleCI](https://circleci.com/gh/ktonon/elm-serverless.svg?style=svg)](https://circleci.com/gh/ktonon/elm-serverless)
+[![elm-package](https://img.shields.io/badge/elm -3.0.0-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
+[![npm version](https://img.shields.io/npm/v/elm-serverless.svg)](https://www.npmjs.com/package/elm-serverless)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ktonon/elm-serverless/blob/master/LICENSE.txt)
+[![CircleCI](https://img.shields.io/circleci/project/github/ktonon/elm-serverless.svg)](https://circleci.com/gh/ktonon/elm-serverless)
+[![gitter](https://img.shields.io/gitter/room/elm-serverless/Lobby.svg)](https://gitter.im/elm-serverless/Lobby)
 
-__Experimental (WIP): Not for use in production__
+![Logo](./logo86x128.png)
 
-Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][].
+__Beta Release 3.0.0__
+
+Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your API in elm and then use the npm package to bridge the interface between the [AWS Lambda handler][] and your elm program.
+
+
+## Intro
+You define a `Serverless.Program`, which among other things, is configured with a `Pipeline`.
+
+```elm
+main : Serverless.Program Config Model Msg
+main =
+    Serverless.httpApi
+        { configDecoder = configDecoder     -- Decode once per Lambda container
+        , requestPort = requestPort
+        , responsePort = responsePort
+        , endpoint = Endpoint               -- Processing starts with this msg
+        , initialModel = Model []           -- Fresh custom model per connection
+        , pipeline = pipeline               -- Pipelines process connections
+        , subscriptions = subscriptions
+        }
+
+```
+
+* pipelines are lists of `Plug`s
+* each plug receives a connection (called `Conn`) and transforms it in some way
+* connections contain the HTTP request, the as yet unsent response, and some other stuff which is specific to your application
+
+Basically, the pipeline takes the place of the usual `update` function in a traditional elm app. And instead of transforming your `Model`, you transform a `Conn`, which contains your `Model`, but also has the request, response, and per deployment configuration.
+
+```elm
+pipeline : Plug
+pipeline =
+    Conn.pipeline
+        |> plug (cors "*" [ GET, OPTIONS ]) -- Plugs transform a connection
+        |> plug authentication              -- Plugs are chained in a pipeline
+        -- ...
+        |> fork router                      -- Routers fork pipelines
+
+```
+
+For routing, we use a [modified version](http://package.elm-lang.org/packages/ktonon/url-parser/latest/) of `evancz/url-parser`, adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
+
+```elm
+router : Conn -> Plug
+router conn =
+    case                                    -- Route however you want, here we
+        ( conn.req.method                   -- use HTTP method
+        , conn |> parseRoute route NotFound -- and parsed request path
+        )
+    of
+        ( GET, Home ) ->
+            statusCode 200
+                >> textBody "Home"
+                |> toResponder responsePort
+
+            -- vvvvvvvvvv --                -- UrlParser gives structured routes
+        ( GET, Quote lang ) ->
+            Quote.pipeline lang             -- Defer to another module
+
+        _ ->
+            statusCode 404
+                >> textBody "Nothing here"
+                |> toResponder responsePort
+```
 
 ## Demo
 
-Clone this project, then run:
+For a complete working example, take a look at [demo/src/API.elm][]. To quickly get it running, clone this project, then run:
 
 ```shell
 $ npm install -g elm@0.18
 $ npm install
 $ npm run demo:install
-$ npm run demo
+$ npm start
 ```
 
 Your server will be running locally at [http://localhost:8000][]
 See the [demo/README][] for more.
 
-## What is it?
+## Middleware
 
-* an npm package [elm-serverless][] which bridges the interface between an [AWS Lambda handler][] and your elm program
-* an elm package [ktonon/elm-serverless][] which provides a framework for writing simple HTTP APIs
+The following is a list of known middleware:
 
-## How it works
+* [ktonon/elm-serverless-cors][] add [CORS][] to your response headers
 
-Learn by example. Take a look at [demo/src/API.elm][].
+## AWS
 
-Here is a quick summary:
-
-* you define a `Serverless.Program` which among other things, is configured with a `Pipeline`
-* pipelines are lists of `Plug`s
-* each plug receives a connection (called `Conn`) and transforms it in some way
-* connections contain the HTTP request, the as yet unsent response, and some other stuff which is specific to your application
-
-Basically, the pipeline takes the place of the usual `update` function in a traditional elm app. And instead of transforming your `Model`, you transform a `Conn`, which contains your `Model`, but also has the request and response stuff.
-
-__Routing__
-
-We use a [modified version](http://package.elm-lang.org/packages/ktonon/url-parser/latest/) of `evancz/url-parser`, adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
-
-## Roadmap
-
-__Updated: January 27, 2017__
-
-This is a _work in progress_. It is missing basic functionality required for a server framework. My goal is to get minimum viable functionality working in about a months time (i.e. late-February). What remains to be implemented:
-
-* __Routers__: basic routing is implemented now, but needs lots of testing and likely refactoring.
-* __Basic middleware__: the pipelines already make this possible, but we'll still need to define middleware for things like [CORS][], [JWT][], body parsing, and so on...
-* [AWS SDK for elm][]: an AWS Lambda function would be pretty limited without an interface to the rest of AWS. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
-
-## Collaboration
-
-I am open to collaboration. Post a message on [gitter][] if you are interested and we can talk about how to factor off a chunk of the work.
+An AWS Lambda function would be pretty limited without an interface to the rest of AWS. [AWS SDK for elm][] is a __work in progress__. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
 
 [http://localhost:8000]:http://localhost:8000
 [AWS Lambda]:https://aws.amazon.com/lambda
@@ -75,6 +113,7 @@ I am open to collaboration. Post a message on [gitter][] if you are interested a
 [gitter]:https://gitter.im/elm-serverless/Lobby
 [JWT]:https://jwt.io/
 [ktonon/elm-serverless]:http://package.elm-lang.org/packages/ktonon/elm-serverless/latest
+[ktonon/elm-serverless-cors]:http://package.elm-lang.org/packages/ktonon/elm-serverless-cors/latest
 [serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
 [serverless]:https://github.com/serverless/serverless
 [webpack]:https://webpack.github.io/

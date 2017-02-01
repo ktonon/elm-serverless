@@ -36,7 +36,7 @@ sl =
     simpleLoop ""
 
 
-sf : Conn -> Pipeline
+sf : Conn -> TestTypes.Plug
 sf =
     simpleFork ""
 
@@ -46,29 +46,25 @@ buildingPipelinesTests =
     describe "Building Pipelines"
         [ describe "pipeline"
             [ it "begins a pipeline" <|
-                expect (pipeline |> Array.length) to equal 0
-            ]
-        , describe "toPipeline"
-            [ it "makes a pipeline of length 1" <|
-                expect (simpleLoop "" NoOp |> toPipeline |> Array.length) to equal 1
+                expect (pipeline |> pipelineCount) to equal 0
             ]
         , describe "plug"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> plug sp |> Array.length) to equal 1
+                expect (pipeline |> plug sp |> pipelineCount) to equal 1
             , it "wraps a simple conn transformation as a Plug" <|
-                expect (pipeline |> plug sp |> Array.get 0)
+                expect (pipeline |> plug sp)
                     to
                     equal
-                    (Just (Plug sp))
+                    (Pipeline (Array.fromList [ Simple sp ]))
             ]
         , describe "loop"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> loop sl |> Array.length) to equal 1
+                expect (pipeline |> loop sl |> pipelineCount) to equal 1
             , it "wraps an update function as a Plug" <|
-                expect (pipeline |> loop sl |> Array.get 0)
+                expect (pipeline |> loop sl)
                     to
                     equal
-                    (Just (Loop sl))
+                    (Pipeline (Array.fromList [ Update sl ]))
             ]
         , describe "nest"
             [ it "extends the pipeline by the length of the nested pipeline" <|
@@ -82,7 +78,7 @@ buildingPipelinesTests =
                                 |> plug sp
                                 |> loop sl
                             )
-                        |> Array.length
+                        |> pipelineCount
                     )
                     to
                     equal
@@ -90,12 +86,12 @@ buildingPipelinesTests =
             ]
         , describe "fork"
             [ it "extends the pipeline by 1" <|
-                expect (pipeline |> fork sf |> Array.length) to equal 1
+                expect (pipeline |> fork sf |> pipelineCount) to equal 1
             , it "wraps a router function as a Router" <|
-                expect (pipeline |> fork sf |> Array.get 0)
+                expect (pipeline |> fork sf)
                     to
                     equal
-                    (Just (Router sf))
+                    (Pipeline (Array.fromList [ Router sf ]))
             ]
         ]
 

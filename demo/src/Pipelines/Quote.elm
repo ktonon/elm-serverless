@@ -8,8 +8,23 @@ import Serverless.Conn.Types exposing (..)
 import Types exposing (..)
 
 
-pipeline : Lang -> Pipeline
-pipeline lang =
+router : Method -> Lang -> Plug
+router method lang =
+    case method of
+        GET ->
+            get lang
+
+        POST ->
+            post lang
+
+        _ ->
+            statusCode 405
+                >> textBody "Method not allowed"
+                |> toResponder responsePort
+
+
+get : Lang -> Plug
+get lang =
     Conn.pipeline
         -- Loop pipelines are like elm update functions.
         -- They can be used to wait for the results of side effects.
@@ -23,6 +38,18 @@ pipeline lang =
         -- be sent by the framework
         |>
             loop respondWithQuotes
+
+
+post : Lang -> Plug
+post lang =
+    toResponder responsePort <|
+        \conn ->
+            conn
+                |> statusCode 501
+                |> textBody
+                    ("Not implemented, but I got this body: "
+                        ++ (toString conn.req.body)
+                    )
 
 
 langFilter : Route.Lang -> List String -> List String
@@ -45,8 +72,8 @@ loadQuotes lang msg conn =
             (case conn.config.languages |> langFilter lang of
                 [] ->
                     conn
-                        |> status (Code 404)
-                        |> body (TextBody "Could not find language")
+                        |> statusCode 404
+                        |> textBody "Could not find language"
                         |> send responsePort
 
                 langs ->
@@ -93,7 +120,8 @@ loadQuotes lang msg conn =
                     -- from processing and removes the connection from the
                     -- connection pool
                     conn
-                        |> internalError (err |> toString |> TextBody) responsePort
+                        |> internalError (err |> toString |> TextBody)
+                        |> send responsePort
 
 
 respondWithQuotes : Msg -> Conn -> ( Conn, Cmd Msg )
@@ -103,7 +131,7 @@ respondWithQuotes msg conn =
         -- endpoint message.
         Endpoint ->
             conn
-                |> status (Code 200)
+                |> statusCode 200
                 |> header ( "content-type", "text/html" )
                 -- By the time we get here, we can be sure that loadQuotes has
                 -- successfully loaded all the quotes, so we can sort, format,
@@ -120,4 +148,6 @@ respondWithQuotes msg conn =
         -- that something is wrong with our pause/resuming count from the previous
         -- plug.
         _ ->
-            conn |> unexpectedMsg msg responsePort
+            conn
+                |> unexpectedMsg msg
+                |> send responsePort

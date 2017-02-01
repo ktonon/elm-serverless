@@ -9,9 +9,9 @@ module which provides concrete types for each of the type variables. See the
 [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Types.elm)
 for an example.
 
-## Pipeline
+## Pipelines
 
-@docs Pipeline, Plug, Conn, Sendable, PipelineState
+@docs Plug, Conn, Sendable, sendableToMaybe, PipelineState
 
 ## Ports
 
@@ -30,27 +30,23 @@ import Serverless.Conn.Types exposing (..)
 -- PIPELINE
 
 
-{-| Represents a list of plugs, each of which processes the connection
--}
-type alias Pipeline config model msg =
-    Array (Plug config model msg)
-
-
 {-| A plug processes the connection in some way.
 
-There are three types:
+There are four types:
 
-* `Plug` a simple plug. It just transforms the connection
-* `Loop` an update plug. It may transform the connection, but it also can
+* `Simple` a simple plug. It just transforms the connection
+* `Update` an update plug. It may transform the connection, but it also can
   have side effects. Execution will only flow to the next plug when an
   update plug returns no side effects.
 * `Router` a function which accepts a connection and returns a new pipeline
   which is a specialized handler for that type of connection.
+* `Pipeline` a sequence of zero or more plugs.
 -}
 type Plug config model msg
-    = Plug (Conn config model -> Conn config model)
-    | Loop (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    | Router (Conn config model -> Pipeline config model msg)
+    = Simple (Conn config model -> Conn config model)
+    | Update (msg -> Conn config model -> ( Conn config model, Cmd msg ))
+    | Router (Conn config model -> Plug config model msg)
+    | Pipeline (Array (Plug config model msg))
 
 
 {-| A connection with a request and response.
@@ -73,6 +69,18 @@ type alias Conn config model =
 type Sendable a
     = Unsent a
     | Sent
+
+
+{-| Convert a Sendable to a Maybe
+-}
+sendableToMaybe : Sendable a -> Maybe a
+sendableToMaybe sendable =
+    case sendable of
+        Unsent a ->
+            Just a
+
+        Sent ->
+            Nothing
 
 
 {-| State of the pipeline for this connection.
