@@ -113,7 +113,7 @@ An AWS Lambda function would be pretty limited without an interface to the rest 
 [gitter]:https://gitter.im/elm-serverless/Lobby
 [JWT]:https://jwt.io/
 [ktonon/elm-serverless]:http://package.elm-lang.org/packages/ktonon/elm-serverless/latest
-[ktonon/elm-serverless-cors]:http://package.elm-lang.org/packages/ktonon/elm-serverless-cors/latest
+[ktonon/elm-serverless-cors]:https://github.com/ktonon/elm-serverless-cors
 [serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
 [serverless]:https://github.com/serverless/serverless
 [webpack]:https://webpack.github.io/
