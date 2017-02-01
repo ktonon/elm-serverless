@@ -1,5 +1,5 @@
 {
-    "version": "3.0.0",
+    "version": "3.0.1",
     "summary": "Deploy an elm worker to AWS Lambda using serverless",
     "repository": "https://github.com/ktonon/elm-serverless.git",
     "license": "MIT",

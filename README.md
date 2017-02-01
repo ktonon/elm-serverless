@@ -1,7 +1,7 @@
 # elm serverless
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![elm-package](https://img.shields.io/badge/elm-3.0.0-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
+[![elm-package](https://img.shields.io/badge/elm-3.0.1-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
 [![npm version](https://img.shields.io/npm/v/elm-serverless.svg)](https://www.npmjs.com/package/elm-serverless)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ktonon/elm-serverless/blob/master/LICENSE.txt)
 [![CircleCI](https://img.shields.io/circleci/project/github/ktonon/elm-serverless.svg)](https://circleci.com/gh/ktonon/elm-serverless)
@@ -9,7 +9,7 @@
 
 ![Logo](https://github.com/ktonon/elm-serverless/raw/3.0.0/logo86x128.png)
 
-__Beta Release 3.0.0__
+__Beta Release 3.0.1__
 
 Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your API in elm and then use the npm package to bridge the interface between the [AWS Lambda handler][] and your elm program.
 

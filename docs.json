@@ -1,0 +1,406 @@
+[
+  {
+    "name": "Serverless",
+    "comment": " __Beta Release 3.0.0__\n\nUse `httpApi` to define a `Program` that responds to HTTP requests. Take a look\nat the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm)\nfor a usage example. Then read about [Building Pipelines](./Conn#building-pipelines).\n\n@docs Program, Flags, httpApi, HttpApi\n\n",
+    "aliases": [
+      {
+        "name": "Flags",
+        "comment": " Type of flags for program.\n\n`Value` is a\n[Json.Encode.Value](http://package.elm-lang.org/packages/elm-lang/core/latest/Json-Encode#Value).\nThe program configuration (`config`) is passed in as flags.\n",
+        "args": [],
+        "type": "Json.Encode.Value"
+      },
+      {
+        "name": "HttpApi",
+        "comment": " Program for an HTTP API.\n\nA Serverless.Program is parameterized by your 3 custom types\n\n* Config is a server load-time record of deployment specific values\n* Model is for whatever you need during the processing of a request\n* Msg is your app message type\n\nYou must provide the following:\n\n* `configDecoder` decodes a JSON value for your custom config type\n* `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.ResponsePort`, respectively\n* `endpoint` is a message through which connections are first received\n* `initialModel` is a value to which new connections will set their model\n* `pipeline` takes the place of the update function in a traditional elm program\n* `subscriptions` has the usual meaning\n\nSee [Building Pipelines](./Conn#building-pipelines) for more details on\nthe `pipeline` parameter.\n",
+        "args": [
+          "config",
+          "model",
+          "msg"
+        ],
+        "type": "{ configDecoder : Json.Decode.Decoder config , requestPort : Serverless.Types.RequestPort (Serverless.Pipeline.Msg msg) , responsePort : Serverless.Types.ResponsePort (Serverless.Pipeline.Msg msg) , endpoint : msg , initialModel : model , pipeline : Serverless.Types.Plug config model msg , subscriptions : Serverless.Types.Conn config model -> Platform.Sub.Sub msg }"
+      },
+      {
+        "name": "Program",
+        "comment": " Serverless program type.\n\nThis maps to a headless elm\n[Platform.Program](http://package.elm-lang.org/packages/elm-lang/core/latest/Platform#Program).\n",
+        "args": [
+          "config",
+          "model",
+          "msg"
+        ],
+        "type": "Platform.Program Serverless.Flags (Serverless.Model config model) (Serverless.Pipeline.Msg msg)"
+      }
+    ],
+    "types": [],
+    "values": [
+      {
+        "name": "httpApi",
+        "comment": " Create a program from the given HTTP api.\n",
+        "type": "Serverless.HttpApi config model msg -> Serverless.Program config model msg"
+      }
+    ],
+    "generated-with-elm-version": "0.18.0"
+  },
+  {
+    "name": "Serverless.Conn",
+    "comment": " Functions for building pipelines and processing connections.\n\n## Terminology\n\n`Conn` stands for __connection__. A connection contains:\n\n* An HTTP request\n* An HTTP response, unsent, and waiting for you to provide meaningful values\n* Your custom deployment configuration data\n* Your custom appliation `Model`\n\nA __pipeline__ is a sequence of functions which transform the connection,\neventually sending back the HTTP response. We use the term __plug__ to mean a\nsingle function that is part of the pipeline. But a pipeline is also just a plug\nand so pipelines can be composed from other pipelines.\n\n## Table of Contents\n\n* [Building Pipelines](#building-pipelines)\n* [Routing](#routing)\n* [Response](#response)\n* [Responding with Errors](#responding-with-errors)\n* [Pipeline Processing](#pipeline-processing)\n* [Application Specific](#application-specific)\n\n## Building Pipelines\n\nUse these functions to build your pipelines. For example,\n\n    myPipeline =\n        pipeline\n            |> plug simplePlugA\n            |> plug simplePlugB\n            |> loop loadSomeDatabaseStuff\n            |> nest anotherPipeline\n            |> fork router\n\n@docs pipeline, plug, loop, fork, nest\n\n## Routing\n\n@docs parseRoute\n\n## Response\n\nThe following functions are used to transform and send the HTTP response. Most\nof these functions can be curried and used directly as simple plugs. For\nexample\n\n    pipeline\n        |> plug (header ( \"access-control-allow-origin\", \"*\" ))\n\nOr they can be used inside of a plug as part of a chain of connection\ntransformations. For example,\n\n    conn\n        |> status (Code 200)\n        |> header ( \"content-type\", \"text/text\" )\n        |> body (TextBody \"hello world\")\n\n@docs body, textBody, jsonBody, header, status, statusCode, send, toResponder\n\n## Responding with Errors\n\nThe following functions set the HTTP status code to 500 and set the body to\nan error response.\n\n@docs internalError, unexpectedMsg\n\n## Pipeline Processing\n\nThe following functions can be used inside of a loop plug which needs to wait for\nthe results of a side effect.\n\n@docs pipelinePause, pipelineResume\n\n## Application Specific\n\n@docs updateModel\n",
+    "aliases": [],
+    "types": [],
+    "values": [
+      {
+        "name": "body",
+        "comment": " Set the response body\n",
+        "type": "Serverless.Conn.Types.Body -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "fork",
+        "comment": " Adds a router to the pipeline.\n\nA router can branch a pipeline into many smaller pipelines depending on the\nroute message passed in. See [Routing](#routing) for more.\n",
+        "type": "(Serverless.Types.Conn config model -> Serverless.Types.Plug config model msg) -> Serverless.Types.Plug config model msg -> Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "header",
+        "comment": " Set a response header.\n\nIf you set the same response header more than once, the second value will\noverride the first.\n",
+        "type": "( String, String ) -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "internalError",
+        "comment": " Respond with a 500 internal server error.\n\nThe given value is converted to a string and set to the response body.\n",
+        "type": "Serverless.Conn.Types.Body -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "jsonBody",
+        "comment": " Sets the given JSON value as the response body.\n\nAlso sets the `Content-Type` to `application/json`.\n",
+        "type": "Json.Encode.Value -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "loop",
+        "comment": " Extends the pipeline with an update plug.\n\nAn update plug can transform the connection and or return a side effect (`Cmd`).\nLoop plugs should use `pipelinePause` and `pipelineResume` when working with side\neffects. See [Pipeline Processing](#pipeline-processing) for more.\n\n    -- Loop plug which does nothing\n    pipeline\n        |> loop (\\msg conn -> (conn, Cmd.none))\n",
+        "type": "(msg -> Serverless.Types.Conn config model -> ( Serverless.Types.Conn config model, Platform.Cmd.Cmd msg )) -> Serverless.Types.Plug config model msg -> Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "nest",
+        "comment": " Extends the pipeline with a plug.\n\nThis is the most general of the pipeline building functions. Since it just\naccepts a plug, and since a plug can be a pipeline, it can be used to extend a\npipeline with a group of plugs.\n",
+        "type": "Serverless.Types.Plug config model msg -> Serverless.Types.Plug config model msg -> Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "parseRoute",
+        "comment": " Parse a connection request path into nicely formatted elm data.\n\n    import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)\n    import Serverless.Conn exposing (parseRoute)\n\n\n    type Route\n        = Home\n        | Cheers Int\n        | NotFound\n\n\n    route : Parser (Route -> a) a\n    route =\n        oneOf\n            [ map Home top\n            , map Cheers (s \"cheers\" </> int)\n            ]\n\n\n    myRouter : Conn -> Plug\n    myRouter conn =\n        case\n            ( conn.req.method\n            , conn |> parseRoute route NotFound\n            )\n        of\n            ( GET, Home ) ->\n                -- pipeline for home...\n\n            ( GET, Cheers numTimes ) ->\n                -- pipeline for cheers...\n\n            _ ->\n                -- pipeline for 404 not found...\n",
+        "type": "UrlParser.Parser (route -> route) route -> route -> Serverless.Types.Conn config model -> route"
+      },
+      {
+        "name": "pipeline",
+        "comment": " Begins a pipeline.\n\nBuild the pipeline by chaining plugs with plug, loop, fork, and nest.\n",
+        "type": "Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "pipelinePause",
+        "comment": " Pause the connection at the current loop plug.\n\nIncrements the pause count by the amount given. You will need to resume by the\nsame amount for pipeline processing to continue onto the next plug.\n\n    conn\n        |> pause 1\n            (\"http://example.com\"\n                |> Http.getString\n                |> Http.send HandleResult\n            )\n            responsePort\n\nAn internal server error will be sent through the responsePort if the pause\nincrement is negative. A pause increment of zero will have no effect.\n",
+        "type": "Int -> Platform.Cmd.Cmd msg -> Serverless.Types.ResponsePort msg -> Serverless.Types.Conn config model -> ( Serverless.Types.Conn config model, Platform.Cmd.Cmd msg )"
+      },
+      {
+        "name": "pipelineResume",
+        "comment": " Resume pipeline processing.\n\nDecrements the pause count by the amount given. You should only call this after\na call to pause, and should decrement it by the same amount. It is ok to make\nmultiple calls, as long as the sum of pauses equals the sum of resumes.\n\n    case msg of\n        HandleResult result ->\n            case result of\n                Ok value ->\n                    conn |> resume 1 responsePort\n\n                Err err ->\n                    conn |> internalError \"did not work\" responsePort\n\nAn internal server error will be sent through the responsePort if the pause\ncount goes below zero. A resume increment of zero will have no effect.\n",
+        "type": "Int -> Serverless.Types.ResponsePort msg -> Serverless.Types.Conn config model -> ( Serverless.Types.Conn config model, Platform.Cmd.Cmd msg )"
+      },
+      {
+        "name": "plug",
+        "comment": " Extend the pipeline with a simple plug.\n\nA plug just transforms the connection. For example,\n\n    pipeline\n        |> plug (body (TextBody \"foo\"))\n",
+        "type": "(Serverless.Types.Conn config model -> Serverless.Types.Conn config model) -> Serverless.Types.Plug config model msg -> Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "send",
+        "comment": " Sends a connection response through the given port\n",
+        "type": "Serverless.Types.ResponsePort msg -> Serverless.Types.Conn config model -> ( Serverless.Types.Conn config model, Platform.Cmd.Cmd msg )"
+      },
+      {
+        "name": "status",
+        "comment": " Set the response HTTP status code\n",
+        "type": "Serverless.Conn.Types.Status -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "statusCode",
+        "comment": " Alias for `status (Code value)`\n",
+        "type": "Int -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "textBody",
+        "comment": " Sets the given string as the response body.\n\nAlso sets the `Content-Type` to `text/text`.\n",
+        "type": "String -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "toResponder",
+        "comment": " Convert a connection transformer into a plug which sends the response.\n\nGood for quickly creating a pipeline inside a router.\n\n    router : Conn -> Plug\n    router conn =\n        case\n            ( conn.req.method\n            , conn |> parseRoute route NotFound\n            )\n        of\n            -- other cases...\n\n            _ ->\n                toResponder responsePort <|\n                    \\conn ->\n                        conn\n                            |> statusCode 404\n                            |> textBody (\"Nothing at: \" ++ conn.req.path)\n",
+        "type": "Serverless.Types.ResponsePort msg -> (Serverless.Types.Conn config model -> Serverless.Types.Conn config model) -> Serverless.Types.Plug config model msg"
+      },
+      {
+        "name": "unexpectedMsg",
+        "comment": " Respond with an unexpected message error.\n\nUse this in the `case msg of` catch-all (`_ ->`) for any messages that you do\nnot expect to receive in a loop plug.\n",
+        "type": "msg -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      },
+      {
+        "name": "updateModel",
+        "comment": " Transform and update the application defined model stored in the connection.\n",
+        "type": "(model -> model) -> Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+      }
+    ],
+    "generated-with-elm-version": "0.18.0"
+  },
+  {
+    "name": "Serverless.Types",
+    "comment": " Types that define a Serverless.Program\n\nThese are all types which are parameterized by specific types which you define.\n\nTo make your program more readable, you should consider defining your own `Types`\nmodule which provides concrete types for each of the type variables. See the\n[demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Types.elm)\nfor an example.\n\n## Pipelines\n\n@docs Plug, Conn, Sendable, sendableToMaybe, PipelineState\n\n## Ports\n\nAn elm library cannot expose a module with ports. The following port definitions\nare provided so that your program can create the necessary request and response\nports.\n\n@docs RequestPort, ResponsePort\n",
+    "aliases": [
+      {
+        "name": "Conn",
+        "comment": " A connection with a request and response.\n\nConnections are parameterized with config and model record types which are\nspecific to the application. Config is loaded once on app startup, while model\nis set to a provided initial value for each incomming request.\n",
+        "args": [
+          "config",
+          "model"
+        ],
+        "type": "{ pipelineState : Serverless.Types.PipelineState , config : config , req : Serverless.Conn.Types.Request , resp : Serverless.Types.Sendable Serverless.Conn.Types.Response , model : model }"
+      },
+      {
+        "name": "RequestPort",
+        "comment": " Type of port through which the request is received.\nSet your request port to this type.\n",
+        "args": [
+          "msg"
+        ],
+        "type": "(Json.Encode.Value -> msg) -> Platform.Sub.Sub msg"
+      },
+      {
+        "name": "ResponsePort",
+        "comment": " Type of port through which the request is sent.\nSet your response port to this type.\n",
+        "args": [
+          "msg"
+        ],
+        "type": "Json.Encode.Value -> Platform.Cmd.Cmd msg"
+      }
+    ],
+    "types": [
+      {
+        "name": "PipelineState",
+        "comment": " State of the pipeline for this connection.\n",
+        "args": [],
+        "cases": [
+          [
+            "Processing",
+            []
+          ],
+          [
+            "Paused",
+            [
+              "Int"
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Plug",
+        "comment": " A plug processes the connection in some way.\n\nThere are four types:\n\n* `Simple` a simple plug. It just transforms the connection\n* `Update` an update plug. It may transform the connection, but it also can\n  have side effects. Execution will only flow to the next plug when an\n  update plug returns no side effects.\n* `Router` a function which accepts a connection and returns a new pipeline\n  which is a specialized handler for that type of connection.\n* `Pipeline` a sequence of one or more plugs.\n",
+        "args": [
+          "config",
+          "model",
+          "msg"
+        ],
+        "cases": [
+          [
+            "Simple",
+            [
+              "Serverless.Types.Conn config model -> Serverless.Types.Conn config model"
+            ]
+          ],
+          [
+            "Update",
+            [
+              "msg -> Serverless.Types.Conn config model -> ( Serverless.Types.Conn config model, Platform.Cmd.Cmd msg )"
+            ]
+          ],
+          [
+            "Router",
+            [
+              "Serverless.Types.Conn config model -> Serverless.Types.Plug config model msg"
+            ]
+          ],
+          [
+            "Pipeline",
+            [
+              "Array.Array (Serverless.Types.Plug config model msg)"
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Sendable",
+        "comment": " A sendable type cannot be accessed after it is sent\n",
+        "args": [
+          "a"
+        ],
+        "cases": [
+          [
+            "Unsent",
+            [
+              "a"
+            ]
+          ],
+          [
+            "Sent",
+            []
+          ]
+        ]
+      }
+    ],
+    "values": [
+      {
+        "name": "sendableToMaybe",
+        "comment": " Convert a Sendable to a Maybe\n",
+        "type": "Serverless.Types.Sendable a -> Maybe.Maybe a"
+      }
+    ],
+    "generated-with-elm-version": "0.18.0"
+  },
+  {
+    "name": "Serverless.Conn.Types",
+    "comment": " Types defining a serverless connection\n\n## General\n\n@docs Id, Body\n\n## Request\n\n@docs Request, Method, Scheme, Secure, IpAddress\n\n## Response\n\n@docs Response, Status, Charset\n",
+    "aliases": [
+      {
+        "name": "Id",
+        "comment": " Uniquely identifies a connection\n",
+        "args": [],
+        "type": "String"
+      },
+      {
+        "name": "Request",
+        "comment": " HTTP Request\n",
+        "args": [],
+        "type": "{ id : Serverless.Conn.Types.Id , body : Serverless.Conn.Types.Body , headers : List ( String, String ) , host : String , method : Serverless.Conn.Types.Method , path : String , port_ : Int , remoteIp : Serverless.Conn.Types.IpAddress , scheme : Serverless.Conn.Types.Scheme , stage : String , queryParams : List ( String, String ) }"
+      },
+      {
+        "name": "Response",
+        "comment": " HTTP Response\n",
+        "args": [],
+        "type": "{ body : Serverless.Conn.Types.Body , charset : Serverless.Conn.Types.Charset , headers : List ( String, String ) , status : Serverless.Conn.Types.Status }"
+      }
+    ],
+    "types": [
+      {
+        "name": "Body",
+        "comment": " Request or Response body\n",
+        "args": [],
+        "cases": [
+          [
+            "NoBody",
+            []
+          ],
+          [
+            "TextBody",
+            [
+              "String"
+            ]
+          ],
+          [
+            "JsonBody",
+            [
+              "Json.Encode.Value"
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Charset",
+        "comment": " Only Utf8 is supported at this time\n",
+        "args": [],
+        "cases": [
+          [
+            "Utf8",
+            []
+          ]
+        ]
+      },
+      {
+        "name": "IpAddress",
+        "comment": " Four part IP address\n",
+        "args": [],
+        "cases": [
+          [
+            "Ip4",
+            [
+              "( Int, Int, Int, Int )"
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Method",
+        "comment": " HTTP request message type\n",
+        "args": [],
+        "cases": [
+          [
+            "GET",
+            []
+          ],
+          [
+            "POST",
+            []
+          ],
+          [
+            "PUT",
+            []
+          ],
+          [
+            "DELETE",
+            []
+          ],
+          [
+            "OPTIONS",
+            []
+          ]
+        ]
+      },
+      {
+        "name": "Scheme",
+        "comment": " Supported connection schemes (protocols)\n",
+        "args": [],
+        "cases": [
+          [
+            "Http",
+            [
+              "Serverless.Conn.Types.Secure"
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Secure",
+        "comment": " Is this connection over SSL?\n",
+        "args": [],
+        "cases": [
+          [
+            "Secure",
+            []
+          ],
+          [
+            "Insecure",
+            []
+          ]
+        ]
+      },
+      {
+        "name": "Status",
+        "comment": " HTTP status code\n",
+        "args": [],
+        "cases": [
+          [
+            "InvalidStatus",
+            []
+          ],
+          [
+            "Code",
+            [
+              "Int"
+            ]
+          ]
+        ]
+      }
+    ],
+    "values": [],
+    "generated-with-elm-version": "0.18.0"
+  }
+]
