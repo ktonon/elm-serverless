@@ -10,7 +10,7 @@
 // require it relative to the current module's location
 //
 const elmServerless = require('../..');
-const rc = require('shebang!rc');
+const rc = require('strip-debug!shebang!rc');
 
 const elm = require('./API.elm');
 
