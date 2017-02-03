@@ -5,7 +5,7 @@ import Route exposing (..)
 import Serverless exposing (..)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Cors as Cors exposing (Reflectable(..))
+import Serverless.Cors exposing (cors)
 import Types exposing (..)
 
 
@@ -36,28 +36,13 @@ in some way.
 pipeline : Plug
 pipeline =
     Conn.pipeline
-        |> plug (Cors.allowOrigin ReflectRequest)
-        |> plug (Cors.allowMethods [ GET, POST, OPTIONS ])
+        -- Simple plugs just transform the connection.
+        -- For example, this cors plug just adds some headers to the response.
+        |>
+            plug (\conn -> conn |> cors conn.config.cors)
         -- A router takes a `Conn` and returns a new pipeline.
         |>
             fork router
-
-
-{-| This is an example of middleware.
-
-Normally this would be defined in an external module, or package, but we include
-it here as a demonstration.
--}
-cors : String -> List Method -> Conn -> Conn
-cors origin methods =
-    (Conn.header ( "access-control-allow-origin", origin ))
-        >> (Conn.header
-                ( "access-control-allow-headers"
-                , methods
-                    |> List.map toString
-                    |> String.join ", "
-                )
-           )
 
 
 router : Conn -> Plug

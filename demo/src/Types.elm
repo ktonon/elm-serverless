@@ -3,6 +3,7 @@ port module Types exposing (..)
 import Http
 import Json.Decode exposing (Decoder, list, string)
 import Json.Decode.Pipeline exposing (required, decode, hardcoded)
+import Serverless.Cors as Cors
 import Serverless.Types as Types
 
 
@@ -16,6 +17,7 @@ import Serverless.Types as Types
 -}
 type alias Config =
     { languages : List String
+    , cors : Cors.Config
     }
 
 
@@ -23,6 +25,7 @@ configDecoder : Json.Decode.Decoder Config
 configDecoder =
     decode Config
         |> required "languages" (list string)
+        |> required "cors" Cors.configDecoder
 
 
 {-| Can be anything you want.

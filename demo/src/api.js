@@ -10,8 +10,20 @@
 // require it relative to the current module's location
 //
 const elmServerless = require('../..');
+const rc = require('shebang!rc');
 
 const elm = require('./API.elm');
+
+// Use AWS Lambda environment variables to override these values
+// See the npm rc package README for more details
+const config = rc('demo', {
+  languages: ['en', 'ru'],
+
+  cors: {
+    origin: '*',
+    methods: 'get,post,options',
+  },
+})
 
 module.exports.handler = elmServerless.httpApi({
   // Your elm app is the handler
@@ -21,9 +33,7 @@ module.exports.handler = elmServerless.httpApi({
   // You will also provide a JSON decoder for this.
   // It should be deployment data that is constant, perhaps loaded from
   // an environment variable.
-  config: {
-    languages: ['en', 'ru'],
-  },
+  config: config,
 
   // Because elm libraries cannot expose ports, you have to define them.
   // Whatever you call them, you have to provide the names.

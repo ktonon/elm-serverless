@@ -16,7 +16,9 @@
     "elm-webpack-loader": "^4.1.1",
     "eslint": "^3.13.1",
     "eslint-config-es2015": "^1.1.0",
+    "rc": "^1.1.6",
     "serverless-webpack": "git://github.com/ktonon/serverless-webpack.git#cf32a9fe70f1bb38db68b449ef214ceed732caab",
+    "shebang-loader": "0.0.1",
     "webpack": "^1.14.0",
     "webpack-loader": "^0.0.1"
   }
