@@ -5,6 +5,7 @@ import Route exposing (..)
 import Serverless exposing (..)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
+import Serverless.Cors as Cors exposing (Reflectable(..))
 import Types exposing (..)
 
 
@@ -35,10 +36,8 @@ in some way.
 pipeline : Plug
 pipeline =
     Conn.pipeline
-        -- Simple plugs just transform the connection.
-        -- For example, this cors plug just adds some headers to the response.
-        |>
-            plug (cors "*" [ GET, OPTIONS ])
+        |> plug (Cors.allowOrigin ReflectRequest)
+        |> plug (Cors.allowMethods [ GET, POST, OPTIONS ])
         -- A router takes a `Conn` and returns a new pipeline.
         |>
             fork router
