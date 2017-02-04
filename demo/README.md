@@ -1,9 +1,7 @@
 elm serverless demo
 ===================
 
-__Experimental (WIP): Not for use in production__
-
-This section demonstrates how to use [elm-serverless][]. It is included in the same repo as `elm-serverless` so that it is always up to date. It may not reflect the latest official release of `elm-serverless`.
+This section demonstrates how to use [elm-serverless][]. It is included in the same repo as `elm-serverless` so that it is always up to date with the master branch. For a demo which works with [![elm-package](https://img.shields.io/badge/elm--serverless-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/3.0.2) (the latest release), see [elm-serverless-demo][].
 
 __NOTE__: This project uses forked [serverless-webpack][], but there is an open [Pull Request](https://github.com/elastic-coders/serverless-webpack/pull/82). The PR adds support for [Lambda Proxy Integration][] to the local server.
 
@@ -12,8 +10,8 @@ __NOTE__: This project uses forked [serverless-webpack][], but there is an open 
 * clone this repo
 * `npm install`
 * `npm run demo:install`
-* `npm run demo`
-  * [http://localhost:8000/](http://localhost:8000/) will respond with quotes which it fetches from another service
+* `npm start`
+  * [http://localhost:8000/quote](http://localhost:8000/quote) will respond with quotes which it fetches from another service
 * `npm run demo:deploy` to test deploying it to [AWS Lambda][]
 
 ## The break down
@@ -32,6 +30,7 @@ There are four files that you should check out in this demo to get a better unde
 
 [AWS Lambda]:https://aws.amazon.com/lambda
 [elm-serverless]:https://github.com/ktonon/elm-serverless
+[elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
 [elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
 [Lambda Proxy Integration]:http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-create-api-as-simple-proxy-for-lambda.html#api-gateway-create-api-as-simple-proxy-for-lambda-build
 [serverless]:https://serverless.com/

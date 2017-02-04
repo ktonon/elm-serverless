@@ -6,11 +6,9 @@ module Serverless
         , Program
         )
 
-{-| __Beta Release 3.0.0__
-
-Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
+{-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
 at the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm)
-for a usage example. Then read about [Building Pipelines](./Conn#building-pipelines).
+for a usage example. Then read about [Building Pipelines](./Serverless-Conn#building-pipelines).
 
 @docs Program, Flags, httpApi, HttpApi
 
@@ -83,7 +81,7 @@ You must provide the following:
 * `pipeline` takes the place of the update function in a traditional elm program
 * `subscriptions` has the usual meaning
 
-See [Building Pipelines](./Conn#building-pipelines) for more details on
+See [Building Pipelines](./Serverless-Conn#building-pipelines) for more details on
 the `pipeline` parameter.
 -}
 type alias HttpApi config model msg =

@@ -3,16 +3,17 @@ const requiredParams = ['handler', 'config', 'requestPort', 'responsePort'];
 
 global.XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
-const httpApi = (opt) => {
-  if (!opt || !requiredParams.every(param => opt[param])) {
-    throw new Error(`httpApi requires named parameters: ${requiredParams.join(', ')}`);
+const httpApi = function(opt) {
+  if (!opt || !requiredParams.every(function(param) { return opt[param] })) {
+    throw new Error('httpApi requires named parameters: '
+      + requiredParams.join(', '));
   }
 
   const app = opt.handler.worker(opt.config);
 
   const callbacks = {};
-  app.ports[opt.responsePort].subscribe(resp => {
-    console.log(`resp: ${JSON.stringify(resp, null, 2)}`);
+  app.ports[opt.responsePort].subscribe(function(resp) {
+    console.log('resp: ' + JSON.stringify(resp, null, 2));
     const cb = callbacks[resp.id];
     if (cb) {
       delete callbacks[resp.id];
@@ -22,11 +23,11 @@ const httpApi = (opt) => {
         headers: resp.headers,
       });
     } else {
-      console.error(`resp missing callback: ${resp.id}`);
+      console.error('resp missing callback: ' + resp.id);
     }
   });
 
-  return (event, context, cb) => {
+  return function(event, context, cb) {
     const params = event.pathParameters || {};
     const headers = event.headers || {};
     const rc = event.requestContext || { identity: {} };
@@ -38,7 +39,7 @@ const httpApi = (opt) => {
       headers: headers,
       host: headers.Host || (headers.host && headers.host.split(':')[0]),
       method: event.httpMethod || event.method,
-      path: `/${params[0] || params['proxy'] || ''}`,
+      path: '/' + (params[0] || params['proxy'] || ''),
       port: parseInt(headers['X-Forwarded-Port'] || (headers.host && headers.host.split(':')[1]), 10),
       remoteIp: rc.identity.sourceIp || '127.0.0.1',
       scheme: headers['X-Forwarded-Proto'] || 'http',
@@ -47,13 +48,15 @@ const httpApi = (opt) => {
     };
 
     callbacks[req.id] = cb;
-    console.log(`req:  ${JSON.stringify(req, null, 2)}`);
+    console.log('req: ' + JSON.stringify(req, null, 2));
     app.ports[opt.requestPort].send(req);
   };
 };
 
-const encodeBody = (raw) => (typeof raw === 'string'
-  ? raw
-  : JSON.stringify(raw));
+const encodeBody = function(raw) {
+  return typeof raw === 'string'
+    ? raw
+    : JSON.stringify(raw);
+}
 
 module.exports.httpApi = httpApi;

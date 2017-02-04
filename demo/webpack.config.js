@@ -1,4 +1,7 @@
 const path = require('path');
+const webpack = require('webpack');
+
+const isProd = process.env.NODE_ENV === 'production';
 
 module.exports = {
   entry: './src/api.js',
@@ -21,4 +24,9 @@ module.exports = {
       },
     ],
   },
+
+  plugins: (isProd
+    ? [new webpack.optimize.UglifyJsPlugin({ compress: { warnings: false } })]
+    : []
+  ),
 };

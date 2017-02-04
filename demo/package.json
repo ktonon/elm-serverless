@@ -5,13 +5,14 @@
   "main": "api.js",
   "scripts": {
     "postinstall": "elm package install -y",
-    "deploy": "webpack && sls deploy",
+    "deploy": "cross-env NODE_ENV=production sls deploy",
     "start": "webpack && sls webpack serve",
     "test": "eslint ."
   },
   "author": "kevin@betweenconcepts.com",
   "license": "MIT",
   "devDependencies": {
+    "cross-env": "^3.1.4",
     "elm": "^0.18.0",
     "elm-webpack-loader": "^4.1.1",
     "eslint": "^3.13.1",
@@ -21,6 +22,7 @@
     "shebang-loader": "0.0.1",
     "strip-debug-loader": "^1.0.0",
     "webpack": "^1.14.0",
-    "webpack-loader": "^0.0.1"
+    "webpack-loader": "^0.0.1",
+    "webpack-uglify-js-plugin": "^1.1.9"
   }
 }

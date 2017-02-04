@@ -1,15 +1,13 @@
-# elm serverless
+# elm <img src="https://raw.githubusercontent.com/ktonon/elm-serverless/master/es-logo-small.png" width="37"> serverless
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![elm-package](https://img.shields.io/badge/elm-3.0.1-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
+[![elm-package](https://img.shields.io/badge/elm-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
 [![npm version](https://img.shields.io/npm/v/elm-serverless.svg)](https://www.npmjs.com/package/elm-serverless)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ktonon/elm-serverless/blob/master/LICENSE.txt)
 [![CircleCI](https://img.shields.io/circleci/project/github/ktonon/elm-serverless.svg)](https://circleci.com/gh/ktonon/elm-serverless)
 [![gitter](https://img.shields.io/gitter/room/elm-serverless/Lobby.svg)](https://gitter.im/elm-serverless/Lobby)
 
-![Logo](https://github.com/ktonon/elm-serverless/raw/3.0.0/logo86x128.png)
-
-__Beta Release 3.0.1__
+__Beta Release 3.0.2__
 
 Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your API in elm and then use the npm package to bridge the interface between the [AWS Lambda handler][] and your elm program.
 
@@ -76,17 +74,10 @@ router conn =
 
 ## Demo
 
-For a complete working example, take a look at [demo/src/API.elm][]. To quickly get it running, clone this project, then run:
+There are two demos:
 
-```shell
-$ npm install -g elm@0.18
-$ npm install
-$ npm run demo:install
-$ npm start
-```
-
-Your server will be running locally at [http://localhost:8000][]
-See the [demo/README][] for more.
+* [./demo][]: which is kept in sync with the master branch of this repository
+* [elm-serverless-demo][]: a separate repository which works with [![elm-package](https://img.shields.io/badge/elm--serverless-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest) (the latest release)
 
 ## Middleware
 
@@ -103,8 +94,7 @@ An AWS Lambda function would be pretty limited without an interface to the rest 
 [AWS Lambda handler]:http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
 [AWS SDK for elm]:https://github.com/ktonon/aws-sdk-elm
 [CORS]:https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
-[demo/README]:https://github.com/ktonon/elm-serverless/blob/master/demo/README.md
-[demo/src/API.elm]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm
+[./demo]:https://github.com/ktonon/elm-serverless/blob/master/demo
 [elm-serverless]:https://www.npmjs.com/package/elm-serverless
 [elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
 [elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
