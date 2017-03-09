@@ -19,6 +19,7 @@ const invalidElmApp = msg => {
 
 const httpApi = ({
   handler,
+  bindPorts,
   config = {},
   requestPort = 'requestPort',
   responsePort = 'responsePort',
@@ -29,6 +30,12 @@ const httpApi = ({
   });
 
   const app = handler.worker(config);
+
+  // Allow calling library access to ports for native js interop
+  if (bindPorts) {
+    bindPorts(app);
+  }
+
   if (typeof app !== 'object') {
     invalidElmApp(`Got: ${validate.inspect(app)}`);
   }
