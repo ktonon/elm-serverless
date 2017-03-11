@@ -1,10 +1,14 @@
 module Serverless.Conn
     exposing
         ( Conn
+        , Id
         , config
         , header
         , id
         , init
+        , interop
+        , interopCalls
+        , interopClear
         , jsonEncodedResponse
         , mapUnsent
         , method
@@ -13,6 +17,7 @@ module Serverless.Conn
         , respond
         , route
         , send
+        , toSent
         , unsent
         , updateModel
         , updateResponse
@@ -20,7 +25,7 @@ module Serverless.Conn
 
 {-| Functions for querying and updating connections.
 
-@docs Conn
+@docs Conn, Id
 
 
 ## Table of Contents
@@ -50,7 +55,12 @@ Get details about the HTTP request.
 
 Update the response and send it.
 
-@docs respond, updateResponse, send, unsent, mapUnsent
+@docs respond, updateResponse, send, toSent, unsent, mapUnsent
+
+
+## JavaScript Interop
+
+@docs interop
 
 
 ## Misc
@@ -59,13 +69,13 @@ These functions are typically not needed when building an application. They are
 used internally by the framework. They are useful when debugging or writing unit
 tests.
 
-@docs init, jsonEncodedResponse
+@docs init, jsonEncodedResponse, interopCalls, interopClear
 
 -}
 
 import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body, text)
-import Serverless.Conn.Request as Request exposing (Id, Method, Request)
+import Serverless.Conn.Request as Request exposing (Method, Request)
 import Serverless.Conn.Response as Response exposing (Response, Status, setBody, setStatus)
 
 
@@ -76,16 +86,24 @@ specific to the application. Config is loaded once on app startup, while model
 is set to a provided initial value for each incomming request.
 
 -}
-type Conn config model route
-    = Conn (Impl config model route)
+type Conn config model route interop
+    = Conn (Impl config model route interop)
 
 
-type alias Impl config model route =
-    { config : config
+{-| Universally unique connection identifier.
+-}
+type alias Id =
+    String
+
+
+type alias Impl config model route interop =
+    { id : Id
+    , config : config
     , req : Request
     , resp : Sendable Response
     , model : model
     , route : route
+    , interopCalls : List interop
     }
 
 
@@ -100,21 +118,21 @@ type Sendable a
 
 {-| Application defined configuration
 -}
-config : Conn config model route -> config
+config : Conn config model route interop -> config
 config (Conn { config }) =
     config
 
 
 {-| Application defined model
 -}
-model : Conn config model route -> model
+model : Conn config model route interop -> model
 model (Conn { model }) =
     model
 
 
 {-| Transform and update the application defined model stored in the connection.
 -}
-updateModel : (model -> model) -> Conn config model route -> Conn config model route
+updateModel : (model -> model) -> Conn config model route interop -> Conn config model route interop
 updateModel update (Conn conn) =
     Conn { conn | model = update conn.model }
 
@@ -125,35 +143,28 @@ updateModel update (Conn conn) =
 
 {-| Request
 -}
-request : Conn config model route -> Request
+request : Conn config model route interop -> Request
 request (Conn { req }) =
     req
 
 
 {-| Get a request header by name
 -}
-header : String -> Conn config model route -> Maybe String
+header : String -> Conn config model route interop -> Maybe String
 header key (Conn { req }) =
     Request.header key req
 
 
-{-| Universally unique Conn identifier
--}
-id : Conn config model route -> Id
-id =
-    request >> Request.id
-
-
 {-| Request HTTP method
 -}
-method : Conn config model route -> Method
+method : Conn config model route interop -> Method
 method =
     request >> Request.method
 
 
 {-| Parsed route
 -}
-route : Conn config model route -> route
+route : Conn config model route interop -> route
 route (Conn { route }) =
     route
 
@@ -179,8 +190,8 @@ route (Conn { route }) =
 -}
 respond :
     ( Status, Body )
-    -> Conn config model route
-    -> Conn config model route
+    -> Conn config model route interop
+    -> ( Conn config model route interop, Cmd msg )
 respond ( status, body ) =
     updateResponse
         (setStatus status >> setBody body)
@@ -203,8 +214,8 @@ Does not do anything if the response has already been sent.
 -}
 updateResponse :
     (Response -> Response)
-    -> Conn config model route
-    -> Conn config model route
+    -> Conn config model route interop
+    -> Conn config model route interop
 updateResponse updater (Conn conn) =
     Conn <|
         case conn.resp of
@@ -216,27 +227,36 @@ updateResponse updater (Conn conn) =
 
 
 {-| Sends a connection response through the given port
+-}
+send :
+    Conn config model route interop
+    -> ( Conn config model route interop, Cmd msg )
+send conn =
+    ( toSent conn, Cmd.none )
+
+
+{-| Converts a conn to a sent conn, making it immutable.
+
+The connection will be sent once the current update loop completes. This
+function is intended to be used by middleware, which cannot issue side-effects.
 
     import TestHelpers exposing (conn)
 
     (unsent conn) == Just conn
     --> True
 
-    (unsent <| send conn) == Nothing
+    (unsent <| toSent conn) == Nothing
     --> True
 
 -}
-send :
-    Conn config model route
-    -> Conn config model route
-send (Conn conn) =
+toSent :
+    Conn config model route interop
+    -> Conn config model route interop
+toSent (Conn conn) =
     case conn.resp of
         Unsent resp ->
             Conn
-                { conn
-                    | resp =
-                        Sent <| Response.encode (Request.id conn.req) resp
-                }
+                { conn | resp = Sent <| Response.encode resp }
 
         Sent _ ->
             Conn conn
@@ -244,7 +264,7 @@ send (Conn conn) =
 
 {-| Return `Just` the same can if it has not been sent yet.
 -}
-unsent : Conn config model route -> Maybe (Conn config model route)
+unsent : Conn config model route interop -> Maybe (Conn config model route interop)
 unsent (Conn conn) =
     case conn.resp of
         Sent _ ->
@@ -257,9 +277,9 @@ unsent (Conn conn) =
 {-| Apply an update function to a conn, but only if the conn is unsent.
 -}
 mapUnsent :
-    (Conn config model route -> ( Conn config model route, Cmd msg ))
-    -> Conn config model route
-    -> ( Conn config model route, Cmd msg )
+    (Conn config model route interop -> ( Conn config model route interop, Cmd msg ))
+    -> Conn config model route interop
+    -> ( Conn config model route interop, Cmd msg )
 mapUnsent func (Conn conn) =
     case conn.resp of
         Sent _ ->
@@ -270,20 +290,59 @@ mapUnsent func (Conn conn) =
 
 
 
+-- JAVASCRIPT INTEROP
+
+
+{-| Schedule one or more interop calls.
+-}
+interop :
+    List interop
+    -> Conn config model route interop
+    -> ( Conn config model route interop, Cmd msg )
+interop interopCalls (Conn conn) =
+    ( Conn { conn | interopCalls = List.append conn.interopCalls interopCalls }
+    , Cmd.none
+    )
+
+
+{-| Get all schedule interop calls.
+-}
+interopCalls : Conn config model route interop -> List interop
+interopCalls (Conn { interopCalls }) =
+    interopCalls
+
+
+{-| Remove all schedule interop calls.
+-}
+interopClear : Conn config model route interop -> Conn config model route interop
+interopClear (Conn conn) =
+    Conn { conn | interopCalls = [] }
+
+
+
 -- MISC
+
+
+{-| Universally unique Conn identifier
+-}
+id : Conn config model route interop -> Id
+id (Conn { id }) =
+    id
 
 
 {-| Initialize a new Conn.
 -}
-init : config -> model -> route -> Request -> Conn config model route
-init config model route req =
+init : Id -> config -> model -> route -> Request -> Conn config model route interop
+init id config model route req =
     Conn
         (Impl
+            id
             config
             req
             (Unsent Response.init)
             model
             route
+            []
         )
 
 
@@ -292,11 +351,11 @@ init config model route req =
 This is the format the response takes when it gets sent through the response port.
 
 -}
-jsonEncodedResponse : Conn config model route -> Json.Encode.Value
-jsonEncodedResponse (Conn { req, resp }) =
+jsonEncodedResponse : Conn config model route interop -> Json.Encode.Value
+jsonEncodedResponse (Conn { resp }) =
     case resp of
         Unsent resp ->
-            Response.encode (Request.id req) resp
+            Response.encode resp
 
         Sent encodedValue ->
             encodedValue

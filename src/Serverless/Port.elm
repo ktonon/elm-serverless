@@ -1,4 +1,9 @@
-module Serverless.Port exposing (Request, Response)
+module Serverless.Port
+    exposing
+        ( IO
+        , Request
+        , Response
+        )
 
 {-| Port type definitions.
 
@@ -6,7 +11,7 @@ An elm library cannot expose a module with ports. The following port definitions
 are provided so that your program can create the necessary request and response
 ports.
 
-@docs Request, Response
+@docs IO, Request, Response
 
 -}
 
@@ -16,6 +21,12 @@ import Json.Encode
 -- PORTS
 
 
+{-| Value passed between Elm and JavaScript.
+-}
+type alias IO =
+    ( String, String, Json.Encode.Value )
+
+
 {-| Type of port through which the request is received.
 Set your request port to this type.
 
@@ -23,7 +34,7 @@ Set your request port to this type.
 
 -}
 type alias Request msg =
-    (Json.Encode.Value -> msg) -> Sub msg
+    (IO -> msg) -> Sub msg
 
 
 {-| Type of port through which the request is sent.
@@ -33,4 +44,4 @@ Set your response port to this type.
 
 -}
 type alias Response msg =
-    Json.Encode.Value -> Cmd msg
+    IO -> Cmd msg

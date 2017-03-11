@@ -49,9 +49,9 @@ import Serverless.Conn as Conn exposing (Conn)
 
 {-| Represents a pipeline or section of a pipeline.
 -}
-type Plug config model route
-    = Simple (Conn config model route -> Conn config model route)
-    | Pipeline (List (Plug config model route))
+type Plug config model route interop
+    = Simple (Conn config model route interop -> Conn config model route interop)
+    | Pipeline (List (Plug config model route interop))
 
 
 
@@ -66,7 +66,7 @@ Build the pipeline by chaining plugs with plug, loop, fork, and nest.
     --> 0
 
 -}
-pipeline : Plug config model route
+pipeline : Plug config model route interop
 pipeline =
     Pipeline []
 
@@ -88,9 +88,9 @@ pipeline with a group of plugs.
 
 -}
 nest :
-    Plug config model route
-    -> Plug config model route
-    -> Plug config model route
+    Plug config model route interop
+    -> Plug config model route interop
+    -> Plug config model route interop
 nest a b =
     case ( a, b ) of
         ( Pipeline begin, Pipeline end ) ->
@@ -118,9 +118,9 @@ A plug just transforms the connection. For example,
 
 -}
 plug :
-    (Conn config model route -> Conn config model route)
-    -> Plug config model route
-    -> Plug config model route
+    (Conn config model route interop -> Conn config model route interop)
+    -> Plug config model route interop
+    -> Plug config model route interop
 plug func =
     nest (Simple func)
 
@@ -128,9 +128,9 @@ plug func =
 {-| Basic pipeline update function.
 -}
 apply :
-    Plug config model route
-    -> Conn config model route
-    -> Conn config model route
+    Plug config model route interop
+    -> Conn config model route interop
+    -> Conn config model route interop
 apply plug conn =
     case ( Conn.unsent conn, plug ) of
         ( Nothing, _ ) ->
@@ -154,7 +154,7 @@ apply plug conn =
 
 {-| The number of plugs in a pipeline
 -}
-size : Plug config model route -> Int
+size : Plug config model route interop -> Int
 size plug =
     case plug of
         Simple _ ->

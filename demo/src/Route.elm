@@ -7,6 +7,7 @@ type Route
     = Home Query
     | Quote Lang
     | Buggy
+    | Number
 
 
 type Lang
@@ -31,6 +32,7 @@ route =
         [ map Home (top </> query)
         , map Quote (s "quote" </> lang)
         , map Buggy (s "buggy")
+        , map Number (s "number")
         ]
 
 

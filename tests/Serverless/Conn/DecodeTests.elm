@@ -5,7 +5,7 @@ import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
 import Serverless.Conn.KeyValueList as KeyValueList
 import Serverless.Conn.Request as Request
 import Test exposing (describe)
-import Test.Extra exposing (describeDecoder, DecoderExpectation(..))
+import Test.Extra exposing (DecoderExpectation(..), describeDecoder)
 
 
 all : Test.Test
@@ -65,7 +65,6 @@ all =
             , ( "{}", FailsToDecode )
             , ( """
             {
-              "id": "some-id",
               "body": null,
               "headers": null,
               "host": "",
@@ -79,7 +78,7 @@ all =
               "queryString": ""
             }
             """
-              , DecodesTo (Request.init "some-id")
+              , DecodesTo Request.init
               )
             ]
         ]

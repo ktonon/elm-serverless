@@ -9,16 +9,17 @@ module Serverless.Conn.Fuzz
 
 import Fuzz exposing (Fuzzer, andMap, andThen, constant, map)
 import Fuzz.Extra exposing (eitherOr)
-import Serverless.Conn
+import Serverless.Conn exposing (Id)
 import Serverless.Conn.Body as Body exposing (Body)
-import Serverless.Conn.Request as Request exposing (Id, Method(..), Request)
+import Serverless.Conn.Request as Request exposing (Method(..), Request)
 import Serverless.Conn.Response as Response exposing (Response, Status)
 import TestHelpers exposing (Config, Conn, Model, Route(..))
 
 
 conn : Fuzzer Conn
 conn =
-    Fuzz.map4 Serverless.Conn.init
+    Fuzz.map5 Serverless.Conn.init
+        id
         (constant (Config "secret"))
         (constant (Model 0))
         (constant Home)
@@ -40,7 +41,7 @@ response =
 
 request : Fuzzer Request
 request =
-    Fuzz.map Request.init id
+    constant Request.init
 
 
 id : Fuzzer Id

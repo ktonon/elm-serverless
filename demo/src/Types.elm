@@ -3,8 +3,10 @@ port module Types exposing (..)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Encode as Encode
 import Route exposing (Route)
-import Serverless.Conn
+import Serverless.Conn exposing (Id)
+import Serverless.Plug
 import Serverless.Port
 
 
@@ -52,8 +54,34 @@ to the program as `endpoint` (see above).
 
 -}
 type Msg
-    = Endpoint
-    | GotQuotes (Result Http.Error (List Quote))
+    = GotQuotes (Result Http.Error (List Quote))
+    | RandomNumber Int
+
+
+{-| Your custom interop type.
+
+Should enumerate the interop (JavaScript) functions which can be called.
+
+-}
+type Interop
+    = GetRandom Int
+
+
+interopEncode : Interop -> Encode.Value
+interopEncode interop =
+    case interop of
+        GetRandom upper ->
+            Encode.int upper
+
+
+interopDecoder : String -> Maybe (Decode.Decoder Msg)
+interopDecoder interopName =
+    case interopName of
+        "getRandom" ->
+            Just <| Decode.map RandomNumber Decode.int
+
+        _ ->
+            Nothing
 
 
 
@@ -64,7 +92,11 @@ type Msg
 
 
 type alias Conn =
-    Serverless.Conn.Conn Config Model Route
+    Serverless.Conn.Conn Config Model Route Interop
+
+
+type alias Plug =
+    Serverless.Plug.Plug Config Model Route Interop
 
 
 port requestPort : Serverless.Port.Request msg

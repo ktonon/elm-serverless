@@ -34,7 +34,6 @@ import Json.Encode as Encode
 import Serverless.Conn.Body as Body exposing (Body, text)
 import Serverless.Conn.Charset as Charset exposing (Charset)
 import Serverless.Conn.KeyValueList as KeyValueList
-import Serverless.Conn.Request exposing (Id)
 
 
 {-| An HTTP response.
@@ -122,11 +121,10 @@ init =
 
 {-| JSON encode an HTTP response.
 -}
-encode : Id -> Response -> Encode.Value
-encode id (Response res) =
+encode : Response -> Encode.Value
+encode (Response res) =
     Encode.object
-        [ ( "id", Encode.string id )
-        , ( "body", Body.encode res.body )
+        [ ( "body", Body.encode res.body )
         , ( "headers"
           , res.headers
                 ++ [ ( "content-type", contentType res ) ]

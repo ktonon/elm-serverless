@@ -16,14 +16,14 @@ class Pool {
     return conn || {};
   }
 
-  put(req, callback) {
-    if (this.connections[req.id] !== undefined) {
-      this.logger.error(`Duplicate connection ID: ${req.id}`);
+  put(id, req, callback) {
+    if (this.connections[id] !== undefined) {
+      this.logger.error(`Duplicate connection ID: ${id}`);
     }
     if (typeof callback !== 'function') {
       throw new Error(`Callback is not a function: ${callback}`);
     }
-    this.connections[req.id] = { req, callback };
+    this.connections[id] = { req, callback, id };
   }
 }
 

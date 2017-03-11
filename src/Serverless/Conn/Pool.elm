@@ -1,76 +1,64 @@
-module Serverless.Conn.Pool exposing (..)
+module Serverless.Conn.Pool
+    exposing
+        ( Pool
+        , empty
+        , get
+        , remove
+        , replace
+        , size
+        )
 
 import Dict exposing (Dict)
-import Logging exposing (LogLevel(..), Logger)
-import Serverless.Conn as Conn exposing (Conn)
-import Serverless.Conn.Request exposing (Id, Request)
+import Serverless.Conn as Conn exposing (Conn, Id)
 
 
--- CONNECTION POOL
+type Pool config model route interop
+    = Pool
+        { connDict : Dict Id (Conn config model route interop)
+        }
 
 
-type alias Pool config model route =
-    { connDict : Dict Id (Conn config model route)
-    , initialModel : model
-    , config : Maybe config
-    }
-
-
-empty :
-    model
-    -> Maybe config
-    -> Pool config model route
+empty : Pool config model route interop
 empty =
-    Pool Dict.empty
-
-
-add :
-    Logger (Pool config model route)
-    -> route
-    -> Request
-    -> Pool config model route
-    -> Pool config model route
-add logger route req pool =
-    case pool.config of
-        Just config ->
-            pool
-                |> replace
-                    (Conn.init config pool.initialModel route req)
-
-        _ ->
-            logger LogError "Failed to add request! Pool has no config" pool
-
-
-remove :
-    Id
-    -> Pool config model route
-    -> Pool config model route
-remove id pool =
-    { pool | connDict = pool.connDict |> Dict.remove id }
+    Pool { connDict = Dict.empty }
 
 
 get :
     Id
-    -> Pool config model route
-    -> Maybe (Conn config model route)
-get requestId { connDict } =
+    -> Pool config model route interop
+    -> Maybe (Conn config model route interop)
+get requestId (Pool { connDict }) =
     Dict.get requestId connDict
 
 
 replace :
-    Conn config model route
-    -> Pool config model route
-    -> Pool config model route
-replace conn pool =
-    let
-        newConnDict =
-            Dict.insert (Conn.id conn) conn pool.connDict
-    in
-    { pool | connDict = newConnDict }
+    Conn config model route interop
+    -> Pool config model route interop
+    -> Pool config model route interop
+replace conn (Pool pool) =
+    Pool
+        { pool
+            | connDict =
+                Dict.insert
+                    (Conn.id conn)
+                    conn
+                    pool.connDict
+        }
 
 
-connections :
-    Pool config model route
-    -> List (Conn config model route)
-connections { connDict } =
-    Dict.values connDict
+remove :
+    Conn config model route interop
+    -> Pool config model route interop
+    -> Pool config model route interop
+remove conn (Pool pool) =
+    Pool
+        { pool
+            | connDict =
+                pool.connDict
+                    |> Dict.remove (Conn.id conn)
+        }
+
+
+size : Pool config model route interop -> Int
+size (Pool { connDict }) =
+    Dict.size connDict

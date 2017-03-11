@@ -35,7 +35,7 @@ describe('requestHandler({ pool })', () => {
     const [conn] = connections(h.pool);
     conn.should.be.an.Object();
     should(conn.callback).equal(callback);
-    should(conn.req).be.an.Object().with.property('id');
+    should(conn.req).be.an.Object().with.property('host');
   });
 
   it('does not call the callback', () => {
@@ -50,7 +50,7 @@ describe('requestHandler({ pool })', () => {
     h.requestPort.send.called.should.be.false();
     h({ id }, context, sinon.spy());
     const { req } = h.pool.take(id);
-    h.requestPort.send.calledWith(req).should.be.true();
+    h.requestPort.send.calledWith([id, '__request__', req]).should.be.true();
   });
 
   it('leaves string bodies unchanged', () => {
@@ -72,7 +72,7 @@ describe('requestHandler({ pool })', () => {
     const n = 100;
     [...Array(n)].forEach(() => h({}, context, sinon.spy()));
     const ids = new Set();
-    connections(h.pool).forEach(({ req }) => ids.add(req.id));
+    connections(h.pool).forEach(conn => ids.add(conn.id));
     ids.size.should.equal(n);
   });
 

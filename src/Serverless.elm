@@ -2,6 +2,7 @@ module Serverless
     exposing
         ( Flags
         , HttpApi
+        , Interop
         , Program
         , httpApi
         )
@@ -12,15 +13,19 @@ for a usage example.
 
 @docs Program, Flags, httpApi, HttpApi
 
+
+## JavaScript Interop
+
+@docs Interop
+
 -}
 
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode
-import Logging exposing (defaultLogger)
-import Serverless.Conn as Conn exposing (Conn)
+import Serverless.Conn as Conn exposing (Conn, Id)
 import Serverless.Conn.Body as Body
 import Serverless.Conn.Pool as ConnPool
-import Serverless.Conn.Request as Request exposing (Id)
+import Serverless.Conn.Request as Request
 import Serverless.Conn.Response as Response exposing (Status)
 import Serverless.Port as Port
 
@@ -31,8 +36,8 @@ This maps to a headless elm
 [Platform.Program](http://package.elm-lang.org/packages/elm-lang/core/latest/Platform#Program).
 
 -}
-type alias Program config model route msg =
-    Platform.Program Flags (Model config model route) (Msg msg)
+type alias Program config model route interop msg =
+    Platform.Program Flags (Model config model route interop) (RawMsg msg)
 
 
 {-| Type of flags for program.
@@ -49,8 +54,8 @@ type alias Flags =
 {-| Create a program from the given HTTP api.
 -}
 httpApi :
-    HttpApi config model route msg
-    -> Program config model route msg
+    HttpApi config model route interop msg
+    -> Program config model route interop msg
 httpApi api =
     Platform.programWithFlags
         { init = init_ api
@@ -78,19 +83,27 @@ You must provide the following:
   - `update` the app update function
   - `subscriptions` the app subscriptions function
 
-Notices that `update` and `subscriptions` operate on `Conn config model route`
+Notices that `update` and `subscriptions` operate on `Conn config model route interop`
 and not just on `model`.
 
 -}
-type alias HttpApi config model route msg =
+type alias HttpApi config model route interop msg =
     { configDecoder : Decoder config
-    , requestPort : Port.Request (Msg msg)
-    , responsePort : Port.Response (Msg msg)
-    , endpoint : msg
     , initialModel : model
     , parseRoute : String -> Maybe route
-    , update : msg -> Conn config model route -> ( Conn config model route, Cmd msg )
-    , subscriptions : Conn config model route -> Sub msg
+    , endpoint : Conn config model route interop -> ( Conn config model route interop, Cmd msg )
+    , update : msg -> Conn config model route interop -> ( Conn config model route interop, Cmd msg )
+    , interop : Interop interop msg
+    , requestPort : Port.Request (RawMsg msg)
+    , responsePort : Port.Response (RawMsg msg)
+    }
+
+
+{-| Translates Elm data to and from JSON.
+-}
+type alias Interop interop msg =
+    { encodeInput : interop -> Json.Encode.Value
+    , outputDecoder : String -> Maybe (Json.Decode.Decoder msg)
     }
 
 
@@ -98,90 +111,112 @@ type alias HttpApi config model route msg =
 -- IMPLEMENTATION
 
 
-type alias Model config model route =
-    { pool : ConnPool.Pool config model route
+type alias Model config model route interop =
+    { pool : ConnPool.Pool config model route interop
+    , config : config
     }
 
 
-type Msg msg
-    = RawRequest Json.Encode.Value
+type RawMsg msg
+    = RequestPort Port.IO
     | HandlerMsg Id msg
 
 
+type SlsMsg config model route interop msg
+    = RequestAdd (Conn config model route interop)
+    | RequestUpdate Id msg
+    | ProcessingError Id Int String
+
+
 init_ :
-    HttpApi config model route msg
+    HttpApi config model route interop msg
     -> Flags
-    -> ( Model config model route, Cmd (Msg msg) )
+    -> ( Model config model route interop, Cmd (RawMsg msg) )
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
-            ( ConnPool.empty api.initialModel (Just config)
-                |> Model
+            ( { pool = ConnPool.empty
+              , config = config
+              }
                 |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            ConnPool.empty api.initialModel Nothing
-                |> Model
-                |> reportFailure "Initialization failed" err
+            Debug.crash "Initialization failed" err
+
+
+toSlsMsg :
+    HttpApi config model route interop msg
+    -> config
+    -> RawMsg msg
+    -> SlsMsg config model route interop msg
+toSlsMsg api config rawMsg =
+    case rawMsg of
+        RequestPort ( id, action, raw ) ->
+            case action of
+                "__request__" ->
+                    case decodeValue Request.decoder raw of
+                        Ok req ->
+                            case
+                                api.parseRoute <|
+                                    (Request.path req ++ Request.queryString req)
+                            of
+                                Just route ->
+                                    RequestAdd <| Conn.init id config api.initialModel route req
+
+                                Nothing ->
+                                    ProcessingError id 404 <|
+                                        (++) "Could not parse route: "
+                                            (Request.path req)
+
+                        Err err ->
+                            ProcessingError id 500 <|
+                                (++) "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
+                                    (toString err)
+
+                action ->
+                    case decodeOutput api.interop action raw of
+                        Ok msg ->
+                            RequestUpdate id msg
+
+                        Err err ->
+                            ProcessingError id 500 <|
+                                (++) "Error decoding interop result: " err
+
+        HandlerMsg id msg ->
+            RequestUpdate id msg
 
 
 update_ :
-    HttpApi config model route msg
-    -> Msg msg
-    -> Model config model route
-    -> ( Model config model route, Cmd (Msg msg) )
-update_ api slsMsg model =
-    case slsMsg of
-        RawRequest raw ->
-            case decodeValue Request.decoder raw of
-                Ok req ->
-                    case
-                        api.parseRoute <|
-                            (Request.path req ++ Request.queryString req)
-                    of
-                        Just route ->
-                            { model | pool = ConnPool.add defaultLogger route req model.pool }
-                                |> updateChild api
-                                    (Request.id req)
-                                    api.endpoint
+    HttpApi config model route interop msg
+    -> RawMsg msg
+    -> Model config model route interop
+    -> ( Model config model route interop, Cmd (RawMsg msg) )
+update_ api rawMsg model =
+    case toSlsMsg api model.config rawMsg of
+        RequestAdd conn ->
+            updateChildHelper api
+                (api.endpoint conn)
+                model
 
-                        Nothing ->
-                            ( model
-                            , send api (Request.id req) 404 <|
-                                (++) "Could not parse route: " <|
-                                    Request.path req
-                            )
-
-                Err err ->
-                    reportFailure
-                        "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
-                        err
-                        model
-
-        HandlerMsg connId msg ->
+        RequestUpdate connId msg ->
             updateChild api connId msg model
 
+        ProcessingError connId status err ->
+            ( model, send api connId status err )
 
-updateChild : HttpApi config model route msg -> Id -> msg -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
+
+updateChild :
+    HttpApi config model route interop msg
+    -> Id
+    -> msg
+    -> Model config model route interop
+    -> ( Model config model route interop, Cmd (RawMsg msg) )
 updateChild api connId msg model =
     case ConnPool.get connId model.pool of
         Just conn ->
-            let
-                ( newConn, cmd ) =
-                    api.update msg conn
-            in
-            case Conn.unsent newConn of
-                Nothing ->
-                    ( { model | pool = model.pool |> ConnPool.remove connId }
-                    , api.responsePort (Conn.jsonEncodedResponse newConn)
-                    )
-
-                Just newConn ->
-                    ( { model | pool = model.pool |> ConnPool.replace newConn }
-                    , Cmd.map (HandlerMsg connId) cmd
-                    )
+            updateChildHelper api (api.update msg conn) model
 
         _ ->
             ( model
@@ -190,46 +225,117 @@ updateChild api connId msg model =
             )
 
 
+updateChildHelper :
+    HttpApi config model route interop msg
+    -> ( Conn config model route interop, Cmd msg )
+    -> Model config model route interop
+    -> ( Model config model route interop, Cmd (RawMsg msg) )
+updateChildHelper api ( conn, cmd ) model =
+    case Conn.unsent conn of
+        Nothing ->
+            ( { model | pool = model.pool |> ConnPool.remove conn }
+            , api.responsePort
+                ( Conn.id conn
+                , "__response__"
+                , Conn.jsonEncodedResponse conn
+                )
+            )
+
+        Just conn ->
+            ( { model
+                | pool =
+                    ConnPool.replace
+                        (Conn.interopClear conn)
+                        model.pool
+              }
+            , Cmd.batch
+                [ Cmd.map (HandlerMsg (Conn.id conn)) cmd
+                , interopCallCmd api conn
+                ]
+            )
+
+
 sub_ :
-    HttpApi config model route msg
-    -> Model config model route
-    -> Sub (Msg msg)
+    HttpApi config model route interop msg
+    -> Model config model route interop
+    -> Sub (RawMsg msg)
 sub_ api model =
-    model.pool
-        |> ConnPool.connections
-        |> List.map (connSub api)
-        |> List.append [ api.requestPort RawRequest ]
-        |> Sub.batch
-
-
-connSub : HttpApi config model route msg -> Conn config model route -> Sub (Msg msg)
-connSub api conn =
-    api.subscriptions conn
-        |> Sub.map (HandlerMsg (Conn.id conn))
+    api.requestPort RequestPort
 
 
 
 -- HELPERS
 
 
-reportFailure : String -> value -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
-reportFailure msg value model =
-    let
-        _ =
-            Debug.log msg value
-    in
-    ( model, Cmd.none )
-
-
 send :
-    HttpApi config model route msg
+    HttpApi config model route interop msg
     -> Id
     -> Status
     -> String
-    -> Cmd (Msg msg)
+    -> Cmd (RawMsg msg)
 send { responsePort } id code msg =
-    Response.init
-        |> Response.setStatus code
-        |> Response.setBody (Body.text msg)
-        |> Response.encode id
-        |> responsePort
+    responsePort
+        ( id
+        , "__response__"
+        , Response.init
+            |> Response.setStatus code
+            |> Response.setBody (Body.text msg)
+            |> Response.encode
+        )
+
+
+
+-- JAVASCRIPT INTEROP
+
+
+interopCallCmd :
+    HttpApi config model route interop msg
+    -> Conn config model route interop
+    -> Cmd (RawMsg msg)
+interopCallCmd api conn =
+    conn
+        |> Conn.interopCalls
+        |> List.map
+            (\interop ->
+                api.responsePort
+                    ( Conn.id conn
+                    , interopFunctionName interop
+                    , encodeInput api.interop interop
+                    )
+            )
+        |> Cmd.batch
+
+
+interopFunctionName : interop -> String
+interopFunctionName interop =
+    let
+        name =
+            interop |> toString |> String.split " " |> List.head |> Maybe.withDefault ""
+    in
+    (++)
+        (name |> String.left 1 |> String.toLower)
+        (name |> String.dropLeft 1)
+
+
+encodeInput :
+    Interop interop msg
+    -> interop
+    -> Json.Encode.Value
+encodeInput { encodeInput } interop =
+    encodeInput interop
+
+
+decodeOutput :
+    Interop interop msg
+    -> String
+    -> Json.Encode.Value
+    -> Result String msg
+decodeOutput { outputDecoder } interopName jsonValue =
+    case outputDecoder interopName of
+        Just decoder ->
+            Json.Decode.decodeValue decoder jsonValue
+
+        Nothing ->
+            Err <|
+                "Could not get decoder for interop named: "
+                    ++ interopName

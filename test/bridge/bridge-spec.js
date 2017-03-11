@@ -1,6 +1,8 @@
 const should = require('should');
 const sinon = require('sinon');
+
 const { httpApi } = require('../../src-bridge');
+const spyLogger = require('./spy-logger');
 
 const requestPort = 'requestPort';
 const responsePort = 'responsePort';
@@ -31,7 +33,7 @@ describe('elmServerless', () => {
       h.worker.calledWith(config).should.be.true();
     });
 
-    it('subscribes to the responsePort with a response handler', () => {
+    it('subscribes to the responsePort', () => {
       const h = makeHandler();
       httpApi({ handler: h, requestPort, responsePort });
       const subscribe = h.worker().ports.responsePort.subscribe;
@@ -39,7 +41,27 @@ describe('elmServerless', () => {
       const call = subscribe.getCall(0);
       const [func] = call.args;
       should(func).be.a.Function();
-      should(func.name).equal('responseHandler');
+    });
+
+    it('handles responses', () => {
+      const h = makeHandler();
+      const logger = spyLogger();
+      httpApi({ handler: h, logger, requestPort, responsePort });
+      const subscribe = h.worker().ports.responsePort.subscribe;
+      const responseHandler = subscribe.getCalls()[0].args[0];
+      logger.error.getCalls().should.be.empty();
+      responseHandler(['id', '__response__', {}]);
+      logger.error.getCalls().should.not.be.empty();
+      logger.error.getCalls()[0].args.should.deepEqual(['No callback for ID: id']);
+    });
+
+    it('handles interop', () => {
+      const h = makeHandler();
+      const logger = spyLogger();
+      httpApi({ handler: h, logger, requestPort, responsePort });
+      const subscribe = h.worker().ports.responsePort.subscribe;
+      const responseHandler = subscribe.getCalls()[0].args[0];
+      (() => responseHandler(['id', 'missingHandler', {}])).should.throw(/^Missing interop/);
     });
 
     it('returns a request handler', () => {
