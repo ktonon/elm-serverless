@@ -1,4 +1,12 @@
-module Serverless.Pipeline exposing (..)
+module Serverless.Pipeline
+    exposing
+        ( Msg(..)
+        , PlugMsg(..)
+        , Options
+        , apply
+        , firstIndexPath
+        , newOptions
+        )
 
 import Array exposing (Array)
 import Json.Encode as J
@@ -27,12 +35,17 @@ type alias UnwrappedPlugMsg config model msg =
     }
 
 
+type alias Index =
+    Int
+
+
 type alias IndexPath =
     Array Index
 
 
-type alias Index =
-    Int
+firstIndexPath : IndexPath
+firstIndexPath =
+    Array.empty |> Array.push 0
 
 
 type alias Options config model msg =
@@ -44,6 +57,11 @@ type alias Options config model msg =
     }
 
 
+newOptions : msg -> ResponsePort (Msg msg) -> Plug config model msg -> Options config model msg
+newOptions =
+    Options Cmd.none 0
+
+
 type alias IndexDepth =
     Int
 
@@ -52,12 +70,12 @@ type alias IndexDepth =
 -- PIPELINE PROCESSING
 
 
-applyPipeline :
+apply :
     Options config model msg
     -> PlugMsg msg
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
-applyPipeline opt plugMsg conn =
+apply opt plugMsg conn =
     case plugMsg |> unwrapPlugMsg opt of
         Nothing ->
             ( conn, opt.appCmdAcc )
@@ -84,7 +102,7 @@ applyUnwrappedPlugMsg opt upm conn =
                 case newConn.pipelineState of
                     Processing ->
                         newConn
-                            |> applyPipeline
+                            |> apply
                                 newOpt
                                 (PlugMsg
                                     -- Move on to the next plug in the pipeline
@@ -167,7 +185,7 @@ incrementIndexDepth :
     -> ( Conn config model, Cmd (Msg msg) )
 incrementIndexDepth opt upm conn =
     conn
-        |> applyPipeline
+        |> apply
             { opt | indexDepth = opt.indexDepth + 1 }
             (PlugMsg
                 (if (upm.indexPath |> Array.length) < opt.indexDepth + 2 then
@@ -177,16 +195,6 @@ incrementIndexDepth opt upm conn =
                 )
                 upm.msg
             )
-
-
-firstIndexPath : IndexPath
-firstIndexPath =
-    Array.empty |> Array.push 0
-
-
-newOptions : msg -> ResponsePort (Msg msg) -> Plug config model msg -> Options config model msg
-newOptions =
-    Options Cmd.none 0
 
 
 addAppCmd : Cmd (Msg msg) -> Options config model msg -> Options config model msg

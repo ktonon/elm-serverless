@@ -4,7 +4,7 @@ import ConnFuzz as Fuzz exposing (testConnWith, testConn)
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Pipeline exposing (..)
+import Serverless.Pipeline as Pipeline exposing (PlugMsg(..))
 import Test exposing (..)
 import TestHelpers exposing (..)
 import TestTypes exposing (..)
@@ -17,9 +17,9 @@ testApplyPipeline label pl tester =
             case
                 (conn
                     |> body (TextBody "")
-                    |> applyPipeline
-                        (Serverless.Pipeline.newOptions NoOp responsePort pl)
-                        (PlugMsg firstIndexPath NoOp)
+                    |> Pipeline.apply
+                        (Pipeline.newOptions NoOp responsePort pl)
+                        (PlugMsg Pipeline.firstIndexPath NoOp)
                 )
             of
                 ( newConn, cmd ) ->

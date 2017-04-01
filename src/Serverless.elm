@@ -17,9 +17,9 @@ for a usage example. Then read about [Building Pipelines](./Serverless-Conn#buil
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode as J
 import Logging exposing (defaultLogger)
-import Serverless.Pool exposing (..)
+import Serverless.Pool as Pool exposing (Pool)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Pipeline exposing (..)
+import Serverless.Pipeline as Pipeline exposing (PlugMsg(..), Msg(..))
 import Serverless.Types exposing (..)
 
 
@@ -30,15 +30,6 @@ This maps to a headless elm
 -}
 type alias Program config model msg =
     Platform.Program Flags (Model config model) (Msg msg)
-
-
-toPipelineOptions :
-    HttpApi config model msg
-    -> Serverless.Pipeline.Options config model msg
-toPipelineOptions api =
-    Serverless.Pipeline.newOptions api.endpoint
-        api.responsePort
-        api.pipeline
 
 
 {-| Type of flags for program.
@@ -111,14 +102,14 @@ init_ :
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
-            ( emptyPool api.initialModel (Just config)
+            ( Pool.empty api.initialModel (Just config)
                 |> Model
                 |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            emptyPool api.initialModel Nothing
+            Pool.empty api.initialModel Nothing
                 |> Model
                 |> reportFailure "Initialization failed" err
 
@@ -131,12 +122,12 @@ update_ :
 update_ api slsMsg model =
     case slsMsg of
         RawRequest raw ->
-            case raw |> decodeValue requestDecoder of
+            case raw |> decodeValue Pool.requestDecoder of
                 Ok req ->
-                    { model | pool = model.pool |> addToPool defaultLogger req }
+                    { model | pool = model.pool |> Pool.add defaultLogger req }
                         |> updateChild api
                             req.id
-                            (PlugMsg firstIndexPath api.endpoint)
+                            (PlugMsg Pipeline.firstIndexPath api.endpoint)
 
                 Err err ->
                     model |> reportFailure "Error decoding request" err
@@ -147,18 +138,27 @@ update_ api slsMsg model =
 
 updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model -> ( Model config model, Cmd (Msg msg) )
 updateChild api requestId msg model =
-    case model.pool |> getFromPool requestId of
+    case model.pool |> Pool.get requestId of
         Just conn ->
             let
                 ( newConn, cmd ) =
-                    conn |> applyPipeline (api |> toPipelineOptions) msg
+                    conn |> Pipeline.apply (api |> toPipelineOptions) msg
             in
-                ( { model | pool = model.pool |> replaceInPool newConn }
+                ( { model | pool = model.pool |> Pool.replace newConn }
                 , cmd
                 )
 
         _ ->
             model |> reportFailure "No connection in pool with id: " requestId
+
+
+toPipelineOptions :
+    HttpApi config model msg
+    -> Pipeline.Options config model msg
+toPipelineOptions api =
+    Pipeline.newOptions api.endpoint
+        api.responsePort
+        api.pipeline
 
 
 sub_ :
@@ -167,7 +167,7 @@ sub_ :
     -> Sub (Msg msg)
 sub_ api model =
     model.pool
-        |> poolConnections
+        |> Pool.connections
         |> List.map (connSub api)
         |> List.append [ api.requestPort RawRequest ]
         |> Sub.batch
@@ -176,7 +176,7 @@ sub_ api model =
 connSub : HttpApi config model msg -> Conn config model -> Sub (Msg msg)
 connSub api conn =
     api.subscriptions conn
-        |> Sub.map (PlugMsg firstIndexPath)
+        |> Sub.map (PlugMsg Pipeline.firstIndexPath)
         |> Sub.map (HandlerMsg conn.req.id)
 
 

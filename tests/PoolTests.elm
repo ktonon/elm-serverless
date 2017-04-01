@@ -9,7 +9,7 @@ import Json.Encode as J
 import Logging exposing (nullLogger)
 import Serverless.Conn as Conn exposing (..)
 import Serverless.Conn.Types exposing (..)
-import Serverless.Pool exposing (..)
+import Serverless.Pool as Pool
 import Test exposing (..)
 import Test.Extra exposing (..)
 import TestHelpers exposing (..)
@@ -31,7 +31,7 @@ connectionPoolTests =
         [ describe "emptyPool"
             [ it "creates a pool with no connections" <|
                 expect
-                    (emptyPool (Model 1) (Config "secret" |> Just)
+                    (Pool.empty (Model 1) (Config "secret" |> Just)
                         |> .conn
                         |> Dict.size
                     )
@@ -43,8 +43,8 @@ connectionPoolTests =
             [ testReq "fails if the pool has no config" <|
                 \req ->
                     expect
-                        (emptyPool (Model 1) Nothing
-                            |> addToPool nullLogger req
+                        (Pool.empty (Model 1) Nothing
+                            |> Pool.add nullLogger req
                             |> .conn
                             |> Dict.size
                         )
@@ -63,7 +63,7 @@ requestDecoderTests : Test
 requestDecoderTests =
     describe "Request Decoding"
         [ describeDecoder "requestDecoder"
-            requestDecoder
+            Pool.requestDecoder
             [ ( "", FailsToDecode )
             , ( "{}", FailsToDecode )
             , ( """
@@ -171,21 +171,21 @@ requestDecoderTests =
               )
             ]
         , describeDecoder "paramsDecoder"
-            paramsDecoder
+            Pool.paramsDecoder
             [ ( "null", DecodesTo [] )
             , ( "{}", DecodesTo [] )
             , ( """{ "fOo": "baR " }""", DecodesTo [ ( "fOo", "baR " ) ] )
             , ( """{ "foo": 3 }""", FailsToDecode )
             ]
         , describeDecoder "bodyDecoder"
-            bodyDecoder
+            Pool.bodyDecoder
             [ ( "null", DecodesTo NoBody )
             , ( "\"\"", DecodesTo (TextBody "") )
             , ( "\"foo bar\\ncar\"", DecodesTo (TextBody "foo bar\ncar") )
             , ( "\"{}\"", DecodesTo (TextBody "{}") )
             ]
         , describeDecoder "ipDecoder"
-            ipDecoder
+            Pool.ipDecoder
             [ ( "null", FailsToDecode )
             , ( "\"\"", FailsToDecode )
             , ( "\"1.2.3\"", FailsToDecode )
@@ -194,7 +194,7 @@ requestDecoderTests =
             , ( "\"1.2.-3.4\"", FailsToDecode )
             ]
         , describeDecoder "methodDecoder"
-            methodDecoder
+            Pool.methodDecoder
             [ ( "null", FailsToDecode )
             , ( "\"\"", FailsToDecode )
             , ( "\"fizz\"", FailsToDecode )
@@ -207,7 +207,7 @@ requestDecoderTests =
             , ( "\"OPTIONS\"", DecodesTo OPTIONS )
             ]
         , describeDecoder "schemeDecoder"
-            schemeDecoder
+            Pool.schemeDecoder
             [ ( "null", FailsToDecode )
             , ( "\"\"", FailsToDecode )
             , ( "\"http\"", DecodesTo (Http Insecure) )
@@ -234,16 +234,16 @@ requestDecoderTests =
             ]
         , describe "encodeBody"
             [ it "encodes NoBody as null" <|
-                expect (encodeBody NoBody) to equal J.null
+                expect (Pool.encodeBody NoBody) to equal J.null
             , it "encodes TextBody to plain text" <|
-                expect (TextBody "abc123" |> encodeBody) to equal (J.string "abc123")
+                expect (TextBody "abc123" |> Pool.encodeBody) to equal (J.string "abc123")
             ]
         , describe "encodeResponse"
             [ testConnWith Fuzz.header "contains the most recent header (when a header is set more than once)" <|
                 \( conn, val ) ->
                     let
                         result =
-                            conn |> Conn.header val |> getEncodedResponse
+                            conn |> Conn.header val |> Pool.getEncodedResponse
                     in
                         case result of
                             Ok resp ->
