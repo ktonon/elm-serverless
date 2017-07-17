@@ -4,9 +4,9 @@
   "description": "Small demonstrative AWS Lambda API written in elm",
   "main": "api.js",
   "scripts": {
-    "postinstall": "elm package install -y",
-    "deploy": "cross-env NODE_ENV=production sls deploy",
-    "start": "webpack && sls webpack serve",
+    "postinstall": "elm package install -y && cd .. && npm install",
+    "deploy": "cross-env NODE_ENV=production serverless deploy",
+    "start": "webpack && serverless webpack serve",
     "test": "eslint ."
   },
   "author": "kevin@betweenconcepts.com",
@@ -18,6 +18,7 @@
     "eslint": "^3.13.1",
     "eslint-config-es2015": "^1.1.0",
     "rc": "^1.1.6",
+    "serverless": "^1.17.0",
     "serverless-webpack": "git://github.com/ktonon/serverless-webpack.git#cf32a9fe70f1bb38db68b449ef214ceed732caab",
     "shebang-loader": "0.0.1",
     "strip-debug-loader": "^1.0.0",
