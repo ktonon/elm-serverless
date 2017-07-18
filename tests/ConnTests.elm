@@ -1,4 +1,4 @@
-module ConnTests exposing (all)
+module ConnTests exposing (..)
 
 import Array
 import ConnFuzz as Fuzz exposing (testConn, testConnWith)

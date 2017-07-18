@@ -4,7 +4,7 @@
 [![elm-package](https://img.shields.io/badge/elm-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest)
 [![npm version](https://img.shields.io/npm/v/elm-serverless.svg)](https://www.npmjs.com/package/elm-serverless)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ktonon/elm-serverless/blob/master/LICENSE.txt)
-[![CircleCI](https://img.shields.io/circleci/project/github/ktonon/elm-serverless.svg)](https://circleci.com/gh/ktonon/elm-serverless)
+[![CircleCI](https://img.shields.io/circleci/project/github/ktonon/elm-serverless/master.svg)](https://circleci.com/gh/ktonon/elm-serverless)
 [![gitter](https://img.shields.io/gitter/room/elm-serverless/Lobby.svg)](https://gitter.im/elm-serverless/Lobby)
 
 __Beta Release 3.0.2__
