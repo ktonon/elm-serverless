@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "elm": "^0.18.0",
-    "elm-test": "^0.18.2",
+    "elm-test": "^0.18.7",
     "eslint": "^3.13.1",
     "eslint-config-es2015": "^1.1.0"
   }

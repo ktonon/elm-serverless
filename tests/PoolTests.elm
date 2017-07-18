@@ -1,4 +1,4 @@
-module PoolTests exposing (all)
+module PoolTests exposing (..)
 
 import ConnFuzz as Fuzz exposing (testConnWith, testReq)
 import Dict
@@ -21,7 +21,6 @@ all =
     describe "Serverless.Pool"
         [ connectionPoolTests
         , requestDecoderTests
-        , responseEncoderTests
         ]
 
 
@@ -52,10 +51,6 @@ connectionPoolTests =
                         equal
                         0
             ]
-        , describe "getFromPool"
-            []
-        , describe "replaceInPool"
-            []
         ]
 
 
@@ -252,11 +247,4 @@ requestDecoderTests =
                             Err err ->
                                 Expect.fail err
             ]
-        ]
-
-
-responseEncoderTests : Test
-responseEncoderTests =
-    describe "Response Encoding"
-        [-- TODO
         ]
