@@ -3,12 +3,10 @@
   "version": "3.0.2",
   "description": "Deploy an Elm worker to AWS Lambda using serverless",
   "main": "index.js",
+  "repository": "git@github.com:ktonon/elm-serverless.git",
   "scripts": {
     "clobber": "rm -rf node_modules elm-stuff demo/node_modules demo/elm-stuff tests/elm-stuff",
     "postinstall": "elm package install -y",
-    "demo:install": "cd demo && npm install",
-    "demo:deploy": "cd demo && npm run deploy",
-    "start": "cd demo && npm start",
     "test": "elm test",
     "posttest": "eslint ."
   },

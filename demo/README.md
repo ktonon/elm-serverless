@@ -12,7 +12,7 @@ __NOTE__: This project uses forked [serverless-webpack][], but there is an open 
 * `npm install`
 * `npm start`
   * [http://localhost:8000/quote](http://localhost:8000/quote) will respond with quotes which it fetches from another service
-* `npm run demo:deploy` to test deploying it to [AWS Lambda][]
+* `npm run deploy` to test deploying it to [AWS Lambda][]
 
 ## The break down
 
