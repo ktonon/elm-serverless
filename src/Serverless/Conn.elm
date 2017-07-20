@@ -252,7 +252,7 @@ Also sets the `Content-Type` to `application/json`.
 jsonBody : J.Value -> Conn config model -> Conn config model
 jsonBody val =
     body (JsonBody val)
-        >> header ( "content-type", "application/json" )
+        >> header ( "content-type", "application/json; charset=utf-8" )
 
 
 {-| Set a response header.

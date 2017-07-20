@@ -30,6 +30,7 @@ const httpApi = function(opt) {
   return function(event, context, cb) {
     const params = event.pathParameters || {};
     const headers = event.headers || {};
+    const host = headers.Host || headers.host;
     const rc = event.requestContext || { identity: {} };
     const req = {
       id: Guid.raw(),
@@ -40,7 +41,7 @@ const httpApi = function(opt) {
       host: headers.Host || (headers.host && headers.host.split(':')[0]),
       method: event.httpMethod || event.method,
       path: '/' + (params[0] || params['proxy'] || ''),
-      port: parseInt(headers['X-Forwarded-Port'] || (headers.host && headers.host.split(':')[1]), 10),
+      port: parseInt(headers['X-Forwarded-Port'] || (host && host.split(':')[1]), 10),
       remoteIp: rc.identity.sourceIp || '127.0.0.1',
       scheme: headers['X-Forwarded-Proto'] || 'http',
       stage: (event.requestContext || {}).stage || 'local',

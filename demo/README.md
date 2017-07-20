@@ -1,43 +1,55 @@
 elm serverless demo
 ===================
 
-This section demonstrates how to use [elm-serverless][]. It is included in the same repo as `elm-serverless` so that it is always up to date with the master branch. For a demo which works with [![elm-package](https://img.shields.io/badge/elm--serverless-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/3.0.2) (the latest release), see [elm-serverless-demo][].
+This folder provides an example usage of [elm-serverless][].
 
-__NOTE__: This project uses forked [serverless-webpack][], but there is an open [Pull Request](https://github.com/elastic-coders/serverless-webpack/pull/82). The PR adds support for [Lambda Proxy Integration][] to the local server.
+## Run locally
 
-## Try it
+We use [serverless-offline][] to run the server locally during development. To get started, clone this repo and then:
 
-* clone this repo
 * `cd demo`
 * `npm install`
 * `npm start`
-  * [http://localhost:8000/quote](http://localhost:8000/quote) will respond with quotes which it fetches from another service
-* `npm run deploy` to test deploying it to [AWS Lambda][]
 
-## The break down
+Which will start a server listening on port `3000`. [http://localhost:3000/quote](http://localhost:3000/quote) will respond with quotes which it fetches from another service
+
+## Deploy to AWS Lambda
+
+Setup `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` in your environment. Make sure you have sufficient permissions to perform a serverless deployment (either admin rights, or [something more restricted](https://github.com/serverless/serverless/issues/1439)). Then `npm run deploy` from within the `demo` folder. If all goes well you'll see something like this in the output:
+
+```shell
+endpoints:
+  ANY - https://***.execute-api.us-east-1.amazonaws.com/dev/
+  ANY - https://***.execute-api.us-east-1.amazonaws.com/dev/{proxy+}
+```
+
+Call the first endpoint to test your deployed function.
+
+## How it works
 
 Two tools are involved in getting your elm app on [AWS Lambda][]:
 
-* [webpack][] along with [elm-webpack-loader][] transpiles your elm code to JavaScript
+* [webpack][] along with [elm-webpack-loader][] compiles your elm code to JavaScript
 * [serverless][] along with [serverless-webpack][] packages and deploys your app to [AWS Lambda][]
 
-There are four files that you should check out in this demo to get a better understanding of how everything fits together. Each file is self-documenting. Take a look at:
+There are four files that you should check out in this demo to get a better understanding of how everything fits together:
 
-* [serverless.yml][]: configures [serverless][] and uses the [serverless-webpack][] plugin
-* [webpack.config.js][]: compiles elm using [elm-webpack-loader][]
-* [api.js][]: contains the `handler` function, which is the entry point to your application, called by AWS Lambda
-* [API.elm][]: contains the elm `Serverless.Program` which defines your HTTP API
-
-[AWS Lambda]:https://aws.amazon.com/lambda
-[elm-serverless]:https://github.com/ktonon/elm-serverless
-[elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
-[elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
-[Lambda Proxy Integration]:http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-create-api-as-simple-proxy-for-lambda.html#api-gateway-create-api-as-simple-proxy-for-lambda-build
-[serverless]:https://serverless.com/
-[serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
-[webpack]:https://webpack.github.io/
+1. [serverless.yml][]: configures [serverless][] and uses two plugins
+  * [serverless-webpack][] for building the AWS Lambda function using Webpack
+  * [serverless-offline][] for running the AWS Lambda function locally
+  * running `npm start` invokes both of these in parallel
+2. [webpack.config.js][]: compiles elm using [elm-webpack-loader][]
+3. [api.js][]: contains the `handler` function, which is the entry point to your application, called by AWS Lambda
+4. [API.elm][]: contains the elm `Serverless.Program` which defines your HTTP API
 
 [API.elm]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm
 [api.js]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/api.js
+[AWS Lambda]:https://aws.amazon.com/lambda
+[elm-serverless]:https://github.com/ktonon/elm-serverless
+[elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
+[serverless-offline]:https://github.com/dherault/serverless-offline
+[serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
 [serverless.yml]:https://github.com/ktonon/elm-serverless/blob/master/demo/serverless.yml
+[serverless]:https://serverless.com/
 [webpack.config.js]:https://github.com/ktonon/elm-serverless/blob/master/demo/webpack.config.js
+[webpack]:https://webpack.github.io/

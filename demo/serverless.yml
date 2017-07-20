@@ -1,14 +1,16 @@
-service: sls-elm
+service: elm-serverless-demo
 
 provider:
   name: aws
-  runtime: nodejs4.3
+  runtime: nodejs6.10
 
-# The webpack plugin will transpile elm to JavaScript
 plugins:
   - serverless-webpack
+  - serverless-offline
+
 custom:
-  webpack: ./webpack.config.js
+  serverless-offline:
+    location: .webpack
 
 functions:
   api:

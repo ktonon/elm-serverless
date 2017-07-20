@@ -4,14 +4,18 @@
   "description": "Small demonstrative AWS Lambda API written in elm",
   "main": "api.js",
   "scripts": {
-    "postinstall": "elm package install -y && cd .. && npm install",
     "deploy": "cross-env NODE_ENV=production serverless deploy",
-    "start": "webpack && serverless webpack serve",
-    "test": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "elm package install -y && cd .. && npm install",
+    "posttest": "npm run lint",
+    "start": "concurrently --kill-others 'npm run server' 'npm run watch'",
+    "server": "serverless offline",
+    "watch": "webpack --watch"
   },
   "author": "kevin@betweenconcepts.com",
   "license": "MIT",
   "devDependencies": {
+    "concurrently": "^3.5.0",
     "cross-env": "^3.1.4",
     "elm": "^0.18.0",
     "elm-webpack-loader": "^4.1.1",
@@ -19,11 +23,12 @@
     "eslint-config-es2015": "^1.1.0",
     "rc": "^1.1.6",
     "serverless": "^1.17.0",
-    "serverless-webpack": "git://github.com/ktonon/serverless-webpack.git#cf32a9fe70f1bb38db68b449ef214ceed732caab",
+    "serverless-offline": "^3.15.1",
+    "serverless-webpack": "^2.0.0",
     "shebang-loader": "0.0.1",
     "strip-debug-loader": "^1.0.0",
-    "webpack": "^1.14.0",
-    "webpack-loader": "^0.0.1",
-    "webpack-uglify-js-plugin": "^1.1.9"
+    "uglifyjs-webpack-plugin": "^0.4.6",
+    "webpack": "^3.3.0",
+    "webpack-loader": "^0.0.1"
   }
 }

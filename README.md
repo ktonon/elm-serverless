@@ -47,7 +47,7 @@ pipeline =
 
 ```
 
-For routing, we use a [modified version](http://package.elm-lang.org/packages/ktonon/url-parser/latest/) of `evancz/url-parser`, adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
+For routing, we use [ktonon/url-parser][], which is a fork of [evancz/url-parser][] adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
 
 ```elm
 router : Conn -> Plug
@@ -89,21 +89,15 @@ The following is a list of known middleware:
 
 An AWS Lambda function would be pretty limited without an interface to the rest of AWS. [AWS SDK for elm][] is a __work in progress__. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
 
-[http://localhost:8000]:http://localhost:8000
-[AWS Lambda]:https://aws.amazon.com/lambda
+[./demo]:https://github.com/ktonon/elm-serverless/blob/master/demo
 [AWS Lambda handler]:http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
+[AWS Lambda]:https://aws.amazon.com/lambda
 [AWS SDK for elm]:https://github.com/ktonon/aws-sdk-elm
 [CORS]:https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
-[./demo]:https://github.com/ktonon/elm-serverless/blob/master/demo
-[elm-serverless]:https://www.npmjs.com/package/elm-serverless
 [elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
-[elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
 [elm]:http://elm-lang.org/
-[evanc/url-parser]:http://package.elm-lang.org/packages/evancz/url-parser/latest
+[evancz/url-parser]:http://package.elm-lang.org/packages/evancz/url-parser/latest
 [gitter]:https://gitter.im/elm-serverless/Lobby
-[JWT]:https://jwt.io/
-[ktonon/elm-serverless]:http://package.elm-lang.org/packages/ktonon/elm-serverless/latest
 [ktonon/elm-serverless-cors]:https://github.com/ktonon/elm-serverless-cors
-[serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
+[ktonon/url-parser]:http://package.elm-lang.org/packages/ktonon/url-parser/latest
 [serverless]:https://github.com/serverless/serverless
-[webpack]:https://webpack.github.io/
