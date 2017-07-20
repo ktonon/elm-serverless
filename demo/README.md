@@ -35,9 +35,9 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 There are four files that you should check out in this demo to get a better understanding of how everything fits together:
 
 1. [serverless.yml][]: configures [serverless][] and uses two plugins
-  * [serverless-webpack][] for building the AWS Lambda function using Webpack
-  * [serverless-offline][] for running the AWS Lambda function locally
-  * running `npm start` invokes both of these in parallel
+    * [serverless-webpack][] for building the AWS Lambda function using Webpack
+    * [serverless-offline][] for running the AWS Lambda function locally
+    * running `npm start` invokes both of these in parallel
 2. [webpack.config.js][]: compiles elm using [elm-webpack-loader][]
 3. [api.js][]: contains the `handler` function, which is the entry point to your application, called by AWS Lambda
 4. [API.elm][]: contains the elm `Serverless.Program` which defines your HTTP API
