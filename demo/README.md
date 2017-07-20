@@ -25,6 +25,10 @@ endpoints:
 
 Call the first endpoint to test your deployed function.
 
+## End-to-end testing
+
+Black box tests are written in JavaScript using [supertest][] and [mocha][]. To run the tests, first start the server using `npm start`, then run `npm test`.
+
 ## How it works
 
 Two tools are involved in getting your elm app on [AWS Lambda][]:
@@ -47,9 +51,11 @@ There are four files that you should check out in this demo to get a better unde
 [AWS Lambda]:https://aws.amazon.com/lambda
 [elm-serverless]:https://github.com/ktonon/elm-serverless
 [elm-webpack-loader]:https://github.com/elm-community/elm-webpack-loader
+[mocha]:https://mochajs.org/
 [serverless-offline]:https://github.com/dherault/serverless-offline
 [serverless-webpack]:https://github.com/elastic-coders/serverless-webpack
 [serverless.yml]:https://github.com/ktonon/elm-serverless/blob/master/demo/serverless.yml
 [serverless]:https://serverless.com/
+[supertest]:https://github.com/visionmedia/supertest
 [webpack.config.js]:https://github.com/ktonon/elm-serverless/blob/master/demo/webpack.config.js
 [webpack]:https://webpack.github.io/

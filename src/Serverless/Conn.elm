@@ -242,7 +242,7 @@ Also sets the `Content-Type` to `text/text`.
 textBody : String -> Conn config model -> Conn config model
 textBody val =
     body (TextBody val)
-        >> header ( "content-type", "text/text" )
+        >> header ( "content-type", "text/text; charset=utf-8" )
 
 
 {-| Sets the given JSON value as the response body.
@@ -347,9 +347,18 @@ toResponder port_ func =
 The given value is converted to a string and set to the response body.
 -}
 internalError : Body -> Conn config model -> Conn config model
-internalError val =
-    status (Code 500)
-        >> body val
+internalError body =
+    (case body of
+        JsonBody json ->
+            jsonBody json
+
+        TextBody text ->
+            textBody text
+
+        NoBody ->
+            (\conn -> conn)
+    )
+        >> status (Code 500)
 
 
 {-| Respond with an unexpected message error.
@@ -359,7 +368,11 @@ not expect to receive in a loop plug.
 -}
 unexpectedMsg : msg -> Conn config model -> Conn config model
 unexpectedMsg msg =
-    internalError ("unexpected msg: " ++ (msg |> toString) |> TextBody)
+    ("unexpected msg: "
+        ++ (msg |> toString)
+        |> textBody
+    )
+        >> status (Code 500)
 
 
 
