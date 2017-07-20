@@ -11,6 +11,11 @@ const httpApi = function(opt) {
 
   const app = opt.handler.worker(opt.config);
 
+  // Allow calling library access to ports for native js interop
+  if (opt.bindPorts) {
+    opt.bindPorts(app);
+  }
+
   const callbacks = {};
   app.ports[opt.responsePort].subscribe(function(resp) {
     console.log('resp: ' + JSON.stringify(resp, null, 2));
