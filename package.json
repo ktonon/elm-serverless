@@ -1,25 +1,35 @@
 {
   "name": "elm-serverless",
   "version": "3.0.2",
+  "engines": {
+    "node": ">=6.10.0"
+  },
   "description": "Deploy an Elm worker to AWS Lambda using serverless",
-  "main": "index.js",
+  "author": "Kevin Tonon <kevin@betweenconcepts.com>",
+  "license": "MIT",
   "repository": "git@github.com:ktonon/elm-serverless.git",
+  "main": "src-bridge/index.js",
   "scripts": {
     "clobber": "rm -rf node_modules elm-stuff demo/node_modules demo/elm-stuff tests/elm-stuff",
     "postinstall": "elm package install -y",
-    "test": "elm test",
-    "posttest": "eslint ."
+    "posttest": "eslint .",
+    "test": "elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test"
   },
-  "author": "Kevin Tonon <kevin@betweenconcepts.com>",
-  "license": "MIT",
   "dependencies": {
-    "guid": "0.0.12",
+    "uuid": "^3.1.0",
     "xmlhttprequest": "git://github.com/ktonon/node-XMLHttpRequest.git#bdd9e5c75a3c0f8f4038697234e8612270cec799"
   },
   "devDependencies": {
     "elm": "^0.18.0",
     "elm-test": "^0.18.7",
-    "eslint": "^3.13.1",
-    "eslint-config-es2015": "^1.1.0"
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb": "^15.0.2",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-jsx-a11y": "^5.1.1",
+    "eslint-plugin-react": "^7.1.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.4.2",
+    "should": "^11.2.1",
+    "sinon": "^2.3.8"
   }
 }

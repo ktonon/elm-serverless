@@ -1,3 +1,4 @@
-/elm-stuff
-/node_modules
-npm-debug.log
+elm-stuff
+node_modules
+*.log
+.coverage

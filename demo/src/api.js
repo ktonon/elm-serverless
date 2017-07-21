@@ -9,8 +9,8 @@
 // but this demo is nested in the `elm-serverless` repo, so we just
 // require it relative to the current module's location
 //
-const elmServerless = require('../..');
-const rc = require('strip-debug-loader!shebang-loader!rc');
+const elmServerless = require('../../src-bridge');
+const rc = require('strip-debug-loader!shebang-loader!rc'); // eslint-disable-line
 
 const elm = require('./API.elm');
 
@@ -23,7 +23,7 @@ const config = rc('demo', {
     origin: '*',
     methods: 'get,post,options',
   },
-})
+});
 
 module.exports.handler = elmServerless.httpApi({
   // Your elm app is the handler
@@ -33,7 +33,7 @@ module.exports.handler = elmServerless.httpApi({
   // You will also provide a JSON decoder for this.
   // It should be deployment data that is constant, perhaps loaded from
   // an environment variable.
-  config: config,
+  config,
 
   // Because elm libraries cannot expose ports, you have to define them.
   // Whatever you call them, you have to provide the names.

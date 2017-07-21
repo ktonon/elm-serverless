@@ -1,5 +1,4 @@
 const path = require('path');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const webpack = require('webpack');
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -23,7 +22,7 @@ module.exports = {
   },
 
   plugins: (isProd
-    ? [new UglifyJsPlugin()]
+    ? [new webpack.optimize.UglifyJsPlugin()]
     : []
   ),
 };

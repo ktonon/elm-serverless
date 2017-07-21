@@ -11,6 +11,7 @@ plugins:
 custom:
   serverless-offline:
     location: .webpack
+    dontPrintOutput: true
 
 functions:
   api:

@@ -1,5 +1,3 @@
-/demo/elm-stuff
-/demo/node_modules
-/elm-stuff
-/node_modules
-/tests
+elm-stuff
+node_modules
+.coverage
