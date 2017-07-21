@@ -10,5 +10,5 @@ describe('GET /some-path-that-does-not-exist', () => {
         .which.equal('text/text; charset=utf-8');
       res.text.should.startWith('Nothing at:');
     })
-  )
+  );
 });

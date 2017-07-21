@@ -1,1 +1,6 @@
-extends: es2015
+extends: airbnb
+env:
+  mocha: true
+rules:
+  arrow-parens: off
+  comma-dangle: off

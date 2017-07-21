@@ -1,6 +1,8 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 const defaults = require('superagent-defaults');
-const supertest = require('supertest-as-promised');
+// eslint-disable-next-line import/no-extraneous-dependencies
+const supertest = require('supertest');
 
-const endpoint = 'http://localhost:3000';
+const endpoint = 'http://localhost:3001';
 
 module.exports = defaults(supertest(endpoint));

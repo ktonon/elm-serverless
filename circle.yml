@@ -1,6 +1,6 @@
 machine:
   node:
-    version: 4.3
+    version: 6.10
 
 dependencies:
   cache_directories:
@@ -8,5 +8,10 @@ dependencies:
     - node_modules
     - elm-stuff
   override:
-    - npm install
+    - cd demo && npm install
     - ./scripts/ci-elm-hack.sh
+
+test:
+  post:
+    - npm install -g coveralls
+    - cat ./.coverage/lcov.info | coveralls

@@ -27,7 +27,14 @@ Call the first endpoint to test your deployed function.
 
 ## End-to-end testing
 
-Black box tests are written in JavaScript using [supertest][] and [mocha][]. To run the tests, first start the server using `npm start`, then run `npm test`.
+Black box tests are written in JavaScript using [supertest][] and [mocha][]. Before running tests, start a test server on port `3001` with the command `npm run test-server`. A nice way to run tests during development is to run the test server in the background, and the tests in watch mode. For example,
+
+```shell
+> npm run test-server &
+> npm test -- --watch
+```
+
+The server can later be stopped with `kill %1`.
 
 ## How it works
 

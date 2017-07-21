@@ -10,5 +10,5 @@ describe('GET /buggy', () => {
         .which.equal('text/text; charset=utf-8');
       res.text.should.equal('bugs, bugs, bugs');
     })
-  )
+  );
 });

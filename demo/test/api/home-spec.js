@@ -10,5 +10,5 @@ describe('GET /', () => {
         .which.equal('text/text; charset=utf-8');
       res.text.should.equal('Home');
     })
-  )
+  );
 });
