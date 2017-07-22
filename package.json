@@ -14,8 +14,9 @@
     "deploy:demo": "cd demo && cross-env NODE_ENV=production serverless deploy",
     "postinstall": "elm package install -y && cd demo && elm package install -y",
     "posttest": "eslint .",
+    "pretest": "node scripts/test-server",
     "start": "cd demo && serverless offline",
-    "test": "node scripts/test-server && elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test/demo test/bridge",
+    "test": "istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test/demo test/bridge && elm test",
     "test:watch": "elm test --watch & node scripts/test-server && mocha --reporter=dot --watch test/bridge test/demo"
   },
   "dependencies": {

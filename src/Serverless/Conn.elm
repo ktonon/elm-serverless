@@ -83,7 +83,7 @@ the results of a side effect.
 
 import Array
 import Dict
-import Json.Encode as J
+import Json.Encode
 import Serverless.Conn.Encode
 import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (..)
@@ -249,7 +249,7 @@ textBody val =
 
 Also sets the `Content-Type` to `application/json`.
 -}
-jsonBody : J.Value -> Conn config model -> Conn config model
+jsonBody : Json.Encode.Value -> Conn config model -> Conn config model
 jsonBody val =
     body (JsonBody val)
         >> header ( "content-type", "application/json; charset=utf-8" )

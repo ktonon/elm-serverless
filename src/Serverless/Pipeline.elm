@@ -9,7 +9,7 @@ module Serverless.Pipeline
         )
 
 import Array exposing (Array)
-import Json.Encode as J
+import Json.Encode
 import Serverless.Conn exposing (body, send, status, internalError)
 import Serverless.Conn.Types exposing (Body(..), Id, Status(..))
 import Serverless.Types exposing (Conn, PipelineState(..), Plug(..), ResponsePort, Sendable(..))
@@ -19,7 +19,7 @@ import Serverless.Types exposing (Conn, PipelineState(..), Plug(..), ResponsePor
 
 
 type Msg msg
-    = RawRequest J.Value
+    = RawRequest Json.Encode.Value
     | HandlerMsg Id (PlugMsg msg)
 
 

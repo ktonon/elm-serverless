@@ -1,8 +1,8 @@
-module Serverless.Conn.Encode exposing (..)
+module Serverless.Conn.Encode exposing (getResponse, response, body)
 
-import Json.Decode
-import Json.Encode as J
-import Serverless.Conn.Decode
+import Json.Decode exposing (decodeValue)
+import Json.Encode as Encode
+import Serverless.Conn.Decode as Decode
 import Serverless.Conn.Types exposing (Body(..), Charset, Id, Response, Status(..))
 import Serverless.Types exposing (Conn, Sendable(..))
 
@@ -13,16 +13,16 @@ getResponse conn =
         Unsent resp ->
             resp
                 |> response conn.req.id
-                |> Json.Decode.decodeValue Serverless.Conn.Decode.response
+                |> decodeValue Decode.response
 
         Sent ->
             Err "response already sent"
 
 
-response : Id -> Response -> J.Value
+response : Id -> Response -> Encode.Value
 response id res =
-    J.object
-        [ ( "id", J.string id )
+    Encode.object
+        [ ( "id", Encode.string id )
         , ( "body", body res.body )
         , ( "charset", charset res.charset )
         , ( "headers", res.headers |> List.reverse |> params )
@@ -30,36 +30,37 @@ response id res =
         ]
 
 
-body : Body -> J.Value
+body : Body -> Encode.Value
 body body =
     case body of
         NoBody ->
-            J.null
+            Encode.null
 
         TextBody w ->
-            J.string w
+            Encode.string w
 
         JsonBody j ->
             j
 
 
-charset : Charset -> J.Value
+charset : Charset -> Encode.Value
 charset =
-    toString >> String.toLower >> J.string
+    toString
+        >> String.toLower
+        >> Encode.string
 
 
-params : List ( String, String ) -> J.Value
-params params =
-    params
-        |> List.map (\( a, b ) -> ( a, J.string b ))
-        |> J.object
+params : List ( String, String ) -> Encode.Value
+params =
+    List.map (\( a, b ) -> ( a, Encode.string b ))
+        >> Encode.object
 
 
-status : Status -> J.Value
+status : Status -> Encode.Value
 status status =
     case status of
         InvalidStatus ->
-            J.int -1
+            Encode.int -1
 
         Code code ->
-            J.int code
+            Encode.int code

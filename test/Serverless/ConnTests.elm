@@ -1,10 +1,18 @@
-module Serverless.ConnTests exposing (..)
+module Serverless.ConnTests
+    exposing
+        ( all
+        , buildingPipelinesTests
+        , pipelineProcessingTests
+        , responseTests
+        , routingTests
+        )
 
 import Array
 import Expect
-import Expect.Extra
+import Expect.Extra as Expect
 import Serverless.Conn exposing (..)
-import Serverless.Conn.Fuzz as Fuzz exposing (testConn, testConnWith)
+import Serverless.Conn.Fuzz as Fuzz
+import Serverless.Conn.Test as Test
 import Serverless.TestTypes exposing (Conn, Msg, responsePort)
 import Serverless.TestHelpers exposing (..)
 import Serverless.Types exposing (PipelineState(..), Plug(..), Sendable(..))
@@ -106,7 +114,7 @@ routingTests : Test.Test
 routingTests =
     describe "Routing"
         [ describe "parseRoute"
-            [ testConn "parses the request path" <|
+            [ Test.conn "parses the request path" <|
                 \conn ->
                     Expect.equal
                         (Foody "bar")
@@ -114,7 +122,7 @@ routingTests =
                             |> updateReq (\req -> { req | path = "/foody/bar" })
                             |> parseRoute route NoCanFind
                         )
-            , testConn "uses the provided default if it fails to parse" <|
+            , Test.conn "uses the provided default if it fails to parse" <|
                 \conn ->
                     Expect.equal
                         NoCanFind
@@ -133,49 +141,49 @@ routingTests =
 responseTests : Test.Test
 responseTests =
     describe "Responding "
-        [ testConnWith Fuzz.body "body sets the response body" <|
+        [ Test.connWith Fuzz.body "body sets the response body" <|
             \( conn, val ) ->
                 conn
                     |> body val
                     |> unsentOrCrash
                     |> .body
                     |> Expect.equal val
-        , testConnWith Fuzz.status "status sets the response status" <|
+        , Test.connWith Fuzz.status "status sets the response status" <|
             \( conn, val ) ->
                 conn
                     |> status val
                     |> unsentOrCrash
                     |> .status
                     |> Expect.equal val
-        , testConn "send sets the response to Sent" <|
+        , Test.conn "send sets the response to Sent" <|
             \conn ->
                 let
                     ( newConn, _ ) =
                         conn |> send responsePort
                 in
                     Expect.equal Sent newConn.resp
-        , testConn "send issues a side effect" <|
+        , Test.conn "send issues a side effect" <|
             \conn ->
                 let
                     ( _, cmd ) =
                         conn |> send responsePort
                 in
                     Expect.notEqual Cmd.none cmd
-        , testConn "send fails if the conn is already halted" <|
+        , Test.conn "send fails if the conn is already halted" <|
             \conn ->
                 let
                     ( _, cmd ) =
                         { conn | resp = Sent } |> send responsePort
                 in
                     Expect.equal Cmd.none cmd
-        , testConnWith Fuzz.header "headers adds a response header" <|
+        , Test.connWith Fuzz.header "headers adds a response header" <|
             \( conn, val ) ->
                 conn
                     |> header val
                     |> unsentOrCrash
                     |> .headers
-                    |> Expect.Extra.member val
-        , testConnWith Fuzz.header "increases the response headers by 1" <|
+                    |> Expect.member val
+        , Test.connWith Fuzz.header "increases the response headers by 1" <|
             \( conn, val ) ->
                 let
                     oldLength =
@@ -203,12 +211,12 @@ pipelineProcessingTests : Test.Test
 pipelineProcessingTests =
     describe "Pipeline Processing"
         [ describe "pipelinePause"
-            [ testConn "it sets pipelineState to Paused" <|
+            [ Test.conn "it sets pipelineState to Paused" <|
                 \conn ->
                     case pipelinePause 3 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
                             Expect.equal (Paused 3) newConn.pipelineState
-            , testConn "it increments paused by the correct amount" <|
+            , Test.conn "it increments paused by the correct amount" <|
                 \conn ->
                     case
                         { conn | pipelineState = Paused 2 }
@@ -216,29 +224,29 @@ pipelineProcessingTests =
                     of
                         ( newConn, _ ) ->
                             Expect.equal (Paused 5) newConn.pipelineState
-            , testConn "it fails if the increment is negative" <|
+            , Test.conn "it fails if the increment is negative" <|
                 \conn ->
                     case pipelinePause -1 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
                             Expect.equal (Processing) newConn.pipelineState
-            , testConn "it sends a failure response if the increment is negative" <|
+            , Test.conn "it sends a failure response if the increment is negative" <|
                 \conn ->
                     case pipelinePause -1 (Cmd.none) responsePort conn of
                         ( _, cmd ) ->
                             Expect.notEqual (Cmd.none) cmd
-            , testConn "it does nothing if the pause increment is zero" <|
+            , Test.conn "it does nothing if the pause increment is zero" <|
                 \conn ->
                     case pipelinePause 0 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
                             Expect.equal Processing newConn.pipelineState
-            , testConn "it does not send a failure response if the increment is zero" <|
+            , Test.conn "it does not send a failure response if the increment is zero" <|
                 \conn ->
                     case pipelinePause 0 (Cmd.none) responsePort conn of
                         ( _, cmd ) ->
                             Expect.equal Cmd.none cmd
             ]
         , describe "pipelineResume"
-            [ testConn "it sets pipelineState to Processing if the increment is equal to the current pause count" <|
+            [ Test.conn "it sets pipelineState to Processing if the increment is equal to the current pause count" <|
                 \conn ->
                     case
                         { conn | pipelineState = Paused 2 }
@@ -246,7 +254,7 @@ pipelineProcessingTests =
                     of
                         ( newConn, _ ) ->
                             Expect.equal Processing newConn.pipelineState
-            , testConn "it decrements paused by the correct amount" <|
+            , Test.conn "it decrements paused by the correct amount" <|
                 \conn ->
                     case
                         { conn | pipelineState = Paused 5 }
@@ -254,7 +262,7 @@ pipelineProcessingTests =
                     of
                         ( newConn, _ ) ->
                             Expect.equal (Paused 1) newConn.pipelineState
-            , testConn "it fails if the increment is negative" <|
+            , Test.conn "it fails if the increment is negative" <|
                 \conn ->
                     case
                         { conn | pipelineState = Paused 2 }
@@ -262,17 +270,17 @@ pipelineProcessingTests =
                     of
                         ( newConn, _ ) ->
                             Expect.equal (Paused 2) newConn.pipelineState
-            , testConn "it sends a failure response if the increment is negative" <|
+            , Test.conn "it sends a failure response if the increment is negative" <|
                 \conn ->
                     case pipelineResume -1 responsePort conn of
                         ( _, cmd ) ->
                             Expect.notEqual Cmd.none cmd
-            , testConn "it does nothing if the resume increment is zero" <|
+            , Test.conn "it does nothing if the resume increment is zero" <|
                 \conn ->
                     case pipelineResume 0 responsePort conn of
                         ( newConn, _ ) ->
                             Expect.equal Processing newConn.pipelineState
-            , testConn "it does not send a failure response if the increment is zero" <|
+            , Test.conn "it does not send a failure response if the increment is zero" <|
                 \conn ->
                     case pipelineResume 0 responsePort conn of
                         ( _, cmd ) ->

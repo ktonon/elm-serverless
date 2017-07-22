@@ -2,7 +2,7 @@ module Serverless.PipelineTests exposing (all)
 
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
-import Serverless.Conn.Fuzz as Fuzz exposing (testConnWith, testConn)
+import Serverless.Conn.Test as Test
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..))
 import Serverless.TestHelpers exposing (..)
@@ -10,9 +10,9 @@ import Serverless.TestTypes exposing (..)
 import Test exposing (..)
 
 
-testApplyPipeline : String -> Plug -> (Conn -> Bool -> Expectation) -> Test
+testApplyPipeline : String -> Plug -> (Conn -> Expectation) -> Test
 testApplyPipeline label pl tester =
-    testConn label <|
+    Test.conn label <|
         \conn ->
             case
                 (conn
@@ -23,7 +23,7 @@ testApplyPipeline label pl tester =
                 )
             of
                 ( newConn, cmd ) ->
-                    tester newConn (cmd /= Cmd.none)
+                    tester newConn
 
 
 all : Test
@@ -38,7 +38,7 @@ all =
                     |> plug (appendToBody "3")
                 )
               <|
-                \conn _ ->
+                \conn ->
                     conn
                         |> unsentOrCrash
                         |> .body
@@ -61,7 +61,7 @@ all =
                     |> plug (appendToBody "7")
                 )
               <|
-                \conn _ ->
+                \conn ->
                     conn
                         |> unsentOrCrash
                         |> .body
@@ -73,7 +73,7 @@ all =
                     |> fork (simpleFork "2")
                 )
               <|
-                \conn _ ->
+                \conn ->
                     conn
                         |> unsentOrCrash
                         |> .body
@@ -91,7 +91,7 @@ all =
                     |> plug (appendToBody "3")
                 )
               <|
-                \conn _ ->
+                \conn ->
                     conn
                         |> unsentOrCrash
                         |> .body

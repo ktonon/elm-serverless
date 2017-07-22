@@ -1,4 +1,4 @@
-module Serverless.Conn.DecodeTests exposing (..)
+module Serverless.Conn.DecodeTests exposing (all)
 
 import Serverless.Conn.Decode as Decode
 import Serverless.Conn.Types

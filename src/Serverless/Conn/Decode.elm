@@ -1,49 +1,58 @@
-module Serverless.Conn.Decode exposing (..)
+module Serverless.Conn.Decode
+    exposing
+        ( body
+        , ip
+        , method
+        , params
+        , request
+        , response
+        , scheme
+        )
 
-import Json.Decode exposing (..)
+import Json.Decode as Decode exposing (Decoder, andThen, map)
 import Json.Decode.Pipeline exposing (decode, required, optional)
 import Serverless.Conn.Types exposing (..)
 import Toolkit.Helpers exposing (maybeList, take4Tuple)
 
 
-request : Json.Decode.Decoder Request
+request : Decoder Request
 request =
     decode Request
-        |> required "id" string
+        |> required "id" Decode.string
         |> required "body" body
         |> required "headers" (params |> map normalizeHeaders)
-        |> required "host" string
+        |> required "host" Decode.string
         |> required "method" method
-        |> required "path" string
-        |> required "port" int
+        |> required "path" Decode.string
+        |> required "port" Decode.int
         |> required "remoteIp" ip
         |> required "scheme" scheme
-        |> required "stage" string
+        |> required "stage" Decode.string
         |> required "queryParams" params
 
 
 params : Decoder (List ( String, String ))
 params =
-    keyValuePairs string
-        |> nullable
+    Decode.keyValuePairs Decode.string
+        |> Decode.nullable
         |> andThen
             (\maybeParams ->
                 case maybeParams of
                     Just params ->
-                        succeed params
+                        Decode.succeed params
 
                     Nothing ->
-                        succeed []
+                        Decode.succeed []
             )
 
 
 body : Decoder Body
 body =
-    nullable string
+    Decode.nullable Decode.string
         |> andThen
             ((Maybe.map TextBody)
                 >> (Maybe.withDefault NoBody)
-                >> succeed
+                >> Decode.succeed
             )
 
 
@@ -54,7 +63,7 @@ normalizeHeaders =
 
 ip : Decoder IpAddress
 ip =
-    string
+    Decode.string
         |> andThen
             (\w ->
                 w
@@ -63,8 +72,8 @@ ip =
                     |> maybeList
                     |> require4
                     |> Maybe.andThen take4Tuple
-                    |> Maybe.map (Ip4 >> succeed)
-                    |> Maybe.withDefault ("Unsupported IP address: " ++ w |> fail)
+                    |> Maybe.map (Decode.succeed << Ip4)
+                    |> Maybe.withDefault (Decode.fail <| "Unsupported IP address: " ++ w)
             )
 
 
@@ -96,49 +105,49 @@ require4 maybeList =
 
 method : Decoder Method
 method =
-    string
+    Decode.string
         |> andThen
             (\w ->
                 case w |> String.toLower of
                     "get" ->
-                        succeed GET
+                        Decode.succeed GET
 
                     "post" ->
-                        succeed POST
+                        Decode.succeed POST
 
                     "put" ->
-                        succeed PUT
+                        Decode.succeed PUT
 
                     "delete" ->
-                        succeed DELETE
+                        Decode.succeed DELETE
 
                     "options" ->
-                        succeed OPTIONS
+                        Decode.succeed OPTIONS
 
                     _ ->
-                        fail ("Unsupported method: " ++ w)
+                        Decode.fail ("Unsupported method: " ++ w)
             )
 
 
 scheme : Decoder Scheme
 scheme =
-    string
+    Decode.string
         |> andThen
             (\w ->
                 case w |> String.toLower of
                     "http" ->
-                        succeed (Http Insecure)
+                        Decode.succeed (Http Insecure)
 
                     "https" ->
-                        succeed (Http Secure)
+                        Decode.succeed (Http Secure)
 
                     _ ->
-                        fail ("Unsupported scheme: " ++ w)
+                        Decode.fail ("Unsupported scheme: " ++ w)
             )
 
 
 
--- RESPONSE ENCODER
+-- RESPONSE DECODER
 
 
 response : Decoder Response
@@ -152,23 +161,24 @@ response =
 
 charset : Decoder Charset
 charset =
-    string
+    Decode.string
         |> andThen
             (\w ->
                 if (w |> String.toLower) == "utf8" then
-                    succeed Utf8
+                    Decode.succeed Utf8
                 else
-                    fail ("Unsupported charset: " ++ w)
+                    Decode.fail ("Unsupported charset: " ++ w)
             )
 
 
 status : Decoder Status
 status =
-    int
+    Decode.int
         |> andThen
             (\c ->
-                if c < 200 || c > 599 then
-                    succeed InvalidStatus
-                else
-                    succeed (Code c)
+                Decode.succeed <|
+                    if c < 200 || c > 599 then
+                        InvalidStatus
+                    else
+                        Code c
             )

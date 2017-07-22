@@ -1,31 +1,17 @@
-module Serverless.Conn.Fuzz exposing (..)
+module Serverless.Conn.Fuzz
+    exposing
+        ( body
+        , conn
+        , header
+        , request
+        , status
+        )
 
-import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, map, andMap, andThen, constant)
 import Fuzz.Extra exposing (eitherOr)
 import Serverless.Conn.Types exposing (..)
 import Serverless.TestTypes exposing (Config, Conn, Model)
 import Serverless.Types exposing (PipelineState(..), Sendable(..))
-import Test exposing (Test)
-
-
-testConn : String -> (Conn -> Expectation) -> Test
-testConn label =
-    Test.fuzz conn label
-
-
-testConnWith : Fuzzer a -> String -> (( Conn, a ) -> Expectation) -> Test
-testConnWith otherFuzzer label =
-    Test.fuzz (Fuzz.tuple ( conn, otherFuzzer )) label
-
-
-testReq : String -> (Request -> Expectation) -> Test
-testReq label =
-    Test.fuzz request label
-
-
-
--- conn
 
 
 conn : Fuzzer Conn
@@ -145,12 +131,7 @@ queryParams : Fuzzer (List ( String, String ))
 queryParams =
     eitherOr
         (constant [])
-        (map toList queryParam)
-
-
-queryParam : Fuzzer ( String, String )
-queryParam =
-    constant ( "page", "123" )
+        (constant [ ( "page", "123" ) ])
 
 
 

@@ -15,7 +15,7 @@ module Serverless.Conn.Types exposing (..)
 @docs Response, Status, Charset
 -}
 
-import Json.Encode as J
+import Json.Encode
 
 
 {-| HTTP Request
@@ -56,7 +56,7 @@ type alias Id =
 type Body
     = NoBody
     | TextBody String
-    | JsonBody J.Value
+    | JsonBody Json.Encode.Value
 
 
 {-| HTTP request message type

@@ -15,10 +15,10 @@ for a usage example. Then read about [Building Pipelines](./Serverless-Conn#buil
 -}
 
 import Json.Decode exposing (Decoder, decodeValue)
-import Json.Encode as J
+import Json.Encode
 import Logging exposing (defaultLogger)
 import Serverless.Pool as Pool exposing (Pool)
-import Serverless.Conn.Decode
+import Serverless.Conn.Decode as Decode
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..), Msg(..))
 import Serverless.Types exposing (Conn, Plug, RequestPort, ResponsePort)
@@ -40,7 +40,7 @@ type alias Program config model msg =
 The program configuration (`config`) is passed in as flags.
 -}
 type alias Flags =
-    J.Value
+    Json.Encode.Value
 
 
 {-| Create a program from the given HTTP api.
@@ -123,7 +123,7 @@ update_ :
 update_ api slsMsg model =
     case slsMsg of
         RawRequest raw ->
-            case raw |> decodeValue Serverless.Conn.Decode.request of
+            case raw |> decodeValue Decode.request of
                 Ok req ->
                     { model | pool = model.pool |> Pool.add defaultLogger req }
                         |> updateChild api

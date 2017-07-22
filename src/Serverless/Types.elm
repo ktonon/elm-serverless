@@ -23,7 +23,7 @@ ports.
 -}
 
 import Array exposing (Array)
-import Json.Encode as J
+import Json.Encode
 import Serverless.Conn.Types exposing (..)
 
 
@@ -98,11 +98,11 @@ type PipelineState
 Set your request port to this type.
 -}
 type alias RequestPort msg =
-    (J.Value -> msg) -> Sub msg
+    (Json.Encode.Value -> msg) -> Sub msg
 
 
 {-| Type of port through which the request is sent.
 Set your response port to this type.
 -}
 type alias ResponsePort msg =
-    J.Value -> Cmd msg
+    Json.Encode.Value -> Cmd msg

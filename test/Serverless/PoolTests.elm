@@ -1,10 +1,10 @@
-module Serverless.PoolTests exposing (..)
+module Serverless.PoolTests exposing (all)
 
 import Dict
 import Expect
-import Expect.Extra
+import Expect.Extra as Expect
 import Logging exposing (nullLogger)
-import Serverless.Conn.Fuzz as Fuzz exposing (testConnWith, testReq)
+import Serverless.Conn.Test as Test
 import Serverless.Conn.Types exposing (Body(..), Status(..), Response)
 import Serverless.Pool as Pool
 import Serverless.TestTypes exposing (Config, Model)
@@ -26,7 +26,7 @@ all =
                         )
             ]
         , describe "add"
-            [ testReq "fails if the pool has no config" <|
+            [ Test.request "fails if the pool has no config" <|
                 \req ->
                     Expect.equal
                         0
@@ -44,7 +44,7 @@ all =
                 \resp -> Expect.equal NoBody resp.body
             , initResponseTest "has a default no-cache header" <|
                 \resp ->
-                    Expect.Extra.member
+                    Expect.member
                         ( "cache-control"
                         , "max-age=0, private, must-revalidate"
                         )

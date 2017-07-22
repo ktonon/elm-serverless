@@ -1,11 +1,12 @@
-module Serverless.Conn.EncodeTests exposing (..)
+module Serverless.Conn.EncodeTests exposing (all)
 
 import Expect
-import Expect.Extra
-import Json.Encode as J
+import Expect.Extra as Expect
+import Json.Encode as Encode
 import Serverless.Conn as Conn
 import Serverless.Conn.Encode as Encode
-import Serverless.Conn.Fuzz as Fuzz exposing (testConnWith)
+import Serverless.Conn.Fuzz as Fuzz
+import Serverless.Conn.Test as Test
 import Serverless.Conn.Types exposing (Body(..))
 import Test exposing (describe, test)
 
@@ -16,15 +17,15 @@ all =
         [ describe "encodeBody"
             [ test "encodes NoBody as null" <|
                 \_ ->
-                    Expect.equal J.null (Encode.body NoBody)
+                    Expect.equal Encode.null (Encode.body NoBody)
             , test "encodes TextBody to plain text" <|
                 \_ ->
                     Expect.equal
-                        (J.string "abc123")
+                        (Encode.string "abc123")
                         (TextBody "abc123" |> Encode.body)
             ]
         , describe "encodeResponse"
-            [ testConnWith Fuzz.header "contains the most recent header (when a header is set more than once)" <|
+            [ Test.connWith Fuzz.header "contains the most recent header (when a header is set more than once)" <|
                 \( conn, val ) ->
                     let
                         result =
@@ -32,7 +33,7 @@ all =
                     in
                         case result of
                             Ok resp ->
-                                Expect.Extra.member val resp.headers
+                                Expect.member val resp.headers
 
                             Err err ->
                                 Expect.fail err
