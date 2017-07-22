@@ -2,8 +2,8 @@ const should = require('should');
 const sinon = require('sinon');
 const uuid = require('uuid');
 
-const Pool = require('../src-bridge/pool');
-const responseHandler = require('../src-bridge/response-handler');
+const Pool = require('../../src-bridge/pool');
+const responseHandler = require('../../src-bridge/response-handler');
 const spyLogger = require('./spy-logger');
 
 const id = uuid.v4();

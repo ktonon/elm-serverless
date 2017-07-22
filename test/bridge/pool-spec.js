@@ -2,7 +2,7 @@ const should = require('should');
 const sinon = require('sinon');
 const uuid = require('uuid');
 
-const Pool = require('../src-bridge/pool');
+const Pool = require('../../src-bridge/pool');
 const spyLogger = require('./spy-logger');
 
 const makeCallback = (retVal) => sinon.stub().returns(retVal);

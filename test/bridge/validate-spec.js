@@ -1,4 +1,4 @@
-const validate = require('../src-bridge/validate');
+const validate = require('../../src-bridge/validate');
 
 const missing = 'is missing';
 const invalid = 'is invalid';

@@ -1,10 +1,11 @@
 const uuid = require('uuid');
 
 const defaultLogger = require('./logger');
+const norm = require('./normalize-headers');
 
-const encodeBody = body => (typeof body === 'object'
-  ? body && JSON.stringify(body)
-  : body);
+const encodeBody = body => (typeof body === 'string'
+  ? body
+  : JSON.stringify(body));
 
 const path = params => `/${params[0] || params.proxy || ''}`;
 
@@ -13,7 +14,11 @@ const splitHostPort = host => {
   return { host: parts[0], port: parts[1] };
 };
 
-module.exports = ({ pool, requestPort, logger = defaultLogger }) => ({
+module.exports = ({
+  pool,
+  requestPort,
+  logger = defaultLogger
+}) => function requestHandler({
   body,
   headers = {},
   httpMethod,
@@ -22,12 +27,12 @@ module.exports = ({ pool, requestPort, logger = defaultLogger }) => ({
   pathParameters,
   queryStringParameters = {},
   requestContext = {},
-}, context, callback) => {
+}, context, callback) {
   const { host, port } = splitHostPort(headers.Host || headers.host);
   const { sourceIp } = requestContext.identity || {};
   const req = {
     body: encodeBody(body),
-    headers,
+    headers: norm(headers),
     host,
     id,
     method,

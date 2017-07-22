@@ -1,0 +1,11 @@
+.coverage
+elm-stuff
+demo
+node_modules
+scripts
+src
+test
+tests
+.*
+circle.yml
+elm-package.json

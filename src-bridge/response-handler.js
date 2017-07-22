@@ -18,7 +18,7 @@ const encodeBody = (body) => {
   }
 };
 
-const responseHandler = ({ pool, logger = defaultLogger }) => resp => {
+const handler = ({ pool, logger = defaultLogger }) => function responseHandler(resp) {
   logger.info(JSON.stringify({ resp }, null, 2));
   const { callback } = pool.take(resp.id);
   const statusCode = parseInt(resp.statusCode, 10);
@@ -41,7 +41,7 @@ const responseHandler = ({ pool, logger = defaultLogger }) => resp => {
   }
 };
 
-module.exports = Object.assign(responseHandler, {
+module.exports = Object.assign(handler, {
   defaultHeaders,
   missingStatusCodeBody,
 });
