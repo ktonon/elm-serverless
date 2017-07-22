@@ -1,18 +1,17 @@
-module ConnTests exposing (..)
+module Serverless.ConnTests exposing (..)
 
 import Array
-import ConnFuzz as Fuzz exposing (testConn, testConnWith)
-import ElmTestBDDStyle exposing (..)
-import Expect exposing (..)
-import Expect.Extra exposing (contain)
+import Expect
+import Expect.Extra
 import Serverless.Conn exposing (..)
+import Serverless.Conn.Fuzz as Fuzz exposing (testConn, testConnWith)
+import Serverless.TestTypes exposing (Conn, Msg, responsePort)
+import Serverless.TestHelpers exposing (..)
 import Serverless.Types exposing (PipelineState(..), Plug(..), Sendable(..))
-import Test exposing (..)
-import TestHelpers exposing (..)
-import TestTypes exposing (..)
+import Test exposing (describe, test)
 
 
-all : Test
+all : Test.Test
 all =
     describe "Serverless.Conn"
         [ buildingPipelinesTests
@@ -36,62 +35,65 @@ sl =
     simpleLoop ""
 
 
-sf : Conn -> TestTypes.Plug
+sf : Conn -> Serverless.TestTypes.Plug
 sf =
     simpleFork ""
 
 
-buildingPipelinesTests : Test
+buildingPipelinesTests : Test.Test
 buildingPipelinesTests =
     describe "Building Pipelines"
         [ describe "pipeline"
-            [ it "begins a pipeline" <|
-                expect (pipeline |> pipelineCount) to equal 0
+            [ test "begins a pipeline" <|
+                \_ ->
+                    Expect.equal 0 (pipelineCount pipeline)
             ]
         , describe "plug"
-            [ it "extends the pipeline by 1" <|
-                expect (pipeline |> plug sp |> pipelineCount) to equal 1
-            , it "wraps a simple conn transformation as a Plug" <|
-                expect (pipeline |> plug sp)
-                    to
-                    equal
-                    (Pipeline (Array.fromList [ Simple sp ]))
+            [ test "extends the pipeline by 1" <|
+                \_ ->
+                    Expect.equal 1 (pipeline |> plug sp |> pipelineCount)
+            , test "wraps a simple conn transformation as a Plug" <|
+                \_ ->
+                    Expect.equal
+                        (Pipeline (Array.fromList [ Simple sp ]))
+                        (pipeline |> plug sp)
             ]
         , describe "loop"
-            [ it "extends the pipeline by 1" <|
-                expect (pipeline |> loop sl |> pipelineCount) to equal 1
-            , it "wraps an update function as a Plug" <|
-                expect (pipeline |> loop sl)
-                    to
-                    equal
-                    (Pipeline (Array.fromList [ Update sl ]))
+            [ test "extends the pipeline by 1" <|
+                \_ ->
+                    Expect.equal 1 (pipeline |> loop sl |> pipelineCount)
+            , test "wraps an update function as a Plug" <|
+                \_ ->
+                    Expect.equal
+                        (Pipeline (Array.fromList [ Update sl ]))
+                        (pipeline |> loop sl)
             ]
         , describe "nest"
-            [ it "extends the pipeline by the length of the nested pipeline" <|
-                expect
-                    (pipeline
-                        |> plug sp
-                        |> loop sl
-                        |> nest
-                            (pipeline
-                                |> plug sp
-                                |> plug sp
-                                |> loop sl
-                            )
-                        |> pipelineCount
-                    )
-                    to
-                    equal
-                    5
+            [ test "extends the pipeline by the length of the nested pipeline" <|
+                \_ ->
+                    Expect.equal
+                        5
+                        (pipeline
+                            |> plug sp
+                            |> loop sl
+                            |> nest
+                                (pipeline
+                                    |> plug sp
+                                    |> plug sp
+                                    |> loop sl
+                                )
+                            |> pipelineCount
+                        )
             ]
         , describe "fork"
-            [ it "extends the pipeline by 1" <|
-                expect (pipeline |> fork sf |> pipelineCount) to equal 1
-            , it "wraps a router function as a Router" <|
-                expect (pipeline |> fork sf)
-                    to
-                    equal
-                    (Pipeline (Array.fromList [ Router sf ]))
+            [ test "extends the pipeline by 1" <|
+                \_ ->
+                    Expect.equal 1 (pipeline |> fork sf |> pipelineCount)
+            , test "wraps a router function as a Router" <|
+                \_ ->
+                    Expect.equal
+                        (Pipeline (Array.fromList [ Router sf ]))
+                        (pipeline |> fork sf)
             ]
         ]
 
@@ -100,30 +102,26 @@ buildingPipelinesTests =
 -- ROUTING TESTS
 
 
-routingTests : Test
+routingTests : Test.Test
 routingTests =
     describe "Routing"
         [ describe "parseRoute"
             [ testConn "parses the request path" <|
                 \conn ->
-                    expect
+                    Expect.equal
+                        (Foody "bar")
                         (conn
                             |> updateReq (\req -> { req | path = "/foody/bar" })
                             |> parseRoute route NoCanFind
                         )
-                        to
-                        equal
-                        (Foody "bar")
             , testConn "uses the provided default if it fails to parse" <|
                 \conn ->
-                    expect
+                    Expect.equal
+                        NoCanFind
                         (conn
                             |> updateReq (\req -> { req | path = "/foozy/bar" })
                             |> parseRoute route NoCanFind
                         )
-                        to
-                        equal
-                        NoCanFind
             ]
         ]
 
@@ -132,7 +130,7 @@ routingTests =
 -- RESPONSE TESTS
 
 
-responseTests : Test
+responseTests : Test.Test
 responseTests =
     describe "Responding "
         [ testConnWith Fuzz.body "body sets the response body" <|
@@ -155,21 +153,21 @@ responseTests =
                     ( newConn, _ ) =
                         conn |> send responsePort
                 in
-                    expect newConn.resp to equal Sent
+                    Expect.equal Sent newConn.resp
         , testConn "send issues a side effect" <|
             \conn ->
                 let
                     ( _, cmd ) =
                         conn |> send responsePort
                 in
-                    expect cmd to notEqual Cmd.none
+                    Expect.notEqual Cmd.none cmd
         , testConn "send fails if the conn is already halted" <|
             \conn ->
                 let
                     ( _, cmd ) =
                         { conn | resp = Sent } |> send responsePort
                 in
-                    expect cmd to equal Cmd.none
+                    Expect.equal Cmd.none cmd
         , testConnWith Fuzz.header "headers adds a response header" <|
             \( conn, val ) ->
                 conn
@@ -201,7 +199,7 @@ responseTests =
 -- PIPELINE PROCESSING TESTS
 
 
-pipelineProcessingTests : Test
+pipelineProcessingTests : Test.Test
 pipelineProcessingTests =
     describe "Pipeline Processing"
         [ describe "pipelinePause"
@@ -209,7 +207,7 @@ pipelineProcessingTests =
                 \conn ->
                     case pipelinePause 3 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Paused 3)
+                            Expect.equal (Paused 3) newConn.pipelineState
             , testConn "it increments paused by the correct amount" <|
                 \conn ->
                     case
@@ -217,27 +215,27 @@ pipelineProcessingTests =
                             |> pipelinePause 3 (Cmd.none) responsePort
                     of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Paused 5)
+                            Expect.equal (Paused 5) newConn.pipelineState
             , testConn "it fails if the increment is negative" <|
                 \conn ->
                     case pipelinePause -1 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Processing)
+                            Expect.equal (Processing) newConn.pipelineState
             , testConn "it sends a failure response if the increment is negative" <|
                 \conn ->
                     case pipelinePause -1 (Cmd.none) responsePort conn of
                         ( _, cmd ) ->
-                            expect cmd to notEqual (Cmd.none)
+                            Expect.notEqual (Cmd.none) cmd
             , testConn "it does nothing if the pause increment is zero" <|
                 \conn ->
                     case pipelinePause 0 (Cmd.none) responsePort conn of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Processing)
+                            Expect.equal Processing newConn.pipelineState
             , testConn "it does not send a failure response if the increment is zero" <|
                 \conn ->
                     case pipelinePause 0 (Cmd.none) responsePort conn of
                         ( _, cmd ) ->
-                            expect cmd to equal (Cmd.none)
+                            Expect.equal Cmd.none cmd
             ]
         , describe "pipelineResume"
             [ testConn "it sets pipelineState to Processing if the increment is equal to the current pause count" <|
@@ -247,7 +245,7 @@ pipelineProcessingTests =
                             |> pipelineResume 2 responsePort
                     of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Processing)
+                            Expect.equal Processing newConn.pipelineState
             , testConn "it decrements paused by the correct amount" <|
                 \conn ->
                     case
@@ -255,7 +253,7 @@ pipelineProcessingTests =
                             |> pipelineResume 4 responsePort
                     of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Paused 1)
+                            Expect.equal (Paused 1) newConn.pipelineState
             , testConn "it fails if the increment is negative" <|
                 \conn ->
                     case
@@ -263,21 +261,21 @@ pipelineProcessingTests =
                             |> pipelineResume -1 responsePort
                     of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Paused 2)
+                            Expect.equal (Paused 2) newConn.pipelineState
             , testConn "it sends a failure response if the increment is negative" <|
                 \conn ->
                     case pipelineResume -1 responsePort conn of
                         ( _, cmd ) ->
-                            expect cmd to notEqual (Cmd.none)
+                            Expect.notEqual Cmd.none cmd
             , testConn "it does nothing if the resume increment is zero" <|
                 \conn ->
                     case pipelineResume 0 responsePort conn of
                         ( newConn, _ ) ->
-                            expect newConn.pipelineState to equal (Processing)
+                            Expect.equal Processing newConn.pipelineState
             , testConn "it does not send a failure response if the increment is zero" <|
                 \conn ->
                     case pipelineResume 0 responsePort conn of
                         ( _, cmd ) ->
-                            expect cmd to equal (Cmd.none)
+                            Expect.equal Cmd.none cmd
             ]
         ]

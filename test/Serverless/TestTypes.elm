@@ -1,4 +1,4 @@
-module TestTypes exposing (..)
+module Serverless.TestTypes exposing (..)
 
 import Json.Encode as J
 import Serverless.Types as Types

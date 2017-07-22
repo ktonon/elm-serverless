@@ -90,9 +90,9 @@ The following is a list of known middleware:
 
 `elm-serverless` targets Node.js 6.10. To get a development environment setup, fork and clone this repo. `npm install` will also install elm packages for the base library as well as the demo. `npm test` will perform the full range of tests including:
 
-* [./tests][]: unit tests for the elm package
 * [./test/bridge][]: unit tests for the JavaScript package
 * [./test/demo][]: end-to-end tests for the included demo
+* [./test/Serverless][]: unit tests for the elm package
 
 The demo tests are written in JavaScript using [supertest][] and [mocha][] and rely on a running test instance of the demo server, which is started automatically when you run `npm test`. You can also launch tests in watch mode with the command `npm run test:watch`.
 
@@ -102,9 +102,9 @@ The demo tests are written in JavaScript using [supertest][] and [mocha][] and r
 An AWS Lambda function would be pretty limited without an interface to the rest of AWS. [AWS SDK for elm][] is a __work in progress__. I don't think there is a huge amount of work to be done here as we can probably generate the elm interface from the AWS SDK json files. But it is definitely non-trivial.
 
 [./demo]:https://github.com/ktonon/elm-serverless/blob/master/demo
-[./tests]:https://github.com/ktonon/elm-serverless/blob/master/tests
 [./test/bridge]:https://github.com/ktonon/elm-serverless/blob/master/test/bridge
 [./test/demo]:https://github.com/ktonon/elm-serverless/blob/master/test/demo
+[./test/Serverless]:https://github.com/ktonon/elm-serverless/blob/master/test/Serverless
 [AWS Lambda handler]:http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
 [AWS Lambda]:https://aws.amazon.com/lambda
 [AWS SDK for elm]:https://github.com/ktonon/aws-sdk-elm

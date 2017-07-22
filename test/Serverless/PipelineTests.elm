@@ -1,13 +1,13 @@
-module PipelineTests exposing (all)
+module Serverless.PipelineTests exposing (all)
 
-import ConnFuzz as Fuzz exposing (testConnWith, testConn)
 import Expect exposing (..)
 import Serverless.Conn as Conn exposing (..)
+import Serverless.Conn.Fuzz as Fuzz exposing (testConnWith, testConn)
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..))
+import Serverless.TestHelpers exposing (..)
+import Serverless.TestTypes exposing (..)
 import Test exposing (..)
-import TestHelpers exposing (..)
-import TestTypes exposing (..)
 
 
 testApplyPipeline : String -> Plug -> (Conn -> Bool -> Expectation) -> Test

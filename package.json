@@ -15,8 +15,8 @@
     "postinstall": "elm package install -y && cd demo && elm package install -y",
     "posttest": "eslint .",
     "start": "cd demo && serverless offline",
-    "test": "node scripts/test-server && elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test",
-    "test:watch": "elm test --watch & node scripts/test-server && mocha --reporter=dot --watch"
+    "test": "node scripts/test-server && elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test/demo test/bridge",
+    "test:watch": "elm test --watch & node scripts/test-server && mocha --reporter=dot --watch test/bridge test/demo"
   },
   "dependencies": {
     "uuid": "^3.1.0",

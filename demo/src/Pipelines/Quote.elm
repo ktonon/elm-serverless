@@ -1,11 +1,11 @@
 module Pipelines.Quote exposing (..)
 
 import Http
-import Models.Quote exposing (..)
+import Models.Quote as Quote
 import Route exposing (..)
-import Serverless.Conn as Conn exposing (..)
-import Serverless.Conn.Types exposing (..)
-import Types exposing (..)
+import Serverless.Conn exposing (..)
+import Serverless.Conn.Types exposing (Body(..), Method(..))
+import Types exposing (Conn, Plug, Msg(..), responsePort)
 
 
 router : Method -> Lang -> Plug
@@ -25,7 +25,7 @@ router method lang =
 
 get : Lang -> Plug
 get lang =
-    Conn.pipeline
+    pipeline
         -- Loop pipelines are like elm update functions.
         -- They can be used to wait for the results of side effects.
         -- For example, loadQuotes makes a few http requests and collects the
@@ -90,7 +90,7 @@ loadQuotes lang msg conn =
                         |> pipelinePause
                             (langs |> List.length)
                             (langs
-                                |> List.map quoteRequest
+                                |> List.map Quote.request
                                 |> List.map (Http.send QuoteResult)
                                 |> Cmd.batch
                             )
@@ -132,7 +132,6 @@ respondWithQuotes msg conn =
         Endpoint ->
             conn
                 |> statusCode 200
-                |> header ( "content-type", "text/html" )
                 -- By the time we get here, we can be sure that loadQuotes has
                 -- successfully loaded all the quotes, so we can sort, format,
                 -- and send them in the response body.
@@ -140,7 +139,7 @@ respondWithQuotes msg conn =
                     jsonBody
                         (conn.model.quotes
                             |> List.sortBy .lang
-                            |> encodeQuotes
+                            |> Quote.encodeList
                         )
                 |> send responsePort
 

@@ -8,7 +8,7 @@ dependencies:
     - node_modules
     - elm-stuff
   override:
-    - cd demo && npm install
+    - npm install
     - ./scripts/ci-elm-hack.sh
 
 test:

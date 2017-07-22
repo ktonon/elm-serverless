@@ -71,13 +71,18 @@ router conn =
             internalError (TextBody "bugs, bugs, bugs")
                 |> toResponder responsePort
 
-        _ ->
+        ( _, NotFound ) ->
             -- use this form of toResponder when you need to access the conn
             toResponder responsePort <|
                 \conn ->
                     conn
                         |> statusCode 404
                         |> textBody ("Nothing at: " ++ conn.req.path)
+
+        _ ->
+            statusCode 405
+                >> textBody "Method not allowed"
+                |> toResponder responsePort
 
 
 

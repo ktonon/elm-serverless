@@ -1,13 +1,10 @@
-module TestHelpers exposing (..)
+module Serverless.TestHelpers exposing (..)
 
 import Array
-import Expect exposing (Expectation)
 import Serverless.Conn exposing (body, pipeline, plug)
 import Serverless.Conn.Types exposing (Body(..), Method(..), Response, Request)
-import Serverless.Pool exposing (initResponse)
+import Serverless.TestTypes exposing (..)
 import Serverless.Types exposing (Sendable(..), ResponsePort)
-import Test exposing (Test, test)
-import TestTypes exposing (..)
 import UrlParser exposing (Parser, (</>), map, oneOf, s, string, top)
 
 
@@ -27,18 +24,6 @@ appendToBody x conn =
 
         Sent ->
             conn
-
-
-initResponseTest : String -> (Response -> Expectation) -> Test
-initResponseTest label e =
-    test label <|
-        \_ ->
-            case initResponse of
-                Unsent resp ->
-                    e resp
-
-                Sent ->
-                    Expect.fail "initResponse was already Sent"
 
 
 unsentOrCrash : Conn -> Response

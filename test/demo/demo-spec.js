@@ -15,6 +15,12 @@ describe('The demo server', () => {
     );
   });
 
+  describe('POST /', () => {
+    it('has status 405', () =>
+      request.post('/').expect(405)
+    );
+  });
+
   describe('GET /buggy', () => {
     it('has status 500', () =>
       request.get('/buggy').expect(500)
@@ -39,6 +45,22 @@ describe('The demo server', () => {
         res.headers.should.have.property('content-type')
           .which.equal('text/text; charset=utf-8');
         res.text.should.startWith('Nothing at:');
+      })
+    );
+  });
+
+  describe('POST /quote', () => {
+    it('has status 501', () =>
+      request.post('/quote').expect(501).then(res => {
+        res.text.should.match(/^Not implemented/);
+      })
+    );
+  });
+
+  describe('PUT /quote', () => {
+    it('has status 405', () =>
+      request.put('/quote').expect(405).then(res => {
+        res.text.should.equal('Method not allowed');
       })
     );
   });

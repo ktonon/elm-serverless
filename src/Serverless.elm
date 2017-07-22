@@ -18,9 +18,10 @@ import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode as J
 import Logging exposing (defaultLogger)
 import Serverless.Pool as Pool exposing (Pool)
+import Serverless.Conn.Decode
 import Serverless.Conn.Types exposing (..)
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..), Msg(..))
-import Serverless.Types exposing (..)
+import Serverless.Types exposing (Conn, Plug, RequestPort, ResponsePort)
 
 
 {-| Serverless program type.
@@ -122,7 +123,7 @@ update_ :
 update_ api slsMsg model =
     case slsMsg of
         RawRequest raw ->
-            case raw |> decodeValue Pool.requestDecoder of
+            case raw |> decodeValue Serverless.Conn.Decode.request of
                 Ok req ->
                     { model | pool = model.pool |> Pool.add defaultLogger req }
                         |> updateChild api

@@ -84,7 +84,7 @@ the results of a side effect.
 import Array
 import Dict
 import Json.Encode as J
-import Serverless.Pool exposing (..)
+import Serverless.Conn.Encode
 import Serverless.Conn.Types exposing (..)
 import Serverless.Types exposing (..)
 import UrlParser exposing (Parser, (</>), oneOf, parse, map, int, s)
@@ -304,7 +304,7 @@ send port_ conn =
     case conn.resp of
         Unsent resp ->
             ( { conn | resp = Sent }
-            , resp |> encodeResponse conn.req.id |> port_
+            , resp |> Serverless.Conn.Encode.response conn.req.id |> port_
             )
 
         Sent ->

@@ -4,19 +4,19 @@ import Http
 import Json.Decode exposing (Decoder, string)
 import Json.Decode.Pipeline exposing (required, decode, hardcoded)
 import Json.Encode as J
-import Types exposing (..)
+import Types exposing (Quote)
 
 
 -- MODEL
 
 
-formatQuote : String -> Quote -> String
-formatQuote lineBreak quote =
+format : String -> Quote -> String
+format lineBreak quote =
     quote.text ++ lineBreak ++ "--" ++ quote.author
 
 
-encodeQuotes : List Quote -> J.Value
-encodeQuotes quotes =
+encodeList : List Quote -> J.Value
+encodeList quotes =
     J.object
         [ ( "quotes"
           , quotes
@@ -37,17 +37,17 @@ encodeQuotes quotes =
 -- DECODER
 
 
-quoteDecoder : String -> Decoder Quote
-quoteDecoder lang =
+decoder : String -> Decoder Quote
+decoder lang =
     decode Quote
         |> hardcoded lang
         |> required "quoteText" string
         |> required "quoteAuthor" string
 
 
-quoteRequest : String -> Http.Request Quote
-quoteRequest lang =
-    quoteDecoder lang
+request : String -> Http.Request Quote
+request lang =
+    decoder lang
         |> Http.get
             ("http://api.forismatic.com/api/1.0/?method=getQuote&format=json&lang="
                 ++ lang
