@@ -13,6 +13,10 @@ If the Serverless.Program is defined in API.elm then the handler is:
     const handler = require('./API.elm').API;
 `;
 
+const invalidElmApp = msg => {
+  throw new Error(`handler.worker did not return valid Elm app.${msg}`);
+};
+
 const httpApi = ({
   handler,
   config = {},
@@ -20,12 +24,15 @@ const httpApi = ({
   responsePort = 'responsePort',
 } = {}) => {
   validate(handler, 'worker', {
-    missing: `Missing handler argument.${handlerExample}Got`,
+    missing: `Missing handler argument.${handlerExample}`,
     invalid: `Invalid handler argument.${handlerExample}Got`,
   });
 
   const app = handler.worker(config);
-  const portNames = `[${Object.keys(app.ports).join(', ')}]`;
+  if (typeof app !== 'object') {
+    invalidElmApp(`Got: ${validate.inspect(app)}`);
+  }
+  const portNames = `[${Object.keys(app.ports).sort().join(', ')}]`;
 
   validate(app.ports[responsePort], 'subscribe', {
     missing: `No response port named ${responsePort} among: ${portNames}`,

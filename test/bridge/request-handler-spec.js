@@ -2,8 +2,8 @@ const should = require('should');
 const sinon = require('sinon');
 const uuid = require('uuid');
 
-const Pool = require('../src-bridge/pool');
-const requestHandler = require('../src-bridge/request-handler');
+const Pool = require('../../src-bridge/pool');
+const requestHandler = require('../../src-bridge/request-handler');
 const spyLogger = require('./spy-logger');
 
 const makeHandler = () => {
@@ -43,6 +43,28 @@ describe('requestHandler({ pool })', () => {
     h({ id }, context, sinon.spy());
     const { callback } = h.pool.take(id);
     callback.called.should.be.false();
+  });
+
+  it('does send the request into elm via the request port', () => {
+    const h = makeHandler();
+    h.requestPort.send.called.should.be.false();
+    h({ id }, context, sinon.spy());
+    const { req } = h.pool.take(id);
+    h.requestPort.send.calledWith(req).should.be.true();
+  });
+
+  it('leaves string bodies unchanged', () => {
+    const h = makeHandler();
+    const body = 'this body\'s content is a string!';
+    h({ id, body }, context, sinon.spy());
+    h.pool.take(id).req.body.should.equal(body);
+  });
+
+  it('JSON stringifies other types of bodies', () => {
+    const h = makeHandler();
+    const body = { some: { thing: [4, 'json'] } };
+    h({ id, body }, context, sinon.spy());
+    h.pool.take(id).req.body.should.equal('{"some":{"thing":[4,"json"]}}');
   });
 
   it('creates a unique id for each request', () => {
@@ -91,15 +113,20 @@ describe('requestHandler({ pool })', () => {
     h.pool.take(id).req.method.should.equal(httpMethod);
   });
 
-  it('preserves the headers', () => {
+  it('normalizes the headers', () => {
     const h = makeHandler();
     const headers = {
-      'Upper-Case': 'stuff',
-      'lower-case': 'things',
-      'X-strange': 'outcomes',
+      'Upper-Case': false,
+      'lower-case': 'Things',
+      'X-strange': 3,
+      'Find-Me': null,
     };
     h({ id, headers }, context, sinon.spy());
-    h.pool.take(id).req.headers.should.deepEqual(headers);
+    h.pool.take(id).req.headers.should.deepEqual({
+      'upper-case': 'false',
+      'lower-case': 'Things',
+      'x-strange': '3',
+    });
   });
 
   it('can get path from pathParameters[0]', () => {

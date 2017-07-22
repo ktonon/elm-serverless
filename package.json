@@ -10,18 +10,26 @@
   "repository": "git@github.com:ktonon/elm-serverless.git",
   "main": "src-bridge/index.js",
   "scripts": {
-    "clobber": "rm -rf node_modules elm-stuff demo/node_modules demo/elm-stuff tests/elm-stuff",
-    "postinstall": "elm package install -y",
+    "clobber": "rm -rf node_modules elm-stuff demo/elm-stuff tests/elm-stuff",
+    "deploy:demo": "cd demo && cross-env NODE_ENV=production serverless deploy",
+    "postinstall": "elm package install -y && cd demo && elm package install -y",
     "posttest": "eslint .",
-    "test": "elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test"
+    "start": "cd demo && serverless offline",
+    "test": "node scripts/test-server && elm test && istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test",
+    "test:watch": "elm test --watch & node scripts/test-server && mocha --reporter=dot --watch"
   },
   "dependencies": {
     "uuid": "^3.1.0",
     "xmlhttprequest": "git://github.com/ktonon/node-XMLHttpRequest.git#bdd9e5c75a3c0f8f4038697234e8612270cec799"
   },
   "devDependencies": {
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.1.1",
+    "babel-preset-env": "^1.6.0",
+    "cross-env": "^3.1.4",
     "elm": "^0.18.0",
     "elm-test": "^0.18.7",
+    "elm-webpack-loader": "^4.3.1",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^15.0.2",
     "eslint-plugin-import": "^2.7.0",
@@ -29,7 +37,17 @@
     "eslint-plugin-react": "^7.1.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.4.2",
+    "ps-node": "^0.1.6",
+    "rc": "^1.1.6",
+    "serverless": "^1.17.0",
+    "serverless-offline": "^3.15.1",
+    "serverless-webpack": "^2.0.0",
+    "shebang-loader": "0.0.1",
     "should": "^11.2.1",
-    "sinon": "^2.3.8"
+    "sinon": "^2.3.8",
+    "strip-debug-loader": "^1.0.0",
+    "superagent-defaults": "^0.1.14",
+    "supertest": "^3.0.0",
+    "webpack": "^3.3.0"
   }
 }

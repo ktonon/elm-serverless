@@ -2,3 +2,5 @@ elm-stuff
 node_modules
 *.log
 .coverage
+.serverless
+.webpack
