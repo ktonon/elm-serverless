@@ -8,7 +8,7 @@ module Serverless
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
 at the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm)
-for a usage example. Then read about [Building Pipelines](./Serverless-Conn#building-pipelines).
+for a usage example. Then read about [Building Pipelines](./Serverless-Plug#building-pipelines).
 
 @docs Program, Flags, httpApi, HttpApi
 
@@ -17,11 +17,12 @@ for a usage example. Then read about [Building Pipelines](./Serverless-Conn#buil
 import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode
 import Logging exposing (defaultLogger)
+import Serverless.Conn as Conn exposing (Conn)
+import Serverless.Conn.Request as Request exposing (Id)
+import Serverless.Plug exposing (Plug)
 import Serverless.Pool as Pool exposing (Pool)
-import Serverless.Conn.Decode as Decode
-import Serverless.Conn.Types exposing (..)
+import Serverless.Port as Port
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..), Msg(..))
-import Serverless.Types exposing (Conn, Plug, RequestPort, ResponsePort)
 
 
 {-| Serverless program type.
@@ -67,19 +68,19 @@ A Serverless.Program is parameterized by your 3 custom types
 You must provide the following:
 
 * `configDecoder` decodes a JSON value for your custom config type
-* `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.ResponsePort`, respectively
+* `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.Port.Response`, respectively
 * `endpoint` is a message through which connections are first received
 * `initialModel` is a value to which new connections will set their model
 * `pipeline` takes the place of the update function in a traditional elm program
 * `subscriptions` has the usual meaning
 
-See [Building Pipelines](./Serverless-Conn#building-pipelines) for more details on
+See [Building Pipelines](./Serverless-Plug#building-pipelines) for more details on
 the `pipeline` parameter.
 -}
 type alias HttpApi config model msg =
     { configDecoder : Decoder config
-    , requestPort : RequestPort (Msg msg)
-    , responsePort : ResponsePort (Msg msg)
+    , requestPort : Port.Request (Msg msg)
+    , responsePort : Port.Response (Msg msg)
     , endpoint : msg
     , initialModel : model
     , pipeline : Plug config model msg
@@ -123,11 +124,11 @@ update_ :
 update_ api slsMsg model =
     case slsMsg of
         RawRequest raw ->
-            case raw |> decodeValue Decode.request of
+            case raw |> decodeValue Request.decoder of
                 Ok req ->
                     { model | pool = model.pool |> Pool.add defaultLogger req }
                         |> updateChild api
-                            req.id
+                            (Request.id req)
                             (PlugMsg Pipeline.firstIndexPath api.endpoint)
 
                 Err err ->
@@ -178,7 +179,7 @@ connSub : HttpApi config model msg -> Conn config model -> Sub (Msg msg)
 connSub api conn =
     api.subscriptions conn
         |> Sub.map (PlugMsg Pipeline.firstIndexPath)
-        |> Sub.map (HandlerMsg conn.req.id)
+        |> Sub.map (HandlerMsg (Conn.id conn))
 
 
 reportFailure : String -> value -> Model config model -> ( Model config model, Cmd (Msg msg) )

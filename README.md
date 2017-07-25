@@ -8,10 +8,13 @@
 [![Coveralls](https://img.shields.io/coveralls/ktonon/elm-serverless.svg?label=coverage%3Ajs)](https://coveralls.io/github/ktonon/elm-serverless)
 [![gitter](https://img.shields.io/gitter/room/elm-serverless/Lobby.svg)](https://gitter.im/elm-serverless/Lobby)
 
-__Beta Release 3.0.2__
-
 Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your API in elm and then use the npm package to bridge the interface between the [AWS Lambda handler][] and your elm program.
 
+__NOTE__: The master branch is on version 4.0.0 which is not yet released. This will include the following changes from release 3.
+
+* Opaque `Conn` and `Plug` types
+* A more efficient pipeline
+* Proper JavaScript interop ([#2](https://github.com/ktonon/elm-serverless/issues/2))
 
 ## Intro
 You define a `Serverless.Program`, which among other things, is configured with a `Pipeline`.
@@ -40,7 +43,7 @@ Basically, the pipeline takes the place of the usual `update` function in a trad
 ```elm
 pipeline : Plug
 pipeline =
-    Conn.pipeline
+    pipeline
         |> plug (cors "*" [ GET, OPTIONS ]) -- Plugs transform a connection
         |> plug authentication              -- Plugs are chained in a pipeline
         -- ...
@@ -54,23 +57,21 @@ For routing, we use [ktonon/url-parser][], which is a fork of [evancz/url-parser
 router : Conn -> Plug
 router conn =
     case                                    -- Route however you want, here we
-        ( conn.req.method                   -- use HTTP method
-        , conn |> parseRoute route NotFound -- and parsed request path
+        ( conn |> method                    -- use HTTP method
+        , conn |> path |> parseRoute route NotFound -- and parsed request path
         )
     of
         ( GET, Home ) ->
-            statusCode 200
-                >> textBody "Home"
-                |> toResponder responsePort
+            responder responsePort <|
+                \_ -> ( 200, text "Home" )
 
             -- vvvvvvvvvv --                -- UrlParser gives structured routes
         ( GET, Quote lang ) ->
             Quote.pipeline lang             -- Defer to another module
 
         _ ->
-            statusCode 404
-                >> textBody "Nothing here"
-                |> toResponder responsePort
+            responder responsePort <|
+                \conn -> ( 404, text <| (++) "Nothing at: " <| path conn )
 ```
 
 ## Demo

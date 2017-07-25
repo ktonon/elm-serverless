@@ -2,8 +2,8 @@ module Serverless.Pool exposing (..)
 
 import Dict exposing (Dict)
 import Logging exposing (Logger, LogLevel(..))
-import Serverless.Conn.Types exposing (..)
-import Serverless.Types exposing (Conn, PipelineState(..), Sendable(..))
+import Serverless.Conn as Conn exposing (Conn)
+import Serverless.Conn.Request exposing (Id, Request)
 
 
 -- CONNECTION POOL
@@ -27,12 +27,7 @@ add logger req pool =
         Just config ->
             pool
                 |> replace
-                    (Conn Processing
-                        config
-                        req
-                        initResponse
-                        pool.initialModel
-                    )
+                    (Conn.init config pool.initialModel req)
 
         _ ->
             logger LogError "Failed to add request! Pool has no config" pool
@@ -50,7 +45,7 @@ replace :
 replace conn pool =
     let
         newConn =
-            pool.conn |> Dict.insert conn.req.id conn
+            pool.conn |> Dict.insert (Conn.id conn) conn
     in
         { pool | conn = newConn }
 
@@ -58,14 +53,3 @@ replace conn pool =
 connections : Pool config model -> List (Conn config model)
 connections pool =
     pool.conn |> Dict.values
-
-
-initResponse : Sendable Response
-initResponse =
-    Unsent
-        (Response
-            NoBody
-            Utf8
-            [ ( "cache-control", "max-age=0, private, must-revalidate" ) ]
-            InvalidStatus
-        )

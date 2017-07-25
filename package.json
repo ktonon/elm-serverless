@@ -16,7 +16,9 @@
     "posttest": "eslint .",
     "pretest": "node scripts/test-server",
     "start": "cd demo && serverless offline",
-    "test": "istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test/demo test/bridge && elm test",
+    "test": "npm run test:js && npm run test:elm",
+    "test:js": "istanbul cover --root src-bridge --include-all-sources --dir ./.coverage node_modules/mocha/bin/_mocha -- test/demo test/bridge",
+    "test:elm": "elm-doc-test && elm test",
     "test:watch": "elm test --watch & node scripts/test-server && mocha --reporter=dot --watch test/bridge test/demo"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "babel-preset-env": "^1.6.0",
     "cross-env": "^3.1.4",
     "elm": "^0.18.0",
+    "elm-doc-test": "^4.0.0",
     "elm-test": "^0.18.7",
     "elm-webpack-loader": "^4.3.1",
     "eslint": "^3.19.0",
@@ -42,7 +45,7 @@
     "rc": "^1.1.6",
     "serverless": "^1.17.0",
     "serverless-offline": "^3.15.1",
-    "serverless-webpack": "^2.0.0",
+    "serverless-webpack": "2.0.0",
     "shebang-loader": "0.0.1",
     "should": "^11.2.1",
     "sinon": "^2.3.8",

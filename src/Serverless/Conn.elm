@@ -1,382 +1,302 @@
-module Serverless.Conn exposing (..)
+module Serverless.Conn
+    exposing
+        ( Conn
+        , config
+        , id
+        , init
+        , isActive
+        , isSent
+        , method
+        , model
+        , parseRoute
+        , path
+        , pause
+        , resume
+        , request
+        , respond
+        , jsonEncodedResponse
+        , send
+        , updateModel
+        , updateResponse
+        )
 
-{-| Functions for building pipelines and processing connections.
+{-| Functions for querying and updating connections.
 
-## Terminology
-
-`Conn` stands for __connection__. A connection contains:
-
-* An HTTP request
-* An HTTP response, unsent, and waiting for you to provide meaningful values
-* Your custom deployment configuration data
-* Your custom appliation `Model`
-
-A __pipeline__ is a sequence of functions which transform the connection,
-eventually sending back the HTTP response. We use the term __plug__ to mean a
-single function that is part of the pipeline. But a pipeline is also just a plug
-and so pipelines can be composed from other pipelines.
+@docs Conn
 
 ## Table of Contents
 
-* [Building Pipelines](#building-pipelines)
-* [Routing](#routing)
-* [Response](#response)
-* [Responding with Errors](#responding-with-errors)
-* [Pipeline Processing](#pipeline-processing)
-* [Application Specific](#application-specific)
+* [Processing Application Data](#processing-application-data)
+* [Querying the Request](#querying-the-request)
+* [Responding](#responding)
+* [Waiting for Side-Effects](#waiting-for-side-effects)
+* [Misc](#misc)
 
-## Building Pipelines
+## Processing Application Data
 
-Use these functions to build your pipelines. For example,
+Query and update your application specific data.
 
-    myPipeline =
-        pipeline
-            |> plug simplePlugA
-            |> plug simplePlugB
-            |> loop loadSomeDatabaseStuff
-            |> nest anotherPipeline
-            |> fork router
+@docs config, model, updateModel
 
-@docs pipeline, plug, loop, fork, nest
+## Querying the Request
 
-## Routing
+Get details about the HTTP request.
 
-@docs parseRoute
+@docs request, id, method, path, parseRoute
 
-## Response
+## Responding
 
-The following functions are used to transform and send the HTTP response. Most
-of these functions can be curried and used directly as simple plugs. For
-example
+Update the response and send it.
 
-    pipeline
-        |> plug (header ( "access-control-allow-origin", "*" ))
+@docs respond, updateResponse, send
 
-Or they can be used inside of a plug as part of a chain of connection
-transformations. For example,
+## Waiting for Side-Effects
 
-    conn
-        |> status (Code 200)
-        |> header ( "content-type", "text/text" )
-        |> body (TextBody "hello world")
+Use inside a loop plug which needs to wait for the results of a side effect.
 
-@docs body, textBody, jsonBody, header, status, statusCode, send, toResponder
+@docs pause, resume
 
-## Responding with Errors
+## Misc
 
-The following functions set the HTTP status code to 500 and set the body to
-an error response.
+These functions are typically not needed when building an application. They are
+used internally by the framework. They are useful when debugging or writing unit
+tests.
 
-@docs internalError, unexpectedMsg
-
-## Pipeline Processing
-
-The following functions can be used inside of a loop plug which needs to wait for
-the results of a side effect.
-
-@docs pipelinePause, pipelineResume
-
-## Application Specific
-
-@docs updateModel
+@docs init, jsonEncodedResponse, isActive, isSent
 -}
 
-import Array
 import Dict
 import Json.Encode
-import Serverless.Conn.Encode
-import Serverless.Conn.Types exposing (..)
-import Serverless.Types exposing (..)
-import UrlParser exposing (Parser, (</>), oneOf, parse, map, int, s)
+import Serverless.Conn.Body as Body exposing (Body, text)
+import Serverless.Conn.Request as Request exposing (Id, Method, Request)
+import Serverless.Conn.Response as Response exposing (Response, Status, setBody, setStatus)
+import Serverless.Port as Port
+import UrlParser
 
 
--- BUILDING PIPELINES
+{-| A connection with a request and response.
 
-
-{-| Begins a pipeline.
-
-Build the pipeline by chaining plugs with plug, loop, fork, and nest.
+Connections are parameterized with config and model record types which are
+specific to the application. Config is loaded once on app startup, while model
+is set to a provided initial value for each incomming request.
 -}
-pipeline : Plug config model msg
-pipeline =
-    Pipeline Array.empty
+type Conn config model
+    = Conn (Impl config model)
 
 
-{-| Extends the pipeline with a plug.
+get : (Impl config model -> a) -> Conn config model -> a
+get getter conn =
+    case conn of
+        Conn impl ->
+            getter impl
 
-This is the most general of the pipeline building functions. Since it just
-accepts a plug, and since a plug can be a pipeline, it can be used to extend a
-pipeline with a group of plugs.
+
+type alias Impl config model =
+    { pipelineState : PipelineState
+    , config : config
+    , req : Request
+    , resp : Sendable Response
+    , model : model
+    }
+
+
+type PipelineState
+    = Processing
+    | Paused Int
+
+
+type Sendable a
+    = Unsent a
+    | Sent Json.Encode.Value
+
+
+
+-- PROCESSING APPLICATION DATA
+
+
+{-| Application defined configuration
 -}
-nest :
-    Plug config model msg
-    -> Plug config model msg
-    -> Plug config model msg
-nest plug pipeline =
-    case ( pipeline, plug ) of
-        ( Pipeline begin, Pipeline end ) ->
-            Array.append begin end |> Pipeline
-
-        ( Pipeline begin, _ ) ->
-            begin |> Array.push plug |> Pipeline
-
-        ( _, Pipeline end ) ->
-            Array.append (Array.fromList [ pipeline ]) end |> Pipeline
-
-        _ ->
-            Array.fromList [ pipeline, plug ] |> Pipeline
+config : Conn config model -> config
+config =
+    get .config
 
 
-{-| Extend the pipeline with a simple plug.
-
-A plug just transforms the connection. For example,
-
-    pipeline
-        |> plug (body (TextBody "foo"))
+{-| Application defined model
 -}
-plug :
-    (Conn config model -> Conn config model)
-    -> Plug config model msg
-    -> Plug config model msg
-plug func =
-    nest (Simple func)
+model : Conn config model -> model
+model =
+    get .model
 
 
-{-| Extends the pipeline with an update plug.
-
-An update plug can transform the connection and or return a side effect (`Cmd`).
-Loop plugs should use `pipelinePause` and `pipelineResume` when working with side
-effects. See [Pipeline Processing](#pipeline-processing) for more.
-
-    -- Loop plug which does nothing
-    pipeline
-        |> loop (\msg conn -> (conn, Cmd.none))
+{-| Transform and update the application defined model stored in the connection.
 -}
-loop :
-    (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    -> Plug config model msg
-    -> Plug config model msg
-loop func =
-    nest (Update func)
+updateModel : (model -> model) -> Conn config model -> Conn config model
+updateModel update conn =
+    case conn of
+        Conn impl ->
+            Conn { impl | model = update impl.model }
 
 
-{-| Adds a router to the pipeline.
 
-A router can branch a pipeline into many smaller pipelines depending on the
-route message passed in. See [Routing](#routing) for more.
+-- QUERYING THE REQUEST
+
+
+{-| Request
 -}
-fork :
-    (Conn config model -> Plug config model msg)
-    -> Plug config model msg
-    -> Plug config model msg
-fork func =
-    nest (Router func)
+request : Conn config model -> Request
+request =
+    get .req
 
 
+{-| Universally unique Conn identifier
+-}
+id : Conn config model -> Id
+id =
+    request >> Request.id
 
--- ROUTING
+
+{-| Request HTTP method
+-}
+method : Conn config model -> Method
+method =
+    request >> Request.method
+
+
+{-| Request path
+-}
+path : Conn config model -> String
+path =
+    request >> Request.path
 
 
 {-| Parse a connection request path into nicely formatted elm data.
 
     import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)
-    import Serverless.Conn exposing (parseRoute)
 
-
-    type Route
-        = Home
-        | Cheers Int
-        | NotFound
-
-
-    route : Parser (Route -> a) a
+    route : Parser (List String -> a) a
     route =
         oneOf
-            [ map Home top
-            , map Cheers (s "cheers" </> int)
+            [ map ["home"] top
+            , map
+                (\n -> List.repeat n "yay")
+                (s "cheers" </> int)
             ]
 
+    "/" |> parseRoute route ["not found"]
+    --> ["home"]
 
-    myRouter : Conn -> Plug
-    myRouter conn =
-        case
-            ( conn.req.method
-            , conn |> parseRoute route NotFound
-            )
-        of
-            ( GET, Home ) ->
-                -- pipeline for home...
+    "/cheers/3" |> parseRoute route ["not found"]
+    --> ["yay", "yay", "yay"]
 
-            ( GET, Cheers numTimes ) ->
-                -- pipeline for cheers...
-
-            _ ->
-                -- pipeline for 404 not found...
+    "/beers" |> parseRoute route ["not found"]
+    --> ["not found"]
 -}
-parseRoute : Parser (route -> route) route -> route -> Conn config model -> route
-parseRoute router defaultRoute conn =
-    UrlParser.parse router conn.req.path Dict.empty
+parseRoute : UrlParser.Parser (route -> route) route -> route -> String -> route
+parseRoute router defaultRoute path =
+    UrlParser.parse router path Dict.empty
         |> Maybe.withDefault defaultRoute
 
 
 
--- RESPONSE
+-- RESPONDING
 
 
-{-| Set the response body
+{-| Update a response and send it.
+
+    import Serverless.Conn.Body exposing (text)
+    import Serverless.Conn.Response exposing (setBody, setStatus)
+    import TestHelpers exposing (conn, responsePort)
+
+    -- The following two expressions produce the same result
+    conn
+        |> respond responsePort ( 200, text "Ok" )
+    --> conn
+    -->     |> updateResponse
+    -->         ((setStatus 200) >> (setBody <| text "Ok"))
+    -->     |> send responsePort
 -}
-body : Body -> Conn config model -> Conn config model
-body val conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn | resp = Unsent { resp | body = val } }
+respond :
+    Port.Response msg
+    -> ( Status, Body )
+    -> Conn config model
+    -> ( Conn config model, Cmd msg )
+respond port_ ( status, body ) =
+    updateResponse
+        (setStatus status >> setBody body)
+        >> send port_
 
-        Sent ->
-            conn
 
+{-| Applies the given transformation to the connection response.
 
-{-| Sets the given string as the response body.
+Does not do anything if the response has already been sent.
 
-Also sets the `Content-Type` to `text/text`.
+    import Serverless.Conn.Response exposing (addHeader)
+    import TestHelpers exposing (conn, getHeader)
+
+    conn
+        |> updateResponse
+            (addHeader ( "Cache-Control", "no-cache" ))
+        |> getHeader "cache-control"
+    --> Just "no-cache"
 -}
-textBody : String -> Conn config model -> Conn config model
-textBody val =
-    body (TextBody val)
-        >> header ( "content-type", "text/text; charset=utf-8" )
+updateResponse :
+    (Response -> Response)
+    -> Conn config model
+    -> Conn config model
+updateResponse updater conn =
+    case conn of
+        Conn impl ->
+            case impl.resp of
+                Unsent resp ->
+                    Conn { impl | resp = Unsent (updater resp) }
 
-
-{-| Sets the given JSON value as the response body.
-
-Also sets the `Content-Type` to `application/json`.
--}
-jsonBody : Json.Encode.Value -> Conn config model -> Conn config model
-jsonBody val =
-    body (JsonBody val)
-        >> header ( "content-type", "application/json; charset=utf-8" )
-
-
-{-| Set a response header.
-
-If you set the same response header more than once, the second value will
-override the first.
--}
-header : ( String, String ) -> Conn config model -> Conn config model
-header ( key, value ) conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn
-                | resp =
-                    Unsent
-                        { resp
-                            | headers =
-                                ( key |> String.toLower, value )
-                                    :: resp.headers
-                        }
-            }
-
-        Sent ->
-            conn
-
-
-{-| Set the response HTTP status code
--}
-status : Status -> Conn config model -> Conn config model
-status val conn =
-    case conn.resp of
-        Unsent resp ->
-            { conn | resp = Unsent { resp | status = val } }
-
-        Sent ->
-            conn
-
-
-{-| Alias for `status (Code value)`
--}
-statusCode : Int -> Conn config model -> Conn config model
-statusCode value =
-    status (Code value)
+                Sent _ ->
+                    conn
 
 
 {-| Sends a connection response through the given port
+
+    import TestHelpers exposing (conn, responsePort)
+
+    conn
+        |> isSent
+    --> False
+
+    conn
+        |> send responsePort
+        |> (Tuple.first >> isSent)
+    --> True
+
+    conn
+        |> send responsePort
+        |> (Tuple.second >> (==) Cmd.none)
+    --> False
 -}
-send : ResponsePort msg -> Conn config model -> ( Conn config model, Cmd msg )
+send :
+    Port.Response msg
+    -> Conn config model
+    -> ( Conn config model, Cmd msg )
 send port_ conn =
-    case conn.resp of
-        Unsent resp ->
-            ( { conn | resp = Sent }
-            , resp |> Serverless.Conn.Encode.response conn.req.id |> port_
-            )
+    case conn of
+        Conn impl ->
+            case impl.resp of
+                Unsent resp ->
+                    let
+                        encodedValue =
+                            Response.encode (id conn) resp
+                    in
+                        ( Conn { impl | resp = Sent encodedValue }
+                        , port_ encodedValue
+                        )
 
-        Sent ->
-            ( conn
-            , Cmd.none
-            )
-
-
-{-| Convert a connection transformer into a plug which sends the response.
-
-Good for quickly creating a pipeline inside a router.
-
-    router : Conn -> Plug
-    router conn =
-        case
-            ( conn.req.method
-            , conn |> parseRoute route NotFound
-            )
-        of
-            -- other cases...
-
-            _ ->
-                toResponder responsePort <|
-                    \conn ->
-                        conn
-                            |> statusCode 404
-                            |> textBody ("Nothing at: " ++ conn.req.path)
--}
-toResponder : ResponsePort msg -> (Conn config model -> Conn config model) -> Plug config model msg
-toResponder port_ func =
-    Update (\msg -> func >> send port_)
+                Sent _ ->
+                    ( conn
+                    , Cmd.none
+                    )
 
 
 
--- RESPONDING WITH ERRORS
-
-
-{-| Respond with a 500 internal server error.
-
-The given value is converted to a string and set to the response body.
--}
-internalError : Body -> Conn config model -> Conn config model
-internalError body =
-    (case body of
-        JsonBody json ->
-            jsonBody json
-
-        TextBody text ->
-            textBody text
-
-        NoBody ->
-            (\conn -> conn)
-    )
-        >> status (Code 500)
-
-
-{-| Respond with an unexpected message error.
-
-Use this in the `case msg of` catch-all (`_ ->`) for any messages that you do
-not expect to receive in a loop plug.
--}
-unexpectedMsg : msg -> Conn config model -> Conn config model
-unexpectedMsg msg =
-    ("unexpected msg: "
-        ++ (msg |> toString)
-        |> textBody
-    )
-        >> status (Code 500)
-
-
-
--- Pipeline Processing
+-- WAITING FOR SIDE-EFFECTS
 
 
 {-| Pause the connection at the current loop plug.
@@ -384,42 +304,44 @@ unexpectedMsg msg =
 Increments the pause count by the amount given. You will need to resume by the
 same amount for pipeline processing to continue onto the next plug.
 
-    conn
-        |> pause 1
-            ("http://example.com"
-                |> Http.getString
-                |> Http.send HandleResult
-            )
-            responsePort
+    import TestHelpers exposing (conn, httpGet)
 
-An internal server error will be sent through the responsePort if the pause
-increment is negative. A pause increment of zero will have no effect.
+    conn
+        |> isActive
+    --> True
+
+    conn
+        |> pause 1 (httpGet "some/thing" "My Handler")
+        |> (Tuple.first >> isActive)
+    --> False
+
+An internal server error occure if the pause increment is negative.
+A pause increment of zero will have no effect.
 -}
-pipelinePause :
+pause :
     Int
     -> Cmd msg
-    -> ResponsePort msg
     -> Conn config model
     -> ( Conn config model, Cmd msg )
-pipelinePause i cmd port_ conn =
+pause i cmd conn =
     if i < 0 then
-        conn
-            |> internalError (TextBody "pause pipeline called with negative value")
-            |> send port_
+        Debug.crash "pause pipeline called with negative value"
     else
-        ( case conn.pipelineState of
-            Processing ->
-                case i of
-                    0 ->
-                        conn
+        case conn of
+            Conn impl ->
+                ( case impl.pipelineState of
+                    Processing ->
+                        case i of
+                            0 ->
+                                conn
 
-                    _ ->
-                        { conn | pipelineState = Paused i }
+                            _ ->
+                                Conn { impl | pipelineState = Paused i }
 
-            Paused j ->
-                { conn | pipelineState = Paused (i + j) }
-        , cmd
-        )
+                    Paused j ->
+                        Conn { impl | pipelineState = Paused (i + j) }
+                , cmd
+                )
 
 
 {-| Resume pipeline processing.
@@ -428,58 +350,115 @@ Decrements the pause count by the amount given. You should only call this after
 a call to pause, and should decrement it by the same amount. It is ok to make
 multiple calls, as long as the sum of pauses equals the sum of resumes.
 
-    case msg of
-        HandleResult result ->
-            case result of
-                Ok value ->
-                    conn |> resume 1 responsePort
+    import TestHelpers exposing (conn, httpGet)
 
-                Err err ->
-                    conn |> internalError "did not work" responsePort
+    conn
+        |> pause 2
+            (Cmd.batch
+                [ httpGet "some/thing" "My Handler"
+                , httpGet "some/other" "My Handler"
+                ]
+            )
+        |> (Tuple.first >> resume 1)
+        |> (Tuple.first >> resume 1)
+        |> (Tuple.first >> isActive)
+    --> True
 
-An internal server error will be sent through the responsePort if the pause
-count goes below zero. A resume increment of zero will have no effect.
+The above example shows how balancing the pause and resume counts makes the
+connection active again. In reality, pause and resume would be asynchronous.
+
+__NOTE__: It is up to you to make sure your pause count reflects the number of
+side-effects that you will be waiting on. It is up to you to `resume 1` each
+time you get the result of a side-effect.
+
+An internal server error will occur if the pause count goes below zero.
+A resume increment of zero will have no effect.
 -}
-pipelineResume :
+resume :
     Int
-    -> ResponsePort msg
     -> Conn config model
     -> ( Conn config model, Cmd msg )
-pipelineResume i port_ conn =
+resume i conn =
     if i < 0 then
-        conn
-            |> internalError (TextBody "resume pipeline called with negative value")
-            |> send port_
+        Debug.crash "resume pipeline called with negative value"
     else
-        case conn.pipelineState of
-            Processing ->
-                case i of
-                    0 ->
-                        ( conn, Cmd.none )
+        case conn of
+            Conn impl ->
+                case impl.pipelineState of
+                    Processing ->
+                        case i of
+                            0 ->
+                                ( conn, Cmd.none )
 
-                    _ ->
-                        conn
-                            |> internalError
-                                (TextBody "resume pipeline called, but processing was not paused")
-                            |> send port_
+                            _ ->
+                                Debug.crash "resume pipeline called, but processing was not paused"
 
-            Paused j ->
-                if j - i > 0 then
-                    ( { conn | pipelineState = Paused (j - i) }, Cmd.none )
-                else if j - i == 0 then
-                    ( { conn | pipelineState = Processing }, Cmd.none )
-                else
-                    conn
-                        |> internalError (TextBody "resume pipeline underflow")
-                        |> send port_
+                    Paused j ->
+                        if j - i > 0 then
+                            ( Conn { impl | pipelineState = Paused (j - i) }, Cmd.none )
+                        else if j - i == 0 then
+                            ( Conn { impl | pipelineState = Processing }, Cmd.none )
+                        else
+                            Debug.crash "resume pipeline underflow"
 
 
 
--- APPLICATION SPECIFIC
+-- MISC
 
 
-{-| Transform and update the application defined model stored in the connection.
+{-| Initialize a new Conn.
 -}
-updateModel : (model -> model) -> Conn config model -> Conn config model
-updateModel update conn =
-    { conn | model = update conn.model }
+init : config -> model -> Request -> Conn config model
+init config model req =
+    Conn
+        (Impl Processing
+            config
+            req
+            (Unsent Response.init)
+            model
+        )
+
+
+{-| Response as JSON encoded to a string.
+
+This is the format the response takes when it gets sent through the response port.
+-}
+jsonEncodedResponse : Conn config model -> String
+jsonEncodedResponse conn =
+    Json.Encode.encode 0 <|
+        case get .resp conn of
+            Unsent resp ->
+                Response.encode (id conn) resp
+
+            Sent encodedValue ->
+                encodedValue
+
+
+{-| Is the connnection active?
+
+An active connection is not paused, and has not yet been sent.
+-}
+isActive : Conn config mode -> Bool
+isActive conn =
+    case conn of
+        Conn impl ->
+            case ( impl.resp, impl.pipelineState ) of
+                ( Unsent _, Processing ) ->
+                    True
+
+                _ ->
+                    False
+
+
+{-| Has the response already been sent?
+-}
+isSent : Conn config model -> Bool
+isSent conn =
+    case conn of
+        Conn { resp } ->
+            case resp of
+                Sent _ ->
+                    True
+
+                _ ->
+                    False

@@ -2,13 +2,11 @@ module Serverless.PoolTests exposing (all)
 
 import Dict
 import Expect
-import Expect.Extra as Expect
 import Logging exposing (nullLogger)
+import Serverless.Conn.Response as Response exposing (Response, Status)
 import Serverless.Conn.Test as Test
-import Serverless.Conn.Types exposing (Body(..), Status(..), Response)
 import Serverless.Pool as Pool
-import Serverless.TestTypes exposing (Config, Model)
-import Serverless.Types exposing (Sendable(..))
+import TestHelpers exposing (Config, Model)
 import Test exposing (describe, test)
 
 
@@ -36,22 +34,6 @@ all =
                             |> Dict.size
                         )
             ]
-        , describe "initResponse"
-            [ initResponseTest "is unsent" <|
-                \_ ->
-                    Expect.pass
-            , initResponseTest "has no body" <|
-                \resp -> Expect.equal NoBody resp.body
-            , initResponseTest "has a default no-cache header" <|
-                \resp ->
-                    Expect.member
-                        ( "cache-control"
-                        , "max-age=0, private, must-revalidate"
-                        )
-                        resp.headers
-            , initResponseTest "has an invalid status code" <|
-                \resp -> Expect.equal InvalidStatus resp.status
-            ]
         ]
 
 
@@ -59,9 +41,4 @@ initResponseTest : String -> (Response -> Expect.Expectation) -> Test.Test
 initResponseTest label e =
     test label <|
         \_ ->
-            case Pool.initResponse of
-                Unsent resp ->
-                    e resp
-
-                Sent ->
-                    Expect.fail "initResponse was already Sent"
+            e Response.init

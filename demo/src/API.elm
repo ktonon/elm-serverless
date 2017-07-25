@@ -3,9 +3,10 @@ module API exposing (..)
 import Pipelines.Quote as Quote
 import Route exposing (..)
 import Serverless exposing (..)
-import Serverless.Conn as Conn exposing (..)
-import Serverless.Conn.Types exposing (..)
-import Serverless.Cors exposing (cors)
+import Serverless.Conn as Conn exposing (method, parseRoute, path, respond, updateResponse)
+import Serverless.Conn.Body as Body exposing (text)
+import Serverless.Conn.Request as Request exposing (Method(..))
+import Serverless.Plug as Plug exposing (fork, pipeline, responder)
 import Types exposing (..)
 
 
@@ -23,7 +24,7 @@ main =
         , responsePort = responsePort
         , endpoint = Endpoint
         , initialModel = Model []
-        , pipeline = pipeline
+        , pipeline = mainPipeline
         , subscriptions = subscriptions
         }
 
@@ -33,13 +34,10 @@ main =
 A pipeline is a sequence of plugs, each of which transforms the connection
 in some way.
 -}
-pipeline : Plug
-pipeline =
-    Conn.pipeline
+mainPipeline : Plug
+mainPipeline =
+    pipeline
         -- Simple plugs just transform the connection.
-        -- For example, this cors plug just adds some headers to the response.
-        |>
-            plug (\conn -> conn |> cors conn.config.cors)
         -- A router takes a `Conn` and returns a new pipeline.
         |>
             fork router
@@ -52,37 +50,32 @@ router conn =
     -- We can then match on the HTTP method and route, returning custom
     -- pipelines for each combination.
     case
-        ( conn.req.method
-        , conn |> parseRoute route NotFound
+        ( conn |> method
+        , conn |> path |> parseRoute route NotFound
         )
     of
         ( GET, Home ) ->
-            -- toResponder can quickly create a loop plug which sends a response
-            statusCode 200
-                >> textBody "Home"
-                |> toResponder responsePort
+            -- responder can quickly create a loop plug which sends a response
+            responder responsePort <|
+                \_ -> ( 200, text "Home" )
 
-        ( _, Quote lang ) ->
+        ( method, Quote lang ) ->
             -- Notice that we are passing part of the router result
             -- (i.e. `lang`) into `loadQuotes`.
-            Quote.router conn.req.method lang
+            Quote.router method lang
 
         ( GET, Buggy ) ->
-            internalError (TextBody "bugs, bugs, bugs")
-                |> toResponder responsePort
+            responder responsePort <|
+                \_ -> ( 500, text "bugs, bugs, bugs" )
 
         ( _, NotFound ) ->
-            -- use this form of toResponder when you need to access the conn
-            toResponder responsePort <|
-                \conn ->
-                    conn
-                        |> statusCode 404
-                        |> textBody ("Nothing at: " ++ conn.req.path)
+            -- use this form of responder when you need to access the conn
+            responder responsePort <|
+                \conn -> ( 404, text <| (++) "Nothing at: " <| path conn )
 
         _ ->
-            statusCode 405
-                >> textBody "Method not allowed"
-                |> toResponder responsePort
+            responder responsePort <|
+                \conn -> ( 405, text "Method not allowed" )
 
 
 

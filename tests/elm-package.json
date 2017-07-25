@@ -17,7 +17,7 @@
         "elm-community/shrink": "2.0.0 <= v < 3.0.0",
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
         "elm-lang/html": "2.0.0 <= v < 3.0.0",
-        "ktonon/elm-test-extra": "1.0.0 <= v < 2.0.0",
+        "ktonon/elm-test-extra": "1.6.0 <= v < 2.0.0",
         "ktonon/url-parser": "1.0.0 <= v < 2.0.0",
         "mgold/elm-random-pcg": "4.0.2 <= v < 5.0.0"
     },

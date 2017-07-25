@@ -3,8 +3,10 @@ port module Types exposing (..)
 import Http
 import Json.Decode exposing (Decoder, list, string)
 import Json.Decode.Pipeline exposing (required, decode, hardcoded)
+import Serverless.Conn
+import Serverless.Plug
+import Serverless.Port
 import Serverless.Cors as Cors
-import Serverless.Types as Types
 
 
 -- CUSTOM TYPES
@@ -62,22 +64,14 @@ type Msg
 
 
 type alias Plug =
-    Types.Plug Config Model Msg
+    Serverless.Plug.Plug Config Model Msg
 
 
 type alias Conn =
-    Types.Conn Config Model
+    Serverless.Conn.Conn Config Model
 
 
-type alias RequestPort msg =
-    Types.RequestPort msg
+port requestPort : Serverless.Port.Request msg
 
 
-type alias ResponsePort msg =
-    Types.ResponsePort msg
-
-
-port requestPort : RequestPort msg
-
-
-port responsePort : ResponsePort msg
+port responsePort : Serverless.Port.Response msg

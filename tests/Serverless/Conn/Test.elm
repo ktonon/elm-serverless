@@ -2,10 +2,10 @@ module Serverless.Conn.Test exposing (conn, connWith, request)
 
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer)
-import Serverless.Conn.Types exposing (Request)
 import Serverless.Conn.Fuzz as Fuzz
-import Serverless.TestTypes exposing (Conn)
+import Serverless.Conn.Request exposing (Request)
 import Test exposing (Test)
+import TestHelpers exposing (Conn)
 
 
 conn : String -> (Conn -> Expectation) -> Test

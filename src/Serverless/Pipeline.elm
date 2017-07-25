@@ -10,9 +10,11 @@ module Serverless.Pipeline
 
 import Array exposing (Array)
 import Json.Encode
-import Serverless.Conn exposing (body, send, status, internalError)
-import Serverless.Conn.Types exposing (Body(..), Id, Status(..))
-import Serverless.Types exposing (Conn, PipelineState(..), Plug(..), ResponsePort, Sendable(..))
+import Serverless.Conn as Conn exposing (Conn, respond)
+import Serverless.Conn.Body exposing (text)
+import Serverless.Conn.Request exposing (Id)
+import Serverless.Plug exposing (Plug(..))
+import Serverless.Port as Port
 
 
 -- MODEL
@@ -52,12 +54,12 @@ type alias Options config model msg =
     { appCmdAcc : Cmd (Msg msg)
     , indexDepth : IndexDepth
     , endpoint : msg
-    , responsePort : ResponsePort (Msg msg)
+    , responsePort : Port.Response (Msg msg)
     , pipeline : Plug config model msg
     }
 
 
-newOptions : msg -> ResponsePort (Msg msg) -> Plug config model msg -> Options config model msg
+newOptions : msg -> Port.Response (Msg msg) -> Plug config model msg -> Options config model msg
 newOptions =
     Options Cmd.none 0
 
@@ -97,31 +99,24 @@ applyUnwrappedPlugMsg opt upm conn =
         newOpt =
             opt |> addAppCmd appCmd
     in
-        case newConn.resp of
-            Unsent _ ->
-                case newConn.pipelineState of
-                    Processing ->
-                        newConn
-                            |> apply
-                                newOpt
-                                (PlugMsg
-                                    -- Move on to the next plug in the pipeline
-                                    -- at the same depth
-                                    (upm.indexPath
-                                        |> Array.set
-                                            newOpt.indexDepth
-                                            (upm.index + 1)
-                                    )
-                                    -- New plugs always receive the endpoint
-                                    -- as the first message
-                                    newOpt.endpoint
-                                )
-
-                    Paused _ ->
-                        ( newConn, newOpt.appCmdAcc )
-
-            Sent ->
-                ( newConn, newOpt.appCmdAcc )
+        if Conn.isActive newConn then
+            newConn
+                |> apply
+                    newOpt
+                    (PlugMsg
+                        -- Move on to the next plug in the pipeline
+                        -- at the same depth
+                        (upm.indexPath
+                            |> Array.set
+                                newOpt.indexDepth
+                                (upm.index + 1)
+                        )
+                        -- New plugs always receive the endpoint
+                        -- as the first message
+                        newOpt.endpoint
+                    )
+        else
+            ( newConn, newOpt.appCmdAcc )
 
 
 applyPlug :
@@ -144,7 +139,7 @@ applyPlug opt upm conn =
                 ( newConn
                 , cmd
                     |> Cmd.map (PlugMsg upm.indexPath)
-                    |> Cmd.map (HandlerMsg conn.req.id)
+                    |> Cmd.map (HandlerMsg (Conn.id conn))
                 )
 
         Router router ->
@@ -162,9 +157,11 @@ applyPlug opt upm conn =
                 _ =
                     Debug.log "pipeline was not flatted" nested
             in
-                conn
-                    |> internalError (TextBody "pipelines was not flattened")
-                    |> send opt.responsePort
+                respond opt.responsePort
+                    ( 500
+                    , text "pipelines was not flattened"
+                    )
+                    conn
 
 
 updatePipelineFromRouter :
