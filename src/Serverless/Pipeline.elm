@@ -11,10 +11,8 @@ module Serverless.Pipeline
 import Array exposing (Array)
 import Json.Encode
 import Serverless.Conn as Conn exposing (Conn, respond)
-import Serverless.Conn.Body exposing (text)
 import Serverless.Conn.Request exposing (Id)
-import Serverless.Plug exposing (Plug(..))
-import Serverless.Port as Port
+import Serverless.Plug as Plug exposing (Plug(..))
 
 
 -- MODEL
@@ -54,12 +52,11 @@ type alias Options config model msg =
     { appCmdAcc : Cmd (Msg msg)
     , indexDepth : IndexDepth
     , endpoint : msg
-    , responsePort : Port.Response (Msg msg)
     , pipeline : Plug config model msg
     }
 
 
-newOptions : msg -> Port.Response (Msg msg) -> Plug config model msg -> Options config model msg
+newOptions : msg -> Plug config model msg -> Options config model msg
 newOptions =
     Options Cmd.none 0
 
@@ -153,15 +150,7 @@ applyPlug opt upm conn =
                         upm
 
         Pipeline nested ->
-            let
-                _ =
-                    Debug.log "pipeline was not flatted" nested
-            in
-                respond opt.responsePort
-                    ( 500
-                    , text "pipelines was not flattened"
-                    )
-                    conn
+            Debug.crash "pipeline was not flatted"
 
 
 updatePipelineFromRouter :
@@ -207,18 +196,6 @@ unwrapPlugMsg opt plugMsg =
                 |> Array.get opt.indexDepth
                 |> Maybe.andThen
                     (\index ->
-                        case opt.pipeline of
-                            Pipeline pipeline ->
-                                case pipeline |> Array.get index of
-                                    Nothing ->
-                                        Nothing
-
-                                    Just plug ->
-                                        Just (UnwrappedPlugMsg msg indexPath index plug)
-
-                            _ ->
-                                if index == 0 then
-                                    Just (UnwrappedPlugMsg msg indexPath index opt.pipeline)
-                                else
-                                    Nothing
+                        Plug.get index opt.pipeline
+                            |> Maybe.map (UnwrappedPlugMsg msg indexPath index)
                     )

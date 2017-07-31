@@ -21,7 +21,7 @@ testApplyPipeline label pl tester =
                 (conn
                     |> updateResponse (setBody <| text "")
                     |> Pipeline.apply
-                        (Pipeline.newOptions NoOp responsePort pl)
+                        (Pipeline.newOptions NoOp pl)
                         (PlugMsg Pipeline.firstIndexPath NoOp)
                 )
             of

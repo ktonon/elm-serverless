@@ -7,6 +7,7 @@ module Serverless.Plug
         , pipeline
         , plug
         , responder
+        , get
         , size
         , inspect
         )
@@ -23,7 +24,7 @@ Examples assume the following imports:
     import Serverless.Conn.Body exposing (text)
     import Serverless.Conn.Request exposing (Method(..))
     import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
-    import TestHelpers exposing (appendToBody, responsePort)
+    import TestHelpers exposing (appendToBody, responsePort, simpleLoop)
 
 @docs Plug
 
@@ -31,7 +32,11 @@ Examples assume the following imports:
 
 Use these functions to build your pipelines.
 
-@docs pipeline, plug, loop, fork, nest, responder, size, inspect
+@docs pipeline, plug, loop, fork, nest, responder
+
+## Querying
+
+@docs get, size, inspect
 -}
 
 import Array exposing (Array)
@@ -177,10 +182,6 @@ fork func =
     nest (Router func)
 
 
-
--- HELPERS
-
-
 {-| Same as [Conn.respond](./Serverless-Conn#respond), but plugable into a pipeline.
 
     inspect <|
@@ -201,7 +202,39 @@ responder port_ f =
 
 
 
--- GETTERS
+-- QUERYING
+
+
+{-| Gets a child plug at the given index.
+
+    pipeline
+        |> get 0
+    --> Nothing
+
+    pipeline
+        |> plug (appendToBody "a")
+        |> (get 0 >> toString)
+    --> "Just (Simple <function>)"
+
+    pipeline
+        |> plug (appendToBody "a")
+        |> get 0
+        |> Maybe.andThen (get 0)
+    --> Nothing
+-}
+get : Int -> Plug config model msg -> Maybe (Plug config model msg)
+get index plug =
+    case plug of
+        Pipeline pipeline ->
+            case pipeline |> Array.get index of
+                Nothing ->
+                    Nothing
+
+                Just childPlug ->
+                    Just childPlug
+
+        _ ->
+            Nothing
 
 
 {-| The number of plugs in a pipeline

@@ -158,9 +158,7 @@ toPipelineOptions :
     HttpApi config model msg
     -> Pipeline.Options config model msg
 toPipelineOptions api =
-    Pipeline.newOptions api.endpoint
-        api.responsePort
-        api.pipeline
+    Pipeline.newOptions api.endpoint api.pipeline
 
 
 sub_ :
