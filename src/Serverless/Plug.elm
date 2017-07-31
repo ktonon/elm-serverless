@@ -1,6 +1,6 @@
 module Serverless.Plug
     exposing
-        ( Plug(..)
+        ( Plug
         , fork
         , loop
         , nest
@@ -10,6 +10,8 @@ module Serverless.Plug
         , get
         , size
         , inspect
+        , Outcome(..)
+        , apply
         )
 
 {-|
@@ -18,7 +20,7 @@ eventually sending back the HTTP response. We use the term __plug__ to mean a
 single function that is part of the pipeline. But a pipeline is also just a plug
 and so pipelines can be composed from other pipelines.
 
-Examples assume the following imports:
+Examples below assume the following imports:
 
     import Serverless.Conn exposing (id, method, respond, send, updateResponse)
     import Serverless.Conn.Body exposing (text)
@@ -32,11 +34,15 @@ Examples assume the following imports:
 
 Use these functions to build your pipelines.
 
-@docs pipeline, plug, loop, fork, nest, responder
+@docs pipeline, plug, loop, responder, fork, nest
 
-## Querying
+## Misc
 
-@docs get, size, inspect
+These functions are typically not needed when building an application. They are
+used internally by the framework. They are useful when debugging or writing unit
+tests.
+
+@docs Outcome, apply, get, size, inspect
 -}
 
 import Array exposing (Array)
@@ -46,17 +52,7 @@ import Serverless.Conn.Response exposing (Status)
 import Serverless.Port as Port
 
 
-{-| A plug processes the connection in some way.
-
-There are four types:
-
-* `Simple` a simple plug. It just transforms the connection
-* `Update` an update plug. It may transform the connection, but it also can
-  have side effects. Execution will only flow to the next plug when an
-  update plug returns no side effects.
-* `Router` a function which accepts a connection and returns a new pipeline
-  which is a specialized handler for that type of connection.
-* `Pipeline` a sequence of zero or more plugs.
+{-| Represents a pipeline or section of a pipeline.
 -}
 type Plug config model msg
     = Simple (Conn config model -> Conn config model)
@@ -141,7 +137,18 @@ Loop plugs should use `pause` and `resume` when working with side
 effects. See [Waiting for Side-Effects](./Serverless-Conn#waiting-for-side-effects) for more.
 
     pipeline
-        |> loop (\msg conn -> (conn, Cmd.none))
+        |> loop
+            (\msg conn ->
+                conn
+                    -- Usually to a `case of` on msg
+                    |> updateResponse
+                        (\resp ->
+                            resp
+                                |> setBody (text "Ok")
+                                |> setStatus 200
+                        )
+                    |> send responsePort
+            )
         |> inspect
     --> "[Update]"
 -}
@@ -202,7 +209,7 @@ responder port_ f =
 
 
 
--- QUERYING
+-- MISC
 
 
 {-| Gets a child plug at the given index.
@@ -237,24 +244,6 @@ get index plug =
             Nothing
 
 
-{-| The number of plugs in a pipeline
--}
-size : Plug config model msg -> Int
-size plug =
-    case plug of
-        Simple _ ->
-            1
-
-        Update _ ->
-            1
-
-        Router _ ->
-            1
-
-        Pipeline plugs ->
-            Array.length plugs
-
-
 {-| Inspect the general shape of the pipeline.
 -}
 inspect : Plug config model msg -> String
@@ -277,3 +266,50 @@ inspect plug =
                         |> String.join ", "
                    )
                 ++ "]"
+
+
+{-| The number of plugs in a pipeline
+-}
+size : Plug config model msg -> Int
+size plug =
+    case plug of
+        Simple _ ->
+            1
+
+        Update _ ->
+            1
+
+        Router _ ->
+            1
+
+        Pipeline plugs ->
+            Array.length plugs
+
+
+{-| Outcome of applying a plug to a connection.
+-}
+type Outcome config model msg
+    = NextConn ( Conn config model, Cmd msg )
+    | NextPipeline (Plug config model msg)
+
+
+{-| Basic pipeline update function.
+-}
+apply :
+    Plug config model msg
+    -> msg
+    -> Conn config model
+    -> Outcome config model msg
+apply plug msg conn =
+    case plug of
+        Simple transform ->
+            NextConn <| ( transform conn, Cmd.none )
+
+        Update update ->
+            NextConn <| update msg conn
+
+        Router router ->
+            NextPipeline <| router conn
+
+        Pipeline nested ->
+            Debug.crash "pipeline was not flatted"

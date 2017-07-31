@@ -12,7 +12,7 @@ import Array exposing (Array)
 import Json.Encode
 import Serverless.Conn as Conn exposing (Conn, respond)
 import Serverless.Conn.Request exposing (Id)
-import Serverless.Plug as Plug exposing (Plug(..))
+import Serverless.Plug as Plug exposing (Plug, Outcome(..))
 
 
 -- MODEL
@@ -80,7 +80,7 @@ apply opt plugMsg conn =
             ( conn, opt.appCmdAcc )
 
         Just upm ->
-            conn |> applyUnwrappedPlugMsg opt upm
+            applyUnwrappedPlugMsg opt upm conn
 
 
 applyUnwrappedPlugMsg :
@@ -91,27 +91,27 @@ applyUnwrappedPlugMsg :
 applyUnwrappedPlugMsg opt upm conn =
     let
         ( newConn, appCmd ) =
-            conn |> applyPlug opt upm
+            applyPlug opt upm conn
 
         newOpt =
-            opt |> addAppCmd appCmd
+            addAppCmd appCmd opt
     in
         if Conn.isActive newConn then
-            newConn
-                |> apply
-                    newOpt
-                    (PlugMsg
-                        -- Move on to the next plug in the pipeline
-                        -- at the same depth
-                        (upm.indexPath
-                            |> Array.set
-                                newOpt.indexDepth
-                                (upm.index + 1)
-                        )
-                        -- New plugs always receive the endpoint
-                        -- as the first message
-                        newOpt.endpoint
+            apply
+                newOpt
+                (PlugMsg
+                    -- Move on to the next plug in the pipeline
+                    -- at the same depth
+                    (upm.indexPath
+                        |> Array.set
+                            newOpt.indexDepth
+                            (upm.index + 1)
                     )
+                    -- New plugs always receive the endpoint
+                    -- as the first message
+                    newOpt.endpoint
+                )
+                newConn
         else
             ( newConn, newOpt.appCmdAcc )
 
@@ -122,65 +122,29 @@ applyPlug :
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
 applyPlug opt upm conn =
-    case upm.plug of
-        Simple transform ->
-            ( conn |> transform
-            , Cmd.none
+    case Plug.apply upm.plug upm.msg conn of
+        NextConn ( conn, cmd ) ->
+            ( conn
+            , cmd
+                |> Cmd.map (PlugMsg upm.indexPath)
+                |> Cmd.map (HandlerMsg (Conn.id conn))
             )
 
-        Update update ->
-            let
-                ( newConn, cmd ) =
-                    conn |> update upm.msg
-            in
-                ( newConn
-                , cmd
-                    |> Cmd.map (PlugMsg upm.indexPath)
-                    |> Cmd.map (HandlerMsg (Conn.id conn))
+        NextPipeline pipeline ->
+            apply
+                { opt
+                    | pipeline = pipeline
+                    , indexDepth = opt.indexDepth + 1
+                }
+                (PlugMsg
+                    (if (upm.indexPath |> Array.length) < opt.indexDepth + 2 then
+                        upm.indexPath |> Array.push 0
+                     else
+                        upm.indexPath
+                    )
+                    upm.msg
                 )
-
-        Router router ->
-            conn
-                -- Increase the pipeline depth, updates the index path to make
-                -- sure it is long enough given the new depth, and changes the
-                -- active pipeline to that which is returned from the router.
-                |>
-                    incrementIndexDepth
-                        (opt |> updatePipelineFromRouter router conn)
-                        upm
-
-        Pipeline nested ->
-            Debug.crash "pipeline was not flatted"
-
-
-updatePipelineFromRouter :
-    (Conn config model -> Plug config model msg)
-    -> Conn config model
-    -> Options config model msg
-    -> Options config model msg
-updatePipelineFromRouter router conn opt =
-    conn
-        |> router
-        |> (\pl -> { opt | pipeline = pl })
-
-
-incrementIndexDepth :
-    Options config model msg
-    -> UnwrappedPlugMsg config model msg
-    -> Conn config model
-    -> ( Conn config model, Cmd (Msg msg) )
-incrementIndexDepth opt upm conn =
-    conn
-        |> apply
-            { opt | indexDepth = opt.indexDepth + 1 }
-            (PlugMsg
-                (if (upm.indexPath |> Array.length) < opt.indexDepth + 2 then
-                    upm.indexPath |> Array.push 0
-                 else
-                    upm.indexPath
-                )
-                upm.msg
-            )
+                conn
 
 
 addAppCmd : Cmd (Msg msg) -> Options config model msg -> Options config model msg
