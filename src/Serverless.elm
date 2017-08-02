@@ -18,9 +18,9 @@ import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode
 import Logging exposing (defaultLogger)
 import Serverless.Conn as Conn exposing (Conn)
+import Serverless.Conn.Pool as ConnPool
 import Serverless.Conn.Request as Request exposing (Id)
 import Serverless.Plug exposing (Plug)
-import Serverless.Pool as Pool exposing (Pool)
 import Serverless.Port as Port
 import Serverless.Pipeline as Pipeline exposing (PlugMsg(..), Msg(..))
 
@@ -93,7 +93,7 @@ type alias HttpApi config model msg =
 
 
 type alias Model config model =
-    { pool : Pool config model
+    { pool : ConnPool.Pool config model
     }
 
 
@@ -104,14 +104,14 @@ init_ :
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
-            ( Pool.empty api.initialModel (Just config)
+            ( ConnPool.empty api.initialModel (Just config)
                 |> Model
                 |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            Pool.empty api.initialModel Nothing
+            ConnPool.empty api.initialModel Nothing
                 |> Model
                 |> reportFailure "Initialization failed" err
 
@@ -126,7 +126,7 @@ update_ api slsMsg model =
         RawRequest raw ->
             case raw |> decodeValue Request.decoder of
                 Ok req ->
-                    { model | pool = model.pool |> Pool.add defaultLogger req }
+                    { model | pool = model.pool |> ConnPool.add defaultLogger req }
                         |> updateChild api
                             (Request.id req)
                             (PlugMsg Pipeline.firstIndexPath api.endpoint)
@@ -140,13 +140,13 @@ update_ api slsMsg model =
 
 updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model -> ( Model config model, Cmd (Msg msg) )
 updateChild api requestId msg model =
-    case model.pool |> Pool.get requestId of
+    case model.pool |> ConnPool.get requestId of
         Just conn ->
             let
                 ( newConn, cmd ) =
                     conn |> Pipeline.apply (api |> toPipelineOptions) msg
             in
-                ( { model | pool = model.pool |> Pool.replace newConn }
+                ( { model | pool = model.pool |> ConnPool.replace newConn }
                 , cmd
                 )
 
@@ -167,7 +167,7 @@ sub_ :
     -> Sub (Msg msg)
 sub_ api model =
     model.pool
-        |> Pool.connections
+        |> ConnPool.connections
         |> List.map (connSub api)
         |> List.append [ api.requestPort RawRequest ]
         |> Sub.batch

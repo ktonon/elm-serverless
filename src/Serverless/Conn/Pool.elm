@@ -1,4 +1,4 @@
-module Serverless.Pool exposing (..)
+module Serverless.Conn.Pool exposing (..)
 
 import Dict exposing (Dict)
 import Logging exposing (Logger, LogLevel(..))

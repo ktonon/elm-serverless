@@ -1,11 +1,11 @@
-module Serverless.PoolTests exposing (all)
+module Serverless.Conn.PoolTests exposing (all)
 
 import Dict
 import Expect
 import Logging exposing (nullLogger)
 import Serverless.Conn.Response as Response exposing (Response, Status)
 import Serverless.Conn.Test as Test
-import Serverless.Pool as Pool
+import Serverless.Conn.Pool as Pool
 import TestHelpers exposing (Config, Model)
 import Test exposing (describe, test)
 
