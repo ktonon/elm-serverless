@@ -3,11 +3,11 @@ module Serverless.Conn.PoolTests exposing (all)
 import Dict
 import Expect
 import Logging exposing (nullLogger)
+import Serverless.Conn.Pool as Pool
 import Serverless.Conn.Response as Response exposing (Response, Status)
 import Serverless.Conn.Test as Test
-import Serverless.Conn.Pool as Pool
-import TestHelpers exposing (Config, Model)
 import Test exposing (describe, test)
+import TestHelpers exposing (Config, Model)
 
 
 all : Test.Test
@@ -19,7 +19,7 @@ all =
                     Expect.equal
                         0
                         (Pool.empty (Model 1) (Config "secret" |> Just)
-                            |> .conn
+                            |> .connDict
                             |> Dict.size
                         )
             ]
@@ -30,7 +30,7 @@ all =
                         0
                         (Pool.empty (Model 1) Nothing
                             |> Pool.add nullLogger req
-                            |> .conn
+                            |> .connDict
                             |> Dict.size
                         )
             ]

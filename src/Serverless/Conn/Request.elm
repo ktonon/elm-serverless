@@ -136,25 +136,18 @@ init id =
 -- GETTERS
 
 
-get : (Model -> a) -> Request -> a
-get getter req =
-    case req of
-        Request req ->
-            getter req
-
-
 {-| Universally unique identifier.
 -}
 id : Request -> Id
-id =
-    get .id
+id (Request { id }) =
+    id
 
 
 {-| Request body.
 -}
 body : Request -> Body
-body =
-    get .body
+body (Request { body }) =
+    body
 
 
 {-| Describes the server endpoint to which the request was made.
@@ -168,8 +161,8 @@ body =
 
 -}
 endpoint : Request -> ( Scheme, String, Int )
-endpoint =
-    get (\req -> ( req.scheme, req.host, req.port_ ))
+endpoint (Request req) =
+    ( req.scheme, req.host, req.port_ )
 
 
 {-| List of key-value pairs representing headers.
@@ -178,8 +171,8 @@ Headers are normalized such that the keys are always `lower-case`.
 
 -}
 headers : Request -> List ( String, String )
-headers =
-    get .headers
+headers (Request { headers }) =
+    headers
 
 
 {-| HTTP request method.
@@ -196,29 +189,29 @@ headers =
 
 -}
 method : Request -> Method
-method =
-    get .method
+method (Request { method }) =
+    method
 
 
 {-| Request path.
 -}
 path : Request -> String
-path =
-    get .path
+path (Request { path }) =
+    path
 
 
 {-| List of key-value pairs representing query arguments.
 -}
 query : Request -> List ( String, String )
-query =
-    get .queryParams
+query (Request { queryParams }) =
+    queryParams
 
 
 {-| IP address of the requesting entity.
 -}
 remoteIp : Request -> IpAddress
-remoteIp =
-    get .remoteIp
+remoteIp (Request { remoteIp }) =
+    remoteIp
 
 
 {-| Serverless deployment stage.
@@ -227,19 +220,8 @@ See <https://serverless.com/framework/docs/providers/aws/guide/deploying/>
 
 -}
 stage : Request -> String
-stage =
-    get .stage
-
-
-
--- SETTERS
-
-
-update : (Model -> Model) -> Request -> Request
-update update resp =
-    case resp of
-        Request model ->
-            Request (update model)
+stage (Request { stage }) =
+    stage
 
 
 

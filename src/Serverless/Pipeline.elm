@@ -121,29 +121,29 @@ applyPlug :
     -> UnwrappedPlugMsg config model msg
     -> Conn config model
     -> ( Conn config model, Cmd (Msg msg) )
-applyPlug opt upm conn =
-    case Plug.apply upm.plug upm.msg conn of
+applyPlug opt { indexPath, msg, plug } conn =
+    case Plug.apply plug msg conn of
         NextConn ( conn, cmd ) ->
             ( conn
             , cmd
-                |> Cmd.map (PlugMsg upm.indexPath)
+                |> Cmd.map (PlugMsg indexPath)
                 |> Cmd.map (HandlerMsg (Conn.id conn))
             )
 
         NextPipeline pipeline ->
+            let
+                nextIndexPath =
+                    if (indexPath |> Array.length) < opt.indexDepth + 2 then
+                        indexPath |> Array.push 0
+                    else
+                        indexPath
+            in
             apply
                 { opt
                     | pipeline = pipeline
                     , indexDepth = opt.indexDepth + 1
                 }
-                (PlugMsg
-                    (if (upm.indexPath |> Array.length) < opt.indexDepth + 2 then
-                        upm.indexPath |> Array.push 0
-                     else
-                        upm.indexPath
-                    )
-                    upm.msg
-                )
+                (PlugMsg nextIndexPath msg)
                 conn
 
 
@@ -153,13 +153,11 @@ addAppCmd cmd opt =
 
 
 unwrapPlugMsg : Options config model msg -> PlugMsg msg -> Maybe (UnwrappedPlugMsg config model msg)
-unwrapPlugMsg opt plugMsg =
-    case plugMsg of
-        PlugMsg indexPath msg ->
-            indexPath
-                |> Array.get opt.indexDepth
-                |> Maybe.andThen
-                    (\index ->
-                        Plug.get index opt.pipeline
-                            |> Maybe.map (UnwrappedPlugMsg msg indexPath index)
-                    )
+unwrapPlugMsg opt (PlugMsg indexPath msg) =
+    indexPath
+        |> Array.get opt.indexDepth
+        |> Maybe.andThen
+            (\index ->
+                Plug.get index opt.pipeline
+                    |> Maybe.map (UnwrappedPlugMsg msg indexPath index)
+            )

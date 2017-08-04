@@ -92,13 +92,6 @@ type Conn config model
     = Conn (Impl config model)
 
 
-get : (Impl config model -> a) -> Conn config model -> a
-get getter conn =
-    case conn of
-        Conn impl ->
-            getter impl
-
-
 type alias Impl config model =
     { pipelineState : PipelineState
     , config : config
@@ -125,24 +118,22 @@ type Sendable a
 {-| Application defined configuration
 -}
 config : Conn config model -> config
-config =
-    get .config
+config (Conn { config }) =
+    config
 
 
 {-| Application defined model
 -}
 model : Conn config model -> model
-model =
-    get .model
+model (Conn { model }) =
+    model
 
 
 {-| Transform and update the application defined model stored in the connection.
 -}
 updateModel : (model -> model) -> Conn config model -> Conn config model
-updateModel update conn =
-    case conn of
-        Conn impl ->
-            Conn { impl | model = update impl.model }
+updateModel update (Conn conn) =
+    Conn { conn | model = update conn.model }
 
 
 
@@ -152,8 +143,8 @@ updateModel update conn =
 {-| Request
 -}
 request : Conn config model -> Request
-request =
-    get .req
+request (Conn { req }) =
+    req
 
 
 {-| Universally unique Conn identifier
@@ -254,15 +245,14 @@ updateResponse :
     (Response -> Response)
     -> Conn config model
     -> Conn config model
-updateResponse updater conn =
-    case conn of
-        Conn impl ->
-            case impl.resp of
-                Unsent resp ->
-                    Conn { impl | resp = Unsent (updater resp) }
+updateResponse updater (Conn conn) =
+    Conn <|
+        case conn.resp of
+            Unsent resp ->
+                { conn | resp = Unsent (updater resp) }
 
-                Sent _ ->
-                    conn
+            Sent _ ->
+                conn
 
 
 {-| Sends a connection response through the given port
@@ -288,23 +278,21 @@ send :
     Port.Response msg
     -> Conn config model
     -> ( Conn config model, Cmd msg )
-send port_ conn =
-    case conn of
-        Conn impl ->
-            case impl.resp of
-                Unsent resp ->
-                    let
-                        encodedValue =
-                            Response.encode (id conn) resp
-                    in
-                    ( Conn { impl | resp = Sent encodedValue }
-                    , port_ encodedValue
-                    )
+send port_ (Conn conn) =
+    case conn.resp of
+        Unsent resp ->
+            let
+                encodedValue =
+                    Response.encode (Request.id conn.req) resp
+            in
+            ( Conn { conn | resp = Sent encodedValue }
+            , port_ encodedValue
+            )
 
-                Sent _ ->
-                    ( conn
-                    , Cmd.none
-                    )
+        Sent _ ->
+            ( Conn conn
+            , Cmd.none
+            )
 
 
 
@@ -336,25 +324,23 @@ pause :
     -> Cmd msg
     -> Conn config model
     -> ( Conn config model, Cmd msg )
-pause i cmd conn =
+pause i cmd (Conn conn) =
     if i < 0 then
         Debug.crash "pause pipeline called with negative value"
     else
-        case conn of
-            Conn impl ->
-                ( case impl.pipelineState of
-                    Processing ->
-                        case i of
-                            0 ->
-                                conn
+        ( case conn.pipelineState of
+            Processing ->
+                case i of
+                    0 ->
+                        Conn conn
 
-                            _ ->
-                                Conn { impl | pipelineState = Paused i }
+                    _ ->
+                        Conn { conn | pipelineState = Paused i }
 
-                    Paused j ->
-                        Conn { impl | pipelineState = Paused (i + j) }
-                , cmd
-                )
+            Paused j ->
+                Conn { conn | pipelineState = Paused (i + j) }
+        , cmd
+        )
 
 
 {-| Resume pipeline processing.
@@ -392,28 +378,26 @@ resume :
     Int
     -> Conn config model
     -> ( Conn config model, Cmd msg )
-resume i conn =
+resume i (Conn conn) =
     if i < 0 then
         Debug.crash "resume pipeline called with negative value"
     else
-        case conn of
-            Conn impl ->
-                case impl.pipelineState of
-                    Processing ->
-                        case i of
-                            0 ->
-                                ( conn, Cmd.none )
+        case conn.pipelineState of
+            Processing ->
+                case i of
+                    0 ->
+                        ( Conn conn, Cmd.none )
 
-                            _ ->
-                                Debug.crash "resume pipeline called, but processing was not paused"
+                    _ ->
+                        Debug.crash "resume pipeline called, but processing was not paused"
 
-                    Paused j ->
-                        if j - i > 0 then
-                            ( Conn { impl | pipelineState = Paused (j - i) }, Cmd.none )
-                        else if j - i == 0 then
-                            ( Conn { impl | pipelineState = Processing }, Cmd.none )
-                        else
-                            Debug.crash "resume pipeline underflow"
+            Paused j ->
+                if j - i > 0 then
+                    ( Conn { conn | pipelineState = Paused (j - i) }, Cmd.none )
+                else if j - i == 0 then
+                    ( Conn { conn | pipelineState = Processing }, Cmd.none )
+                else
+                    Debug.crash "resume pipeline underflow"
 
 
 
@@ -439,11 +423,11 @@ This is the format the response takes when it gets sent through the response por
 
 -}
 jsonEncodedResponse : Conn config model -> String
-jsonEncodedResponse conn =
+jsonEncodedResponse (Conn { req, resp }) =
     Json.Encode.encode 0 <|
-        case get .resp conn of
+        case resp of
             Unsent resp ->
-                Response.encode (id conn) resp
+                Response.encode (Request.id req) resp
 
             Sent encodedValue ->
                 encodedValue
@@ -455,26 +439,22 @@ An active connection is not paused, and has not yet been sent.
 
 -}
 isActive : Conn config mode -> Bool
-isActive conn =
-    case conn of
-        Conn impl ->
-            case ( impl.resp, impl.pipelineState ) of
-                ( Unsent _, Processing ) ->
-                    True
+isActive (Conn { resp, pipelineState }) =
+    case ( resp, pipelineState ) of
+        ( Unsent _, Processing ) ->
+            True
 
-                _ ->
-                    False
+        _ ->
+            False
 
 
 {-| Has the response already been sent?
 -}
 isSent : Conn config model -> Bool
-isSent conn =
-    case conn of
-        Conn { resp } ->
-            case resp of
-                Sent _ ->
-                    True
+isSent (Conn { resp }) =
+    case resp of
+        Sent _ ->
+            True
 
-                _ ->
-                    False
+        _ ->
+            False

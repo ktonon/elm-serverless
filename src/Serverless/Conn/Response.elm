@@ -61,13 +61,6 @@ type alias Status =
 -- UPDATING
 
 
-update : (Model -> Model) -> Response -> Response
-update update resp =
-    case resp of
-        Response model ->
-            Response (update model)
-
-
 {-| Set a response header.
 
 If you set the same response header more than once, the second value will
@@ -75,46 +68,39 @@ override the first.
 
 -}
 addHeader : ( String, String ) -> Response -> Response
-addHeader ( key, value ) =
-    update
-        (\model ->
-            { model
-                | headers =
-                    ( key |> String.toLower, value )
-                        :: model.headers
-            }
-        )
+addHeader ( key, value ) (Response res) =
+    Response
+        { res
+            | headers =
+                ( key |> String.toLower, value )
+                    :: res.headers
+        }
 
 
 {-| Set the response body.
 -}
 setBody : Body -> Response -> Response
-setBody body =
-    update
-        (\model ->
-            { model
-                | body = body
-            }
-        )
+setBody body (Response res) =
+    Response { res | body = body }
 
 
 {-| Updates the response body.
 -}
 updateBody : (Body -> Body) -> Response -> Response
-updateBody updater =
-    update (\model -> { model | body = updater model.body })
+updateBody updater (Response res) =
+    Response { res | body = updater res.body }
 
 
 setCharset : Charset -> Response -> Response
-setCharset value =
-    update (\model -> { model | charset = value })
+setCharset value (Response res) =
+    Response { res | charset = value }
 
 
 {-| Set the response HTTP status code.
 -}
 setStatus : Status -> Response -> Response
-setStatus value =
-    update (\model -> { model | status = value })
+setStatus value (Response res) =
+    Response { res | status = value }
 
 
 
@@ -137,19 +123,17 @@ init =
 {-| JSON encode an HTTP response.
 -}
 encode : Id -> Response -> Encode.Value
-encode id res =
-    case res of
-        Response model ->
-            Encode.object
-                [ ( "id", Encode.string id )
-                , ( "body", Body.encode model.body )
-                , ( "headers"
-                  , model.headers
-                        ++ [ ( "content-type", contentType model ) ]
-                        |> KeyValueList.encode
-                  )
-                , ( "statusCode", Encode.int model.status )
-                ]
+encode id (Response res) =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "body", Body.encode res.body )
+        , ( "headers"
+          , res.headers
+                ++ [ ( "content-type", contentType res ) ]
+                |> KeyValueList.encode
+          )
+        , ( "statusCode", Encode.int res.status )
+        ]
 
 
 contentType : Model -> String

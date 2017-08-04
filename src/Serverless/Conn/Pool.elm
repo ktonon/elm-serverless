@@ -10,7 +10,7 @@ import Serverless.Conn.Request exposing (Id, Request)
 
 
 type alias Pool config model =
-    { conn : Dict Id (Conn config model)
+    { connDict : Dict Id (Conn config model)
     , initialModel : model
     , config : Maybe config
     }
@@ -34,8 +34,8 @@ add logger req pool =
 
 
 get : Id -> Pool config model -> Maybe (Conn config model)
-get requestId pool =
-    pool.conn |> Dict.get requestId
+get requestId { connDict } =
+    Dict.get requestId connDict
 
 
 replace :
@@ -44,12 +44,12 @@ replace :
     -> Pool config model
 replace conn pool =
     let
-        newConn =
-            pool.conn |> Dict.insert (Conn.id conn) conn
+        newConnDict =
+            Dict.insert (Conn.id conn) conn pool.connDict
     in
-    { pool | conn = newConn }
+    { pool | connDict = newConnDict }
 
 
 connections : Pool config model -> List (Conn config model)
-connections pool =
-    pool.conn |> Dict.values
+connections { connDict } =
+    Dict.values connDict
