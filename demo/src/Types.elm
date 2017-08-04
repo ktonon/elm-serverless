@@ -2,11 +2,12 @@ port module Types exposing (..)
 
 import Http
 import Json.Decode exposing (Decoder, list, string)
-import Json.Decode.Pipeline exposing (required, decode, hardcoded)
+import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Route exposing (Route)
 import Serverless.Conn
+import Serverless.Cors as Cors
 import Serverless.Plug
 import Serverless.Port
-import Serverless.Cors as Cors
 
 
 -- CUSTOM TYPES
@@ -50,6 +51,7 @@ type alias Quote =
 The only restriction is that it has to contain an endpoint. You can call the
 endpoint whatever you want, but it accepts no parameters, and must be provided
 to the program as `endpoint` (see above).
+
 -}
 type Msg
     = Endpoint
@@ -64,11 +66,11 @@ type Msg
 
 
 type alias Plug =
-    Serverless.Plug.Plug Config Model Msg
+    Serverless.Plug.Plug Config Model Route Msg
 
 
 type alias Conn =
-    Serverless.Conn.Conn Config Model
+    Serverless.Conn.Conn Config Model Route
 
 
 port requestPort : Serverless.Port.Request msg

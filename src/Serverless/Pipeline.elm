@@ -27,11 +27,11 @@ type PlugMsg msg
     = PlugMsg IndexPath msg
 
 
-type alias UnwrappedPlugMsg config model msg =
+type alias UnwrappedPlugMsg config model route msg =
     { msg : msg
     , indexPath : IndexPath
     , index : Index
-    , plug : Plug config model msg
+    , plug : Plug config model route msg
     }
 
 
@@ -48,15 +48,15 @@ firstIndexPath =
     Array.empty |> Array.push 0
 
 
-type alias Options config model msg =
+type alias Options config model route msg =
     { appCmdAcc : Cmd (Msg msg)
     , indexDepth : IndexDepth
     , endpoint : msg
-    , pipeline : Plug config model msg
+    , pipeline : Plug config model route msg
     }
 
 
-newOptions : msg -> Plug config model msg -> Options config model msg
+newOptions : msg -> Plug config model route msg -> Options config model route msg
 newOptions =
     Options Cmd.none 0
 
@@ -70,10 +70,10 @@ type alias IndexDepth =
 
 
 apply :
-    Options config model msg
+    Options config model route msg
     -> PlugMsg msg
-    -> Conn config model
-    -> ( Conn config model, Cmd (Msg msg) )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd (Msg msg) )
 apply opt plugMsg conn =
     case plugMsg |> unwrapPlugMsg opt of
         Nothing ->
@@ -84,10 +84,10 @@ apply opt plugMsg conn =
 
 
 applyUnwrappedPlugMsg :
-    Options config model msg
-    -> UnwrappedPlugMsg config model msg
-    -> Conn config model
-    -> ( Conn config model, Cmd (Msg msg) )
+    Options config model route msg
+    -> UnwrappedPlugMsg config model route msg
+    -> Conn config model route
+    -> ( Conn config model route, Cmd (Msg msg) )
 applyUnwrappedPlugMsg opt upm conn =
     let
         ( newConn, appCmd ) =
@@ -117,10 +117,10 @@ applyUnwrappedPlugMsg opt upm conn =
 
 
 applyPlug :
-    Options config model msg
-    -> UnwrappedPlugMsg config model msg
-    -> Conn config model
-    -> ( Conn config model, Cmd (Msg msg) )
+    Options config model route msg
+    -> UnwrappedPlugMsg config model route msg
+    -> Conn config model route
+    -> ( Conn config model route, Cmd (Msg msg) )
 applyPlug opt { indexPath, msg, plug } conn =
     case Plug.apply plug msg conn of
         NextConn ( conn, cmd ) ->
@@ -147,12 +147,12 @@ applyPlug opt { indexPath, msg, plug } conn =
                 conn
 
 
-addAppCmd : Cmd (Msg msg) -> Options config model msg -> Options config model msg
+addAppCmd : Cmd (Msg msg) -> Options config model route msg -> Options config model route msg
 addAppCmd cmd opt =
     { opt | appCmdAcc = Cmd.batch [ cmd, opt.appCmdAcc ] }
 
 
-unwrapPlugMsg : Options config model msg -> PlugMsg msg -> Maybe (UnwrappedPlugMsg config model msg)
+unwrapPlugMsg : Options config model route msg -> PlugMsg msg -> Maybe (UnwrappedPlugMsg config model route msg)
 unwrapPlugMsg opt (PlugMsg indexPath msg) =
     indexPath
         |> Array.get opt.indexDepth

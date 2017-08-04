@@ -7,7 +7,7 @@ import Serverless.Conn as Conn exposing (respond, updateResponse)
 import Serverless.Conn.Body as Body exposing (json, text)
 import Serverless.Conn.Request as Request exposing (Method(..))
 import Serverless.Plug as Plug
-import Types exposing (Conn, Plug, Msg(..), responsePort)
+import Types exposing (Conn, Msg(..), Plug, responsePort)
 
 
 router : Method -> Lang -> Plug
@@ -40,13 +40,11 @@ get lang =
         -- For example, loadQuotes makes a few http requests and collects the
         -- results in the model.
         --
-        |>
-            Plug.loop (loadQuotes lang)
+        |> Plug.loop (loadQuotes lang)
         -- You can have multiple loop plugs. The last one in the pipeline
         -- must send a respnose, or an internal server error will automatically
         -- be sent by the framework
-        |>
-            Plug.loop respondWithQuotes
+        |> Plug.loop respondWithQuotes
 
 
 post : Lang -> Plug
@@ -77,7 +75,7 @@ loadQuotes : Route.Lang -> Msg -> Conn -> ( Conn, Cmd Msg )
 loadQuotes lang msg conn =
     case msg of
         Endpoint ->
-            (case conn |> Conn.config |> .languages |> langFilter lang of
+            case conn |> Conn.config |> .languages |> langFilter lang of
                 [] ->
                     respond responsePort ( 404, text "Could not find language" ) conn
 
@@ -99,7 +97,6 @@ loadQuotes lang msg conn =
                                 |> List.map (Http.send QuoteResult)
                                 |> Cmd.batch
                             )
-            )
 
         QuoteResult result ->
             case result of
@@ -115,8 +112,7 @@ loadQuotes lang msg conn =
                         -- automatically send server errors if the pause count
                         -- underflows.
                         -- Try changing the resume count to 3, to see what happens
-                        |>
-                            Conn.resume 1
+                        |> Conn.resume 1
 
                 Err err ->
                     -- If anything unexpected happends, we can always send a

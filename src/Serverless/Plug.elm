@@ -56,11 +56,11 @@ import Serverless.Port as Port
 
 {-| Represents a pipeline or section of a pipeline.
 -}
-type Plug config model msg
-    = Simple (Conn config model -> Conn config model)
-    | Update (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    | Router (Conn config model -> Plug config model msg)
-    | Pipeline (Array (Plug config model msg))
+type Plug config model route msg
+    = Simple (Conn config model route -> Conn config model route)
+    | Update (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
+    | Router (Conn config model route -> Plug config model route msg)
+    | Pipeline (Array (Plug config model route msg))
 
 
 
@@ -76,7 +76,7 @@ Build the pipeline by chaining plugs with plug, loop, fork, and nest.
     --> "[]"
 
 -}
-pipeline : Plug config model msg
+pipeline : Plug config model route msg
 pipeline =
     Pipeline Array.empty
 
@@ -98,9 +98,9 @@ pipeline with a group of plugs.
 
 -}
 nest :
-    Plug config model msg
-    -> Plug config model msg
-    -> Plug config model msg
+    Plug config model route msg
+    -> Plug config model route msg
+    -> Plug config model route msg
 nest plug pipeline =
     case ( pipeline, plug ) of
         ( Pipeline begin, Pipeline end ) ->
@@ -128,9 +128,9 @@ A plug just transforms the connection. For example,
 
 -}
 plug :
-    (Conn config model -> Conn config model)
-    -> Plug config model msg
-    -> Plug config model msg
+    (Conn config model route -> Conn config model route)
+    -> Plug config model route msg
+    -> Plug config model route msg
 plug func =
     nest (Simple func)
 
@@ -159,9 +159,9 @@ effects. See [Waiting for Side-Effects](./Serverless-Conn#waiting-for-side-effec
 
 -}
 loop :
-    (msg -> Conn config model -> ( Conn config model, Cmd msg ))
-    -> Plug config model msg
-    -> Plug config model msg
+    (msg -> Conn config model route -> ( Conn config model route, Cmd msg ))
+    -> Plug config model route msg
+    -> Plug config model route msg
 loop func =
     nest (Update func)
 
@@ -189,9 +189,9 @@ route message passed in. See [Conn.parseRoute](./Serverless-Conn#parseRoute) for
 
 -}
 fork :
-    (Conn config model -> Plug config model msg)
-    -> Plug config model msg
-    -> Plug config model msg
+    (Conn config model route -> Plug config model route msg)
+    -> Plug config model route msg
+    -> Plug config model route msg
 fork func =
     nest (Router func)
 
@@ -209,8 +209,8 @@ fork func =
 -}
 responder :
     Port.Response msg
-    -> (Conn config model -> ( Status, Body ))
-    -> Plug config model msg
+    -> (Conn config model route -> ( Status, Body ))
+    -> Plug config model route msg
 responder port_ f =
     pipeline
         |> loop (\_ conn -> Conn.respond port_ (f conn) conn)
@@ -238,7 +238,7 @@ responder port_ f =
     --> Nothing
 
 -}
-get : Int -> Plug config model msg -> Maybe (Plug config model msg)
+get : Int -> Plug config model route msg -> Maybe (Plug config model route msg)
 get index plug =
     case plug of
         Pipeline pipeline ->
@@ -255,7 +255,7 @@ get index plug =
 
 {-| Inspect the general shape of the pipeline.
 -}
-inspect : Plug config model msg -> String
+inspect : Plug config model route msg -> String
 inspect plug =
     case plug of
         Simple _ ->
@@ -279,7 +279,7 @@ inspect plug =
 
 {-| The number of plugs in a pipeline
 -}
-size : Plug config model msg -> Int
+size : Plug config model route msg -> Int
 size plug =
     case plug of
         Simple _ ->
@@ -297,18 +297,18 @@ size plug =
 
 {-| Outcome of applying a plug to a connection.
 -}
-type Outcome config model msg
-    = NextConn ( Conn config model, Cmd msg )
-    | NextPipeline (Plug config model msg)
+type Outcome config model route msg
+    = NextConn ( Conn config model route, Cmd msg )
+    | NextPipeline (Plug config model route msg)
 
 
 {-| Basic pipeline update function.
 -}
 apply :
-    Plug config model msg
+    Plug config model route msg
     -> msg
-    -> Conn config model
-    -> Outcome config model msg
+    -> Conn config model route
+    -> Outcome config model route msg
 apply plug msg conn =
     case plug of
         Simple transform ->

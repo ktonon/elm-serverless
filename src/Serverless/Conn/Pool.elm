@@ -9,39 +9,50 @@ import Serverless.Conn.Request exposing (Id, Request)
 -- CONNECTION POOL
 
 
-type alias Pool config model =
-    { connDict : Dict Id (Conn config model)
+type alias Pool config model route =
+    { connDict : Dict Id (Conn config model route)
     , initialModel : model
     , config : Maybe config
     }
 
 
-empty : model -> Maybe config -> Pool config model
+empty :
+    model
+    -> Maybe config
+    -> Pool config model route
 empty =
     Pool Dict.empty
 
 
-add : Logger (Pool config model) -> Request -> Pool config model -> Pool config model
-add logger req pool =
+add :
+    Logger (Pool config model route)
+    -> route
+    -> Request
+    -> Pool config model route
+    -> Pool config model route
+add logger route req pool =
     case pool.config of
         Just config ->
             pool
                 |> replace
-                    (Conn.init config pool.initialModel req)
+                    (Conn.init config pool.initialModel route req)
 
         _ ->
             logger LogError "Failed to add request! Pool has no config" pool
 
 
-get : Id -> Pool config model -> Maybe (Conn config model)
+get :
+    Id
+    -> Pool config model route
+    -> Maybe (Conn config model route)
 get requestId { connDict } =
     Dict.get requestId connDict
 
 
 replace :
-    Conn config model
-    -> Pool config model
-    -> Pool config model
+    Conn config model route
+    -> Pool config model route
+    -> Pool config model route
 replace conn pool =
     let
         newConnDict =
@@ -50,6 +61,8 @@ replace conn pool =
     { pool | connDict = newConnDict }
 
 
-connections : Pool config model -> List (Conn config model)
+connections :
+    Pool config model route
+    -> List (Conn config model route)
 connections { connDict } =
     Dict.values connDict

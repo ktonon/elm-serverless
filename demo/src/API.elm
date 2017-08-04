@@ -1,22 +1,25 @@
 module API exposing (..)
 
+import Dict
 import Pipelines.Quote as Quote
-import Route exposing (..)
+import Route exposing (Route(..))
 import Serverless exposing (..)
-import Serverless.Conn as Conn exposing (method, parseRoute, path, respond, updateResponse)
+import Serverless.Conn as Conn exposing (method, respond, route, updateResponse)
 import Serverless.Conn.Body as Body exposing (text)
 import Serverless.Conn.Request as Request exposing (Method(..))
 import Serverless.Plug as Plug exposing (fork, pipeline, responder)
 import Types exposing (..)
+import UrlParser
 
 
 {-| A Serverless.Program is parameterized by your 3 custom types
 
-* Config is a server load-time record of deployment specific values
-* Model is for whatever you need during the processing of a request
-* Msg is your app message type
+  - Config is a server load-time record of deployment specific values
+  - Model is for whatever you need during the processing of a request
+  - Msg is your app message type
+
 -}
-main : Serverless.Program Config Model Msg
+main : Serverless.Program Config Model Route Msg
 main =
     Serverless.httpApi
         { configDecoder = configDecoder
@@ -24,6 +27,7 @@ main =
         , responsePort = responsePort
         , endpoint = Endpoint
         , initialModel = Model []
+        , parseRoute = \path -> UrlParser.parse Route.route path Dict.empty
         , pipeline = mainPipeline
         , subscriptions = subscriptions
         }
@@ -33,14 +37,14 @@ main =
 
 A pipeline is a sequence of plugs, each of which transforms the connection
 in some way.
+
 -}
 mainPipeline : Plug
 mainPipeline =
     pipeline
         -- Simple plugs just transform the connection.
         -- A router takes a `Conn` and returns a new pipeline.
-        |>
-            fork router
+        |> fork router
 
 
 router : Conn -> Plug
@@ -51,7 +55,7 @@ router conn =
     -- pipelines for each combination.
     case
         ( conn |> method
-        , conn |> path |> parseRoute route NotFound
+        , conn |> route
         )
     of
         ( GET, Home ) ->
@@ -67,11 +71,6 @@ router conn =
         ( GET, Buggy ) ->
             responder responsePort <|
                 \_ -> ( 500, text "bugs, bugs, bugs" )
-
-        ( _, NotFound ) ->
-            -- use this form of responder when you need to access the conn
-            responder responsePort <|
-                \conn -> ( 404, text <| (++) "Nothing at: " <| path conn )
 
         _ ->
             responder responsePort <|

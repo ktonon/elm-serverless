@@ -7,7 +7,7 @@ import Serverless.Conn.Pool as Pool
 import Serverless.Conn.Response as Response exposing (Response, Status)
 import Serverless.Conn.Test as Test
 import Test exposing (describe, test)
-import TestHelpers exposing (Config, Model)
+import TestHelpers exposing (Config, Model, Route(Home))
 
 
 all : Test.Test
@@ -29,7 +29,7 @@ all =
                     Expect.equal
                         0
                         (Pool.empty (Model 1) Nothing
-                            |> Pool.add nullLogger req
+                            |> Pool.add nullLogger Home req
                             |> .connDict
                             |> Dict.size
                         )

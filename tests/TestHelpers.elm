@@ -7,7 +7,7 @@ import Serverless.Conn.Body as Body exposing (appendText)
 import Serverless.Conn.Request as Request exposing (Request)
 import Serverless.Conn.Response as Response exposing (Response, updateBody)
 import Serverless.Plug as Plug exposing (pipeline, plug)
-import UrlParser exposing (Parser, (</>), map, oneOf, s, string, top)
+import UrlParser exposing ((</>), Parser, map, oneOf, s, string, top)
 
 
 appendToBody : String -> Conn -> Conn
@@ -42,7 +42,7 @@ simpleFork label conn =
         method =
             conn |> Conn.request |> Request.method |> toString
     in
-        pipeline |> plug (simplePlug (method ++ label))
+    pipeline |> plug (simplePlug (method ++ label))
 
 
 
@@ -69,7 +69,7 @@ route =
 
 conn : Conn
 conn =
-    Conn.init (Config "secret") (Model 0) <| Request.init "id"
+    Conn.init (Config "secret") (Model 0) Home <| Request.init "id"
 
 
 getHeader : String -> Conn -> Maybe String
@@ -106,11 +106,11 @@ type Msg
 
 
 type alias Plug =
-    Plug.Plug Config Model Msg
+    Plug.Plug Config Model Route Msg
 
 
 type alias Conn =
-    Conn.Conn Config Model
+    Conn.Conn Config Model Route
 
 
 requestPort : (Encode.Value -> msg) -> Sub msg

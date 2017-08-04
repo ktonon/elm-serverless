@@ -3,7 +3,6 @@ module Serverless.ConnTests
         ( all
         , buildingPipelinesTests
         , responseTests
-        , routingTests
         )
 
 import Expect
@@ -11,7 +10,6 @@ import Expect.Extra as Expect exposing (stringPattern)
 import Serverless.Conn as Conn
     exposing
         ( isActive
-        , parseRoute
         , pause
         , resume
         , send
@@ -22,15 +20,14 @@ import Serverless.Conn.Fuzz as Fuzz
 import Serverless.Conn.Response as Response exposing (addHeader, setBody, setStatus)
 import Serverless.Conn.Test as Test
 import Serverless.Plug as Plug
-import TestHelpers exposing (..)
 import Test exposing (describe, test)
+import TestHelpers exposing (..)
 
 
 all : Test.Test
 all =
     describe "Serverless.Conn"
         [ buildingPipelinesTests
-        , routingTests
         , responseTests
         ]
 
@@ -98,28 +95,6 @@ buildingPipelinesTests =
 
 
 
--- ROUTING TESTS
-
-
-routingTests : Test.Test
-routingTests =
-    describe "Routing"
-        [ describe "parseRoute"
-            [ Test.conn "parses the request path" <|
-                \conn ->
-                    Expect.equal
-                        (Foody "bar")
-                        (parseRoute route NoCanFind "/foody/bar")
-            , Test.conn "uses the provided default if it fails to parse" <|
-                \conn ->
-                    Expect.equal
-                        NoCanFind
-                        (parseRoute route NoCanFind "/foozy/bar")
-            ]
-        ]
-
-
-
 -- RESPONSE TESTS
 
 
@@ -144,14 +119,14 @@ responseTests =
                     ( newConn, _ ) =
                         conn |> send responsePort
                 in
-                    Expect.true "response was not sent" (Conn.isSent newConn)
+                Expect.true "response was not sent" (Conn.isSent newConn)
         , Test.conn "send issues a side effect" <|
             \conn ->
                 let
                     ( _, cmd ) =
                         conn |> send responsePort
                 in
-                    Expect.notEqual Cmd.none cmd
+                Expect.notEqual Cmd.none cmd
         , Test.conn "send fails if the conn is already halted" <|
             \conn ->
                 let
@@ -161,7 +136,7 @@ responseTests =
                     ( _, cmd ) =
                         newConn |> send responsePort
                 in
-                    Expect.equal Cmd.none cmd
+                Expect.equal Cmd.none cmd
         , Test.connWith Fuzz.header "headers adds a response header" <|
             \( conn, ( key, value ) ) ->
                 conn

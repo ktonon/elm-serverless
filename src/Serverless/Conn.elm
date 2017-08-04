@@ -9,12 +9,11 @@ module Serverless.Conn
         , jsonEncodedResponse
         , method
         , model
-        , parseRoute
-        , path
         , pause
         , request
         , respond
         , resume
+        , route
         , send
         , updateModel
         , updateResponse
@@ -45,7 +44,7 @@ Query and update your application specific data.
 
 Get details about the HTTP request.
 
-@docs request, id, method, path, parseRoute
+@docs request, id, method, route
 
 
 ## Responding
@@ -72,13 +71,11 @@ tests.
 
 -}
 
-import Dict
 import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body, text)
 import Serverless.Conn.Request as Request exposing (Id, Method, Request)
 import Serverless.Conn.Response as Response exposing (Response, Status, setBody, setStatus)
 import Serverless.Port as Port
-import UrlParser
 
 
 {-| A connection with a request and response.
@@ -88,16 +85,17 @@ specific to the application. Config is loaded once on app startup, while model
 is set to a provided initial value for each incomming request.
 
 -}
-type Conn config model
-    = Conn (Impl config model)
+type Conn config model route
+    = Conn (Impl config model route)
 
 
-type alias Impl config model =
+type alias Impl config model route =
     { pipelineState : PipelineState
     , config : config
     , req : Request
     , resp : Sendable Response
     , model : model
+    , route : route
     }
 
 
@@ -117,21 +115,21 @@ type Sendable a
 
 {-| Application defined configuration
 -}
-config : Conn config model -> config
+config : Conn config model route -> config
 config (Conn { config }) =
     config
 
 
 {-| Application defined model
 -}
-model : Conn config model -> model
+model : Conn config model route -> model
 model (Conn { model }) =
     model
 
 
 {-| Transform and update the application defined model stored in the connection.
 -}
-updateModel : (model -> model) -> Conn config model -> Conn config model
+updateModel : (model -> model) -> Conn config model route -> Conn config model route
 updateModel update (Conn conn) =
     Conn { conn | model = update conn.model }
 
@@ -142,59 +140,30 @@ updateModel update (Conn conn) =
 
 {-| Request
 -}
-request : Conn config model -> Request
+request : Conn config model route -> Request
 request (Conn { req }) =
     req
 
 
 {-| Universally unique Conn identifier
 -}
-id : Conn config model -> Id
+id : Conn config model route -> Id
 id =
     request >> Request.id
 
 
 {-| Request HTTP method
 -}
-method : Conn config model -> Method
+method : Conn config model route -> Method
 method =
     request >> Request.method
 
 
-{-| Request path
+{-| Parsed route
 -}
-path : Conn config model -> String
-path =
-    request >> Request.path
-
-
-{-| Parse a connection request path into nicely formatted elm data.
-
-    import UrlParser exposing (Parser, (</>), s, int, top, map, oneOf)
-
-    route : Parser (List String -> a) a
-    route =
-        oneOf
-            [ map ["home"] top
-            , map
-                (\n -> List.repeat n "yay")
-                (s "cheers" </> int)
-            ]
-
-    "/" |> parseRoute route ["not found"]
-    --> ["home"]
-
-    "/cheers/3" |> parseRoute route ["not found"]
-    --> ["yay", "yay", "yay"]
-
-    "/beers" |> parseRoute route ["not found"]
-    --> ["not found"]
-
--}
-parseRoute : UrlParser.Parser (route -> route) route -> route -> String -> route
-parseRoute router defaultRoute path =
-    UrlParser.parse router path Dict.empty
-        |> Maybe.withDefault defaultRoute
+route : Conn config model route -> route
+route (Conn { route }) =
+    route
 
 
 
@@ -219,8 +188,8 @@ parseRoute router defaultRoute path =
 respond :
     Port.Response msg
     -> ( Status, Body )
-    -> Conn config model
-    -> ( Conn config model, Cmd msg )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd msg )
 respond port_ ( status, body ) =
     updateResponse
         (setStatus status >> setBody body)
@@ -243,8 +212,8 @@ Does not do anything if the response has already been sent.
 -}
 updateResponse :
     (Response -> Response)
-    -> Conn config model
-    -> Conn config model
+    -> Conn config model route
+    -> Conn config model route
 updateResponse updater (Conn conn) =
     Conn <|
         case conn.resp of
@@ -276,8 +245,8 @@ updateResponse updater (Conn conn) =
 -}
 send :
     Port.Response msg
-    -> Conn config model
-    -> ( Conn config model, Cmd msg )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd msg )
 send port_ (Conn conn) =
     case conn.resp of
         Unsent resp ->
@@ -322,8 +291,8 @@ A pause increment of zero will have no effect.
 pause :
     Int
     -> Cmd msg
-    -> Conn config model
-    -> ( Conn config model, Cmd msg )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd msg )
 pause i cmd (Conn conn) =
     if i < 0 then
         Debug.crash "pause pipeline called with negative value"
@@ -376,8 +345,8 @@ A resume increment of zero will have no effect.
 -}
 resume :
     Int
-    -> Conn config model
-    -> ( Conn config model, Cmd msg )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd msg )
 resume i (Conn conn) =
     if i < 0 then
         Debug.crash "resume pipeline called with negative value"
@@ -406,14 +375,15 @@ resume i (Conn conn) =
 
 {-| Initialize a new Conn.
 -}
-init : config -> model -> Request -> Conn config model
-init config model req =
+init : config -> model -> route -> Request -> Conn config model route
+init config model route req =
     Conn
         (Impl Processing
             config
             req
             (Unsent Response.init)
             model
+            route
         )
 
 
@@ -422,7 +392,7 @@ init config model req =
 This is the format the response takes when it gets sent through the response port.
 
 -}
-jsonEncodedResponse : Conn config model -> String
+jsonEncodedResponse : Conn config model route -> String
 jsonEncodedResponse (Conn { req, resp }) =
     Json.Encode.encode 0 <|
         case resp of
@@ -438,7 +408,7 @@ jsonEncodedResponse (Conn { req, resp }) =
 An active connection is not paused, and has not yet been sent.
 
 -}
-isActive : Conn config mode -> Bool
+isActive : Conn config model route -> Bool
 isActive (Conn { resp, pipelineState }) =
     case ( resp, pipelineState ) of
         ( Unsent _, Processing ) ->
@@ -450,7 +420,7 @@ isActive (Conn { resp, pipelineState }) =
 
 {-| Has the response already been sent?
 -}
-isSent : Conn config model -> Bool
+isSent : Conn config model route -> Bool
 isSent (Conn { resp }) =
     case resp of
         Sent _ ->

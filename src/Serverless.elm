@@ -18,8 +18,10 @@ import Json.Decode exposing (Decoder, decodeValue)
 import Json.Encode
 import Logging exposing (defaultLogger)
 import Serverless.Conn as Conn exposing (Conn)
+import Serverless.Conn.Body as Body
 import Serverless.Conn.Pool as ConnPool
 import Serverless.Conn.Request as Request exposing (Id)
+import Serverless.Conn.Response as Response exposing (Status)
 import Serverless.Pipeline as Pipeline exposing (Msg(..), PlugMsg(..))
 import Serverless.Plug exposing (Plug)
 import Serverless.Port as Port
@@ -31,8 +33,8 @@ This maps to a headless elm
 [Platform.Program](http://package.elm-lang.org/packages/elm-lang/core/latest/Platform#Program).
 
 -}
-type alias Program config model msg =
-    Platform.Program Flags (Model config model) (Msg msg)
+type alias Program config model route msg =
+    Platform.Program Flags (Model config model route) (Msg msg)
 
 
 {-| Type of flags for program.
@@ -49,8 +51,8 @@ type alias Flags =
 {-| Create a program from the given HTTP api.
 -}
 httpApi :
-    HttpApi config model msg
-    -> Program config model msg
+    HttpApi config model route msg
+    -> Program config model route msg
 httpApi api =
     Platform.programWithFlags
         { init = init_ api
@@ -80,14 +82,15 @@ See [Building Pipelines](./Serverless-Plug#building-pipelines) for more details 
 the `pipeline` parameter.
 
 -}
-type alias HttpApi config model msg =
+type alias HttpApi config model route msg =
     { configDecoder : Decoder config
     , requestPort : Port.Request (Msg msg)
     , responsePort : Port.Response (Msg msg)
     , endpoint : msg
     , initialModel : model
-    , pipeline : Plug config model msg
-    , subscriptions : Conn config model -> Sub msg
+    , parseRoute : String -> Maybe route
+    , pipeline : Plug config model route msg
+    , subscriptions : Conn config model route -> Sub msg
     }
 
 
@@ -95,15 +98,15 @@ type alias HttpApi config model msg =
 -- IMPLEMENTATION
 
 
-type alias Model config model =
-    { pool : ConnPool.Pool config model
+type alias Model config model route =
+    { pool : ConnPool.Pool config model route
     }
 
 
 init_ :
-    HttpApi config model msg
+    HttpApi config model route msg
     -> Flags
-    -> ( Model config model, Cmd (Msg msg) )
+    -> ( Model config model route, Cmd (Msg msg) )
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
@@ -120,30 +123,39 @@ init_ api flags =
 
 
 update_ :
-    HttpApi config model msg
+    HttpApi config model route msg
     -> Msg msg
-    -> Model config model
-    -> ( Model config model, Cmd (Msg msg) )
+    -> Model config model route
+    -> ( Model config model route, Cmd (Msg msg) )
 update_ api slsMsg model =
     case slsMsg of
         RawRequest raw ->
-            case raw |> decodeValue Request.decoder of
+            case decodeValue Request.decoder raw of
                 Ok req ->
-                    { model | pool = model.pool |> ConnPool.add defaultLogger req }
-                        |> updateChild api
-                            (Request.id req)
-                            (PlugMsg Pipeline.firstIndexPath api.endpoint)
+                    case api.parseRoute <| Request.path req of
+                        Just route ->
+                            { model | pool = ConnPool.add defaultLogger route req model.pool }
+                                |> updateChild api
+                                    (Request.id req)
+                                    (PlugMsg Pipeline.firstIndexPath api.endpoint)
+
+                        Nothing ->
+                            ( model
+                            , send api (Request.id req) 404 <|
+                                (++) "Could not parse route: " <|
+                                    Request.path req
+                            )
 
                 Err err ->
-                    model |> reportFailure "Error decoding request" err
+                    reportFailure "Error decoding request" err model
 
-        HandlerMsg requestId msg ->
-            updateChild api requestId msg model
+        HandlerMsg connId msg ->
+            updateChild api connId msg model
 
 
-updateChild : HttpApi config model msg -> Id -> PlugMsg msg -> Model config model -> ( Model config model, Cmd (Msg msg) )
-updateChild api requestId msg model =
-    case model.pool |> ConnPool.get requestId of
+updateChild : HttpApi config model route msg -> Id -> PlugMsg msg -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
+updateChild api connId msg model =
+    case ConnPool.get connId model.pool of
         Just conn ->
             let
                 ( newConn, cmd ) =
@@ -154,19 +166,19 @@ updateChild api requestId msg model =
             )
 
         _ ->
-            model |> reportFailure "No connection in pool with id: " requestId
+            reportFailure "No connection in pool with id: " connId model
 
 
 toPipelineOptions :
-    HttpApi config model msg
-    -> Pipeline.Options config model msg
+    HttpApi config model route msg
+    -> Pipeline.Options config model route msg
 toPipelineOptions api =
     Pipeline.newOptions api.endpoint api.pipeline
 
 
 sub_ :
-    HttpApi config model msg
-    -> Model config model
+    HttpApi config model route msg
+    -> Model config model route
     -> Sub (Msg msg)
 sub_ api model =
     model.pool
@@ -176,17 +188,35 @@ sub_ api model =
         |> Sub.batch
 
 
-connSub : HttpApi config model msg -> Conn config model -> Sub (Msg msg)
+connSub : HttpApi config model route msg -> Conn config model route -> Sub (Msg msg)
 connSub api conn =
     api.subscriptions conn
         |> Sub.map (PlugMsg Pipeline.firstIndexPath)
         |> Sub.map (HandlerMsg (Conn.id conn))
 
 
-reportFailure : String -> value -> Model config model -> ( Model config model, Cmd (Msg msg) )
+
+-- HELPERS
+
+
+reportFailure : String -> value -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
 reportFailure msg value model =
     let
         _ =
             Debug.log msg value
     in
     ( model, Cmd.none )
+
+
+send :
+    HttpApi config model route msg
+    -> Id
+    -> Status
+    -> String
+    -> Cmd (Msg msg)
+send { responsePort } id code msg =
+    Response.init
+        |> Response.setStatus code
+        |> Response.setBody (Body.text msg)
+        |> Response.encode id
+        |> responsePort

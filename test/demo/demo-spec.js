@@ -44,7 +44,7 @@ describe('The demo server', () => {
       request.get('/some-random-path').then(res => {
         res.headers.should.have.property('content-type')
           .which.equal('text/text; charset=utf-8');
-        res.text.should.startWith('Nothing at:');
+        res.text.should.startWith('Could not parse route: ');
       })
     );
   });

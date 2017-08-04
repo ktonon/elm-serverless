@@ -7,7 +7,6 @@ type Route
     = Home
     | Quote Lang
     | Buggy
-    | NotFound
 
 
 type Lang
@@ -28,5 +27,5 @@ lang : Parser (Lang -> a) a
 lang =
     oneOf
         [ map LangAll top
-        , map Lang (string)
+        , map Lang string
         ]
