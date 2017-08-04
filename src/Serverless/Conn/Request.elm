@@ -1,21 +1,21 @@
 module Serverless.Conn.Request
     exposing
-        ( Request
-        , Id
+        ( Id
         , Method(..)
+        , Request
         , Scheme(..)
-        , id
         , body
+        , decoder
         , endpoint
         , headers
+        , id
+        , init
         , method
+        , methodDecoder
         , path
         , query
-        , stage
-        , init
-        , decoder
-        , methodDecoder
         , schemeDecoder
+        , stage
         )
 
 {-| Query attributes of the HTTP request.
@@ -26,9 +26,11 @@ Typically imported as
 
 @docs Request, Id, Method, Scheme
 
+
 ## Attributes
 
 @docs id, body, endpoint, headers, method, path, query, stage
+
 
 ## Misc
 
@@ -36,6 +38,7 @@ These functions are typically not needed when building an application. They are
 used internally by the framework.
 
 @docs init, decoder, methodDecoder, schemeDecoder
+
 -}
 
 import Json.Decode as Decode exposing (Decoder)
@@ -79,6 +82,7 @@ type Method
 
     -- to use shorthand notation
     import Serverless.Conn.Request exposing (Scheme(..))
+
 -}
 type Scheme
     = Http
@@ -108,6 +112,7 @@ type alias Model =
 
 Exposed for unit testing. Incoming connections initialize requests using
 JSON decoders.
+
 -}
 init : Id -> Request
 init id =
@@ -154,11 +159,13 @@ body =
 
 {-| Describes the server endpoint to which the request was made.
 
-    ( scheme, host, port_ ) = Request.endpoint req
+    ( scheme, host, port_ ) =
+        Request.endpoint req
 
-* `scheme` is either `Request.Http` or `Request.Https`
-* `host` is the hostname as taken from the `"host"` request header
-* `port_` is the port, for example `80` or `443`
+  - `scheme` is either `Request.Http` or `Request.Https`
+  - `host` is the hostname as taken from the `"host"` request header
+  - `port_` is the port, for example `80` or `443`
+
 -}
 endpoint : Request -> ( Scheme, String, Int )
 endpoint =
@@ -168,6 +175,7 @@ endpoint =
 {-| List of key-value pairs representing headers.
 
 Headers are normalized such that the keys are always `lower-case`.
+
 -}
 headers : Request -> List ( String, String )
 headers =
@@ -215,7 +223,8 @@ remoteIp =
 
 {-| Serverless deployment stage.
 
-See https://serverless.com/framework/docs/providers/aws/guide/deploying/
+See <https://serverless.com/framework/docs/providers/aws/guide/deploying/>
+
 -}
 stage : Request -> String
 stage =
@@ -305,10 +314,10 @@ schemeDecoder =
             (\w ->
                 case w |> String.toLower of
                     "http" ->
-                        Decode.succeed (Http)
+                        Decode.succeed Http
 
                     "https" ->
-                        Decode.succeed (Https)
+                        Decode.succeed Https
 
                     _ ->
                         Decode.fail ("Unsupported scheme: " ++ w)

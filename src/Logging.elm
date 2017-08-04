@@ -38,6 +38,7 @@ type alias Logger a =
 {-| A logger that only logs messages at a minimum log level
 
     logger Info -- will not log Debug level messages
+
 -}
 logger : LogLevel -> Logger a
 logger minLevel level label val =

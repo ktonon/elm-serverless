@@ -1,7 +1,7 @@
 module Serverless.Conn.Pool exposing (..)
 
 import Dict exposing (Dict)
-import Logging exposing (Logger, LogLevel(..))
+import Logging exposing (LogLevel(..), Logger)
 import Serverless.Conn as Conn exposing (Conn)
 import Serverless.Conn.Request exposing (Id, Request)
 
@@ -47,7 +47,7 @@ replace conn pool =
         newConn =
             pool.conn |> Dict.insert (Conn.id conn) conn
     in
-        { pool | conn = newConn }
+    { pool | conn = newConn }
 
 
 connections : Pool config model -> List (Conn config model)

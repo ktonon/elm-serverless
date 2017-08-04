@@ -15,17 +15,21 @@ module Serverless.Conn.Body
 
 @docs Body
 
+
 ## Constructors
 
 @docs empty, text, json
+
 
 ## Querying
 
 @docs contentType, isEmpty
 
+
 ## Updating
 
 @docs appendText
+
 
 ## Misc
 
@@ -33,6 +37,7 @@ These functions are typically not needed when building an application. They are
 used internally by the framework.
 
 @docs decoder, encode
+
 -}
 
 import Json.Decode as Decode exposing (Decoder, andThen)
@@ -54,6 +59,7 @@ type Body
 {-| An empty body.
 
 Represents the lack of a request or response body.
+
 -}
 empty : Body
 empty =
@@ -87,6 +93,7 @@ json =
 
     contentType (json Json.Encode.null)
     --> "application/json"
+
 -}
 contentType : Body -> String
 contentType body =
@@ -110,6 +117,7 @@ contentType body =
 
     isEmpty (json (list []))
     --> False
+
 -}
 isEmpty : Body -> Bool
 isEmpty body =
@@ -137,6 +145,7 @@ isEmpty body =
 
     json (list []) |> appendText "will fail"
     --> Err "cannot append text to json"
+
 -}
 appendText : String -> Body -> Result String Body
 appendText val body =
@@ -161,8 +170,8 @@ decoder : Decoder Body
 decoder =
     Decode.nullable Decode.string
         |> andThen
-            ((Maybe.map Text)
-                >> (Maybe.withDefault Empty)
+            (Maybe.map Text
+                >> Maybe.withDefault Empty
                 >> Decode.succeed
             )
 

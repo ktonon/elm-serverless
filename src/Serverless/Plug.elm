@@ -1,22 +1,21 @@
 module Serverless.Plug
     exposing
-        ( Plug
+        ( Outcome(..)
+        , Plug
+        , apply
         , fork
+        , get
+        , inspect
         , loop
         , nest
         , pipeline
         , plug
         , responder
-        , get
         , size
-        , inspect
-        , Outcome(..)
-        , apply
         )
 
-{-|
-A __pipeline__ is a sequence of functions which transform the connection,
-eventually sending back the HTTP response. We use the term __plug__ to mean a
+{-| A **pipeline** is a sequence of functions which transform the connection,
+eventually sending back the HTTP response. We use the term **plug** to mean a
 single function that is part of the pipeline. But a pipeline is also just a plug
 and so pipelines can be composed from other pipelines.
 
@@ -30,11 +29,13 @@ Examples below assume the following imports:
 
 @docs Plug
 
+
 ## Building Pipelines
 
 Use these functions to build your pipelines.
 
 @docs pipeline, plug, loop, responder, fork, nest
+
 
 ## Misc
 
@@ -43,6 +44,7 @@ used internally by the framework. They are useful when debugging or writing unit
 tests.
 
 @docs Outcome, apply, get, size, inspect
+
 -}
 
 import Array exposing (Array)
@@ -72,6 +74,7 @@ Build the pipeline by chaining plugs with plug, loop, fork, and nest.
     pipeline
         |> inspect
     --> "[]"
+
 -}
 pipeline : Plug config model msg
 pipeline =
@@ -92,6 +95,7 @@ pipeline with a group of plugs.
         |> plug (updateResponse <| setStatus 200)
         |> inspect
     --> "[Simple, Simple]"
+
 -}
 nest :
     Plug config model msg
@@ -121,6 +125,7 @@ A plug just transforms the connection. For example,
         |> plug (updateResponse <| setStatus 200)
         |> inspect
     --> "[Simple, Simple]"
+
 -}
 plug :
     (Conn config model -> Conn config model)
@@ -151,6 +156,7 @@ effects. See [Waiting for Side-Effects](./Serverless-Conn#waiting-for-side-effec
             )
         |> inspect
     --> "[Update]"
+
 -}
 loop :
     (msg -> Conn config model -> ( Conn config model, Cmd msg ))
@@ -180,6 +186,7 @@ route message passed in. See [Conn.parseRoute](./Serverless-Conn#parseRoute) for
             )
         |> inspect
     --> "[Router]"
+
 -}
 fork :
     (Conn config model -> Plug config model msg)
@@ -198,6 +205,7 @@ fork func =
                 , text <| (++) "Id: " <| id conn
                 )
     --> "[Update]"
+
 -}
 responder :
     Port.Response msg
@@ -228,6 +236,7 @@ responder port_ f =
         |> get 0
         |> Maybe.andThen (get 0)
     --> Nothing
+
 -}
 get : Int -> Plug config model msg -> Maybe (Plug config model msg)
 get index plug =

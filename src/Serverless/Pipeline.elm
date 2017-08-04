@@ -1,8 +1,8 @@
 module Serverless.Pipeline
     exposing
         ( Msg(..)
-        , PlugMsg(..)
         , Options
+        , PlugMsg(..)
         , apply
         , firstIndexPath
         , newOptions
@@ -12,7 +12,7 @@ import Array exposing (Array)
 import Json.Encode
 import Serverless.Conn as Conn exposing (Conn, respond)
 import Serverless.Conn.Request exposing (Id)
-import Serverless.Plug as Plug exposing (Plug, Outcome(..))
+import Serverless.Plug as Plug exposing (Outcome(..), Plug)
 
 
 -- MODEL
@@ -96,24 +96,24 @@ applyUnwrappedPlugMsg opt upm conn =
         newOpt =
             addAppCmd appCmd opt
     in
-        if Conn.isActive newConn then
-            apply
-                newOpt
-                (PlugMsg
-                    -- Move on to the next plug in the pipeline
-                    -- at the same depth
-                    (upm.indexPath
-                        |> Array.set
-                            newOpt.indexDepth
-                            (upm.index + 1)
-                    )
-                    -- New plugs always receive the endpoint
-                    -- as the first message
-                    newOpt.endpoint
+    if Conn.isActive newConn then
+        apply
+            newOpt
+            (PlugMsg
+                -- Move on to the next plug in the pipeline
+                -- at the same depth
+                (upm.indexPath
+                    |> Array.set
+                        newOpt.indexDepth
+                        (upm.index + 1)
                 )
-                newConn
-        else
-            ( newConn, newOpt.appCmdAcc )
+                -- New plugs always receive the endpoint
+                -- as the first message
+                newOpt.endpoint
+            )
+            newConn
+    else
+        ( newConn, newOpt.appCmdAcc )
 
 
 applyPlug :

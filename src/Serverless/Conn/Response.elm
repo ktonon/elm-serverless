@@ -3,20 +3,22 @@ module Serverless.Conn.Response
         ( Response
         , Status
         , addHeader
-        , setBody
-        , updateBody
-        , setStatus
-        , init
         , encode
+        , init
+        , setBody
+        , setStatus
+        , updateBody
         )
 
 {-| Query and update the HTTP response.
 
 @docs Response, Status
 
+
 ## Updating
 
 @docs addHeader, setBody, updateBody, setStatus
+
 
 ## Misc
 
@@ -25,13 +27,14 @@ used internally by the framework. They are useful when debugging or writing unit
 tests.
 
 @docs init, encode
+
 -}
 
 import Json.Encode as Encode
 import Serverless.Conn.Body as Body exposing (Body, text)
 import Serverless.Conn.Charset as Charset exposing (Charset)
-import Serverless.Conn.Request exposing (Id)
 import Serverless.Conn.KeyValueList as KeyValueList
+import Serverless.Conn.Request exposing (Id)
 
 
 {-| An HTTP response.
@@ -69,6 +72,7 @@ update update resp =
 
 If you set the same response header more than once, the second value will
 override the first.
+
 -}
 addHeader : ( String, String ) -> Response -> Response
 addHeader ( key, value ) =
@@ -152,4 +156,4 @@ contentType : Model -> String
 contentType { body, charset } =
     Body.contentType body
         ++ "; charset="
-        ++ (Charset.toString charset)
+        ++ Charset.toString charset

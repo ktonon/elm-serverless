@@ -10,7 +10,7 @@
   "repository": "git@github.com:ktonon/elm-serverless.git",
   "main": "src-bridge/index.js",
   "scripts": {
-    "clobber": "rm -rf node_modules elm-stuff demo/elm-stuff tests/elm-stuff",
+    "clobber": "rm -rf elm-stuff demo/elm-stuff tests/elm-stuff",
     "deploy:demo": "cd demo && cross-env NODE_ENV=production serverless deploy",
     "postinstall": "elm package install -y && cd demo && elm package install -y",
     "posttest": "eslint .",

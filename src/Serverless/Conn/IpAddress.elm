@@ -10,9 +10,11 @@ module Serverless.Conn.IpAddress
 
 @docs IpAddress
 
+
 ## Constructors
 
 @docs ip4, loopback
+
 
 ## Misc
 
@@ -20,6 +22,7 @@ These functions are typically not needed when building an application. They are
 used internally by the framework.
 
 @docs decoder
+
 -}
 
 import Json.Decode as Decode exposing (Decoder, andThen)
@@ -47,6 +50,7 @@ ip4 a b c d =
 
     loopback
     --> ip4 127 0 0 1
+
 -}
 loopback : IpAddress
 loopback =
@@ -92,7 +96,7 @@ require4 : Maybe (List a) -> Maybe (List a)
 require4 maybeList =
     case maybeList of
         Just list ->
-            if (List.length list) == 4 then
+            if List.length list == 4 then
                 Just list
             else
                 Nothing

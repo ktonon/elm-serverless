@@ -6,15 +6,15 @@ module Serverless.Conn
         , init
         , isActive
         , isSent
+        , jsonEncodedResponse
         , method
         , model
         , parseRoute
         , path
         , pause
-        , resume
         , request
         , respond
-        , jsonEncodedResponse
+        , resume
         , send
         , updateModel
         , updateResponse
@@ -24,13 +24,15 @@ module Serverless.Conn
 
 @docs Conn
 
+
 ## Table of Contents
 
-* [Processing Application Data](#processing-application-data)
-* [Querying the Request](#querying-the-request)
-* [Responding](#responding)
-* [Waiting for Side-Effects](#waiting-for-side-effects)
-* [Misc](#misc)
+  - [Processing Application Data](#processing-application-data)
+  - [Querying the Request](#querying-the-request)
+  - [Responding](#responding)
+  - [Waiting for Side-Effects](#waiting-for-side-effects)
+  - [Misc](#misc)
+
 
 ## Processing Application Data
 
@@ -38,11 +40,13 @@ Query and update your application specific data.
 
 @docs config, model, updateModel
 
+
 ## Querying the Request
 
 Get details about the HTTP request.
 
 @docs request, id, method, path, parseRoute
+
 
 ## Responding
 
@@ -50,11 +54,13 @@ Update the response and send it.
 
 @docs respond, updateResponse, send
 
+
 ## Waiting for Side-Effects
 
 Use inside a loop plug which needs to wait for the results of a side effect.
 
 @docs pause, resume
+
 
 ## Misc
 
@@ -63,6 +69,7 @@ used internally by the framework. They are useful when debugging or writing unit
 tests.
 
 @docs init, jsonEncodedResponse, isActive, isSent
+
 -}
 
 import Dict
@@ -79,6 +86,7 @@ import UrlParser
 Connections are parameterized with config and model record types which are
 specific to the application. Config is loaded once on app startup, while model
 is set to a provided initial value for each incomming request.
+
 -}
 type Conn config model
     = Conn (Impl config model)
@@ -190,6 +198,7 @@ path =
 
     "/beers" |> parseRoute route ["not found"]
     --> ["not found"]
+
 -}
 parseRoute : UrlParser.Parser (route -> route) route -> route -> String -> route
 parseRoute router defaultRoute path =
@@ -214,6 +223,7 @@ parseRoute router defaultRoute path =
     -->     |> updateResponse
     -->         ((setStatus 200) >> (setBody <| text "Ok"))
     -->     |> send responsePort
+
 -}
 respond :
     Port.Response msg
@@ -238,6 +248,7 @@ Does not do anything if the response has already been sent.
             (addHeader ( "Cache-Control", "no-cache" ))
         |> getHeader "cache-control"
     --> Just "no-cache"
+
 -}
 updateResponse :
     (Response -> Response)
@@ -271,6 +282,7 @@ updateResponse updater conn =
         |> send responsePort
         |> (Tuple.second >> (==) Cmd.none)
     --> False
+
 -}
 send :
     Port.Response msg
@@ -285,9 +297,9 @@ send port_ conn =
                         encodedValue =
                             Response.encode (id conn) resp
                     in
-                        ( Conn { impl | resp = Sent encodedValue }
-                        , port_ encodedValue
-                        )
+                    ( Conn { impl | resp = Sent encodedValue }
+                    , port_ encodedValue
+                    )
 
                 Sent _ ->
                     ( conn
@@ -317,6 +329,7 @@ same amount for pipeline processing to continue onto the next plug.
 
 An internal server error occure if the pause increment is negative.
 A pause increment of zero will have no effect.
+
 -}
 pause :
     Int
@@ -367,12 +380,13 @@ multiple calls, as long as the sum of pauses equals the sum of resumes.
 The above example shows how balancing the pause and resume counts makes the
 connection active again. In reality, pause and resume would be asynchronous.
 
-__NOTE__: It is up to you to make sure your pause count reflects the number of
+**NOTE**: It is up to you to make sure your pause count reflects the number of
 side-effects that you will be waiting on. It is up to you to `resume 1` each
 time you get the result of a side-effect.
 
 An internal server error will occur if the pause count goes below zero.
 A resume increment of zero will have no effect.
+
 -}
 resume :
     Int
@@ -422,6 +436,7 @@ init config model req =
 {-| Response as JSON encoded to a string.
 
 This is the format the response takes when it gets sent through the response port.
+
 -}
 jsonEncodedResponse : Conn config model -> String
 jsonEncodedResponse conn =
@@ -437,6 +452,7 @@ jsonEncodedResponse conn =
 {-| Is the connnection active?
 
 An active connection is not paused, and has not yet been sent.
+
 -}
 isActive : Conn config mode -> Bool
 isActive conn =
