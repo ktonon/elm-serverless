@@ -3,7 +3,6 @@
   "tests": [
     "Serverless.Conn",
     "Serverless.Conn.Body",
-    "Serverless.Conn.IpAddress",
-    "Serverless.Plug"
+    "Serverless.Conn.IpAddress"
   ]
 }

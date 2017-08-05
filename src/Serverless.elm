@@ -22,8 +22,6 @@ import Serverless.Conn.Body as Body
 import Serverless.Conn.Pool as ConnPool
 import Serverless.Conn.Request as Request exposing (Id)
 import Serverless.Conn.Response as Response exposing (Status)
-import Serverless.Pipeline as Pipeline exposing (Msg(..), PlugMsg(..))
-import Serverless.Plug exposing (Plug)
 import Serverless.Port as Port
 
 
@@ -63,23 +61,25 @@ httpApi api =
 
 {-| Program for an HTTP API.
 
-A Serverless.Program is parameterized by your 3 custom types
+A Serverless.Program is parameterized by your 4 custom types
 
-  - Config is a server load-time record of deployment specific values
-  - Model is for whatever you need during the processing of a request
-  - Msg is your app message type
+  - `config` is a server load-time record of deployment specific values
+  - `model` is for whatever you need during the processing of a request
+  - `route` represents your application routes
+  - `msg` is your app message type
 
 You must provide the following:
 
   - `configDecoder` decodes a JSON value for your custom config type
-  - `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports. They should have types `Serverless.RequestPort` and `Serverless.Port.Response`, respectively
+  - `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports
   - `endpoint` is a message through which connections are first received
   - `initialModel` is a value to which new connections will set their model
-  - `pipeline` takes the place of the update function in a traditional elm program
-  - `subscriptions` has the usual meaning
+  - `parseRoute` takes the `request/path/and?query=string` and parses it into a `route`
+  - `update` the app update function
+  - `subscriptions` the app subscriptions function
 
-See [Building Pipelines](./Serverless-Plug#building-pipelines) for more details on
-the `pipeline` parameter.
+Notices that `update` and `subscriptions` operate on `Conn config model route`
+and not just on `model`.
 
 -}
 type alias HttpApi config model route msg =
@@ -89,7 +89,7 @@ type alias HttpApi config model route msg =
     , endpoint : msg
     , initialModel : model
     , parseRoute : String -> Maybe route
-    , pipeline : Plug config model route msg
+    , update : msg -> Conn config model route -> ( Conn config model route, Cmd msg )
     , subscriptions : Conn config model route -> Sub msg
     }
 
@@ -101,6 +101,11 @@ type alias HttpApi config model route msg =
 type alias Model config model route =
     { pool : ConnPool.Pool config model route
     }
+
+
+type Msg msg
+    = RawRequest Json.Encode.Value
+    | HandlerMsg Id msg
 
 
 init_ :
@@ -137,7 +142,7 @@ update_ api slsMsg model =
                             { model | pool = ConnPool.add defaultLogger route req model.pool }
                                 |> updateChild api
                                     (Request.id req)
-                                    (PlugMsg Pipeline.firstIndexPath api.endpoint)
+                                    api.endpoint
 
                         Nothing ->
                             ( model
@@ -147,33 +152,32 @@ update_ api slsMsg model =
                             )
 
                 Err err ->
-                    reportFailure "Error decoding request" err model
+                    reportFailure
+                        "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
+                        err
+                        model
 
         HandlerMsg connId msg ->
             updateChild api connId msg model
 
 
-updateChild : HttpApi config model route msg -> Id -> PlugMsg msg -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
+updateChild : HttpApi config model route msg -> Id -> msg -> Model config model route -> ( Model config model route, Cmd (Msg msg) )
 updateChild api connId msg model =
     case ConnPool.get connId model.pool of
         Just conn ->
             let
                 ( newConn, cmd ) =
-                    conn |> Pipeline.apply (api |> toPipelineOptions) msg
+                    api.update msg conn
             in
             ( { model | pool = model.pool |> ConnPool.replace newConn }
-            , cmd
+            , Cmd.map (HandlerMsg connId) cmd
             )
 
         _ ->
-            reportFailure "No connection in pool with id: " connId model
-
-
-toPipelineOptions :
-    HttpApi config model route msg
-    -> Pipeline.Options config model route msg
-toPipelineOptions api =
-    Pipeline.newOptions api.endpoint api.pipeline
+            ( model
+            , send api connId 500 <|
+                (++) "No connection in pool with id: " connId
+            )
 
 
 sub_ :
@@ -191,7 +195,6 @@ sub_ api model =
 connSub : HttpApi config model route msg -> Conn config model route -> Sub (Msg msg)
 connSub api conn =
     api.subscriptions conn
-        |> Sub.map (PlugMsg Pipeline.firstIndexPath)
         |> Sub.map (HandlerMsg (Conn.id conn))
 
 

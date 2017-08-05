@@ -12,7 +12,6 @@
         "Serverless.Conn.Body",
         "Serverless.Conn.Request",
         "Serverless.Conn.Response",
-        "Serverless.Plug",
         "Serverless.Port"
     ],
     "dependencies": {

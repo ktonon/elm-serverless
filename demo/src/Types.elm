@@ -6,7 +6,6 @@ import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Route exposing (Route)
 import Serverless.Conn
 import Serverless.Cors as Cors
-import Serverless.Plug
 import Serverless.Port
 
 
@@ -55,7 +54,7 @@ to the program as `endpoint` (see above).
 -}
 type Msg
     = Endpoint
-    | QuoteResult (Result Http.Error Quote)
+    | GotQuotes (Result Http.Error (List Quote))
 
 
 
@@ -63,10 +62,6 @@ type Msg
 --
 -- Provide concrete values for the type variable defined in Serverless.Types
 -- then import this module instead, to make your code more readable.
-
-
-type alias Plug =
-    Serverless.Plug.Plug Config Model Route Msg
 
 
 type alias Conn =

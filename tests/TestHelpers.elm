@@ -6,7 +6,6 @@ import Serverless.Conn as Conn exposing (updateResponse)
 import Serverless.Conn.Body as Body exposing (appendText)
 import Serverless.Conn.Request as Request exposing (Request)
 import Serverless.Conn.Response as Response exposing (Response, updateBody)
-import Serverless.Plug as Plug exposing (pipeline, plug)
 import UrlParser exposing ((</>), Parser, map, oneOf, s, string, top)
 
 
@@ -34,15 +33,6 @@ simplePlug =
 simpleLoop : String -> Msg -> Conn -> ( Conn, Cmd Msg )
 simpleLoop label msg conn =
     ( conn |> appendToBody label, Cmd.none )
-
-
-simpleFork : String -> Conn -> Plug
-simpleFork label conn =
-    let
-        method =
-            conn |> Conn.request |> Request.method |> toString
-    in
-    pipeline |> plug (simplePlug (method ++ label))
 
 
 
@@ -103,10 +93,6 @@ type alias Model =
 
 type Msg
     = NoOp
-
-
-type alias Plug =
-    Plug.Plug Config Model Route Msg
 
 
 type alias Conn =

@@ -1,7 +1,6 @@
 module Serverless.ConnTests
     exposing
         ( all
-        , buildingPipelinesTests
         , responseTests
         )
 
@@ -19,7 +18,6 @@ import Serverless.Conn.Body exposing (text)
 import Serverless.Conn.Fuzz as Fuzz
 import Serverless.Conn.Response as Response exposing (addHeader, setBody, setStatus)
 import Serverless.Conn.Test as Test
-import Serverless.Plug as Plug
 import Test exposing (describe, test)
 import TestHelpers exposing (..)
 
@@ -27,8 +25,7 @@ import TestHelpers exposing (..)
 all : Test.Test
 all =
     describe "Serverless.Conn"
-        [ buildingPipelinesTests
-        , responseTests
+        [ responseTests
         ]
 
 
@@ -44,54 +41,6 @@ sp =
 sl : Msg -> Conn -> ( Conn, Cmd Msg )
 sl =
     simpleLoop ""
-
-
-sf : Conn -> Plug
-sf =
-    simpleFork ""
-
-
-buildingPipelinesTests : Test.Test
-buildingPipelinesTests =
-    describe "Building Pipelines"
-        [ describe "pipeline"
-            [ test "begins a pipeline" <|
-                \_ ->
-                    Expect.equal 0 (Plug.size Plug.pipeline)
-            ]
-        , describe "plug"
-            [ test "extends the pipeline by 1" <|
-                \_ ->
-                    Expect.equal 1 (Plug.pipeline |> Plug.plug sp |> Plug.size)
-            ]
-        , describe "loop"
-            [ test "extends the pipeline by 1" <|
-                \_ ->
-                    Expect.equal 1 (Plug.pipeline |> Plug.loop sl |> Plug.size)
-            ]
-        , describe "nest"
-            [ test "extends the pipeline by the length of the nested pipeline" <|
-                \_ ->
-                    Expect.equal
-                        5
-                        (Plug.pipeline
-                            |> Plug.plug sp
-                            |> Plug.loop sl
-                            |> Plug.nest
-                                (Plug.pipeline
-                                    |> Plug.plug sp
-                                    |> Plug.plug sp
-                                    |> Plug.loop sl
-                                )
-                            |> Plug.size
-                        )
-            ]
-        , describe "fork"
-            [ test "extends the pipeline by 1" <|
-                \_ ->
-                    Expect.equal 1 (Plug.pipeline |> Plug.fork sf |> Plug.size)
-            ]
-        ]
 
 
 

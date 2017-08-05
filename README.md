@@ -12,67 +12,39 @@ Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your A
 
 __NOTE__: The master branch is on version 4.0.0 which is not yet released. This will include the following changes from release 3.
 
-* Opaque `Conn` and `Plug` types
-* A more efficient pipeline
+* `Conn` is now opaque
+* `Plug` has been removed
+* Simpler pipelines (i.e. just `|>` chains of `Conn -> Conn` functions)
+* A single update function (just like an Elm SPA)
 * Proper JavaScript interop ([#2](https://github.com/ktonon/elm-serverless/issues/2))
 
 ## Intro
-You define a `Serverless.Program`, which among other things, is configured with a `Pipeline`.
+
+You define a `Serverless.Program`.
 
 ```elm
-main : Serverless.Program Config Model Msg
+main : Serverless.Program Config Model Route Msg
 main =
     Serverless.httpApi
-        { configDecoder = configDecoder     -- Decode once per Lambda container
+        { configDecoder = configDecoder -- Decode once per Lambda container
         , requestPort = requestPort
         , responsePort = responsePort
-        , endpoint = Endpoint               -- Processing starts with this msg
-        , initialModel = Model []           -- Fresh custom model per connection
-        , pipeline = pipeline               -- Pipelines process connections
+        , endpoint = Endpoint           -- Processing starts with this msg
+        , initialModel = Model []       -- Fresh custom model per connection
+        , parseRoute = parseRoute       -- String -> Route
+        , update = update               -- Msg -> Conn -> (Conn, Cmd Msg)
         , subscriptions = subscriptions
         }
 
 ```
 
-* pipelines are lists of `Plug`s
-* each plug receives a connection (called `Conn`) and transforms it in some way
-* connections contain the HTTP request, the as yet unsent response, and some other stuff which is specific to your application
+The main difference between an Elm SPA and a Serverless app is that the update function operates on a `Conn config model route` instead of just the app `model`. As you can see from the type name, a `Conn` is parameterized with three types specific to your application.
 
-Basically, the pipeline takes the place of the usual `update` function in a traditional elm app. And instead of transforming your `Model`, you transform a `Conn`, which contains your `Model`, but also has the request, response, and per deployment configuration.
+* `config` is a server load-time record of deployment specific values. It is initialized once per AWS Lambda instance. It is immutable and all connections share the same value.
+* `model` is for whatever you need during the processing of a request. It is initialized to `initialModel` (in the above example `Model []`) for each incoming request.
+* `route` represents the set of routes your app will handle. By the time your app gets to handle the request, that path and query will already be parsed into nice Elm data (using the `parseRoute` function which you provide). If parsing fails, a 404 is automatically sent.
 
-```elm
-pipeline : Plug
-pipeline =
-    pipeline
-        |> plug (cors "*" [ GET, OPTIONS ]) -- Plugs transform a connection
-        |> plug authentication              -- Plugs are chained in a pipeline
-        -- ...
-        |> fork router                      -- Routers fork pipelines
-
-```
-
-For routing, we use [ktonon/url-parser][], which is a fork of [evancz/url-parser][] adapted for use outside of the browser. A router function can then be used to map routes to new pipelines for handling specific tasks. Router functions can be plugged into the pipeline.
-
-```elm
-router : Conn -> Plug
-router conn =
-    case                                    -- Route however you want, here we
-        ( conn |> method                    -- use HTTP method
-        , conn |> path |> parseRoute route NotFound -- and parsed request path
-        )
-    of
-        ( GET, Home ) ->
-            responder responsePort <|
-                \_ -> ( 200, text "Home" )
-
-            -- vvvvvvvvvv --                -- UrlParser gives structured routes
-        ( GET, Quote lang ) ->
-            Quote.pipeline lang             -- Defer to another module
-
-        _ ->
-            responder responsePort <|
-                \conn -> ( 404, text <| (++) "Nothing at: " <| path conn )
-```
+In addition to these the conn also contains the HTTP request and pending HTTP response, and a globally unique identifier.
 
 ## Demo
 

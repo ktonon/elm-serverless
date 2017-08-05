@@ -7,7 +7,9 @@ const encodeBody = body => (typeof body === 'string'
   ? body
   : JSON.stringify(body));
 
-const path = params => `/${params[0] || params.proxy || ''}`;
+const path = params =>
+  `/${params[0] || params.proxy || ''}`
+  .replace(/%2f/gi, '/');
 
 const splitHostPort = host => {
   const parts = typeof host === 'string' ? host.split(':') : [];
