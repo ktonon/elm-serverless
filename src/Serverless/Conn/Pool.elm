@@ -41,6 +41,14 @@ add logger route req pool =
             logger LogError "Failed to add request! Pool has no config" pool
 
 
+remove :
+    Id
+    -> Pool config model route
+    -> Pool config model route
+remove id pool =
+    { pool | connDict = pool.connDict |> Dict.remove id }
+
+
 get :
     Id
     -> Pool config model route

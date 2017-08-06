@@ -25,6 +25,9 @@ const startServer = () => new Promise((resolve, reject) => {
   const server = spawn(`${__dirname}/../node_modules/.bin/serverless`, args, {
     cwd: `${__dirname}/../demo`,
     detached: true,
+    env: Object.assign({
+      demo_enableAuth: 'true',
+    }, process.env),
     stdio: ['ignore', out, out],
   });
   server.unref();

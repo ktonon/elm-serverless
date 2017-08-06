@@ -7,7 +7,7 @@ module Serverless.Conn.Request
         , body
         , decoder
         , endpoint
-        , headers
+        , header
         , id
         , init
         , method
@@ -29,7 +29,7 @@ Typically imported as
 
 ## Attributes
 
-@docs id, body, endpoint, headers, method, path, query, stage
+@docs id, body, endpoint, header, method, path, query, stage
 
 
 ## Misc
@@ -41,6 +41,7 @@ used internally by the framework.
 
 -}
 
+import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
 import Serverless.Conn.Body as Body exposing (Body)
@@ -92,7 +93,7 @@ type Scheme
 type alias Model =
     { id : Id
     , body : Body
-    , headers : List ( String, String )
+    , headers : Dict String String
     , host : String
     , method : Method
     , path : String
@@ -100,7 +101,7 @@ type alias Model =
     , remoteIp : IpAddress
     , scheme : Scheme
     , stage : String
-    , queryParams : List ( String, String )
+    , queryParams : Dict String String
     }
 
 
@@ -120,7 +121,7 @@ init id =
         (Model
             id
             Body.empty
-            []
+            Dict.empty
             ""
             GET
             "/"
@@ -128,7 +129,7 @@ init id =
             IpAddress.loopback
             Http
             "test"
-            []
+            Dict.empty
         )
 
 
@@ -165,14 +166,14 @@ endpoint (Request req) =
     ( req.scheme, req.host, req.port_ )
 
 
-{-| List of key-value pairs representing headers.
+{-| Get a request header by name.
 
 Headers are normalized such that the keys are always `lower-case`.
 
 -}
-headers : Request -> List ( String, String )
-headers (Request { headers }) =
-    headers
+header : String -> Request -> Maybe String
+header key (Request { headers }) =
+    Dict.get key headers
 
 
 {-| HTTP request method.
@@ -200,11 +201,11 @@ path (Request { path }) =
     path
 
 
-{-| List of key-value pairs representing query arguments.
+{-| Get a query argument by name.
 -}
-query : Request -> List ( String, String )
-query (Request { queryParams }) =
-    queryParams
+query : String -> Request -> Maybe String
+query name (Request { queryParams }) =
+    Dict.get name queryParams
 
 
 {-| IP address of the requesting entity.
@@ -235,7 +236,7 @@ decoder =
     decode Model
         |> required "id" Decode.string
         |> required "body" Body.decoder
-        |> required "headers" KeyValueList.decoder
+        |> required "headers" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> required "host" Decode.string
         |> required "method" methodDecoder
         |> required "path" Decode.string
@@ -243,7 +244,7 @@ decoder =
         |> required "remoteIp" IpAddress.decoder
         |> required "scheme" schemeDecoder
         |> required "stage" Decode.string
-        |> required "queryParams" KeyValueList.decoder
+        |> required "queryParams" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> Decode.map Request
 
 
