@@ -2,7 +2,7 @@ module Models.Quote exposing (..)
 
 import Http
 import Json.Decode exposing (Decoder, string)
-import Json.Decode.Pipeline exposing (required, decode, hardcoded)
+import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Json.Encode as J
 import Types exposing (Quote)
 

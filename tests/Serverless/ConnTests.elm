@@ -7,12 +7,11 @@ module Serverless.ConnTests
 
 import Expect
 import Expect.Extra as Expect exposing (stringPattern)
+import Json.Encode
 import Serverless.Conn as Conn
     exposing
-        ( isActive
-        , pause
-        , resume
-        , send
+        ( send
+        , unsent
         , updateResponse
         )
 import Serverless.Conn.Body exposing (text)
@@ -46,11 +45,6 @@ sl =
     simpleLoop ""
 
 
-sf : Conn -> Plug
-sf =
-    simpleFork ""
-
-
 buildingPipelinesTests : Test.Test
 buildingPipelinesTests =
     describe "Building Pipelines"
@@ -64,11 +58,6 @@ buildingPipelinesTests =
                 \_ ->
                     Expect.equal 1 (Plug.pipeline |> Plug.plug sp |> Plug.size)
             ]
-        , describe "loop"
-            [ test "extends the pipeline by 1" <|
-                \_ ->
-                    Expect.equal 1 (Plug.pipeline |> Plug.loop sl |> Plug.size)
-            ]
         , describe "nest"
             [ test "extends the pipeline by the length of the nested pipeline" <|
                 \_ ->
@@ -76,20 +65,15 @@ buildingPipelinesTests =
                         5
                         (Plug.pipeline
                             |> Plug.plug sp
-                            |> Plug.loop sl
+                            |> Plug.plug sp
                             |> Plug.nest
                                 (Plug.pipeline
                                     |> Plug.plug sp
                                     |> Plug.plug sp
-                                    |> Plug.loop sl
+                                    |> Plug.plug sp
                                 )
                             |> Plug.size
                         )
-            ]
-        , describe "fork"
-            [ test "extends the pipeline by 1" <|
-                \_ ->
-                    Expect.equal 1 (Plug.pipeline |> Plug.fork sf |> Plug.size)
             ]
         ]
 
@@ -106,41 +90,23 @@ responseTests =
                 conn
                     |> updateResponse (setBody <| text "hello")
                     |> Conn.jsonEncodedResponse
+                    |> Json.Encode.encode 0
                     |> Expect.match (stringPattern "\"body\":\"hello\"")
         , Test.conn "status sets the response status" <|
             \conn ->
                 conn
                     |> updateResponse (setStatus 200)
                     |> Conn.jsonEncodedResponse
+                    |> Json.Encode.encode 0
                     |> Expect.match (stringPattern "\"statusCode\":200")
         , Test.conn "send sets the response to Sent" <|
             \conn ->
-                let
-                    ( newConn, _ ) =
-                        conn |> send responsePort
-                in
-                Expect.true "response was not sent" (Conn.isSent newConn)
-        , Test.conn "send issues a side effect" <|
-            \conn ->
-                let
-                    ( _, cmd ) =
-                        conn |> send responsePort
-                in
-                Expect.notEqual Cmd.none cmd
-        , Test.conn "send fails if the conn is already halted" <|
-            \conn ->
-                let
-                    ( newConn, _ ) =
-                        conn |> send responsePort
-
-                    ( _, cmd ) =
-                        newConn |> send responsePort
-                in
-                Expect.equal Cmd.none cmd
+                Expect.equal Nothing (send conn |> unsent)
         , Test.connWith Fuzz.header "headers adds a response header" <|
             \( conn, ( key, value ) ) ->
                 conn
                     |> updateResponse (addHeader ( key, value ))
                     |> Conn.jsonEncodedResponse
+                    |> Json.Encode.encode 0
                     |> Expect.match (stringPattern ("\"" ++ key ++ "\":\"" ++ value ++ "\""))
         ]

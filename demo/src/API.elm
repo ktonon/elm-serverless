@@ -1,21 +1,23 @@
 module API exposing (..)
 
 import Dict
+import Middleware
 import Pipelines.Quote as Quote
 import Route exposing (Route(..))
 import Serverless exposing (..)
 import Serverless.Conn as Conn exposing (method, respond, route, updateResponse)
 import Serverless.Conn.Body as Body exposing (text)
 import Serverless.Conn.Request as Request exposing (Method(..))
-import Serverless.Plug as Plug exposing (fork, pipeline, responder)
+import Serverless.Plug as Plug exposing (Plug, plug)
 import Types exposing (..)
 import UrlParser
 
 
-{-| A Serverless.Program is parameterized by your 3 custom types
+{-| A Serverless.Program is parameterized by your 4 custom types
 
   - Config is a server load-time record of deployment specific values
   - Model is for whatever you need during the processing of a request
+  - Route represents the set of routes your app will handle
   - Msg is your app message type
 
 -}
@@ -25,56 +27,77 @@ main =
         { configDecoder = configDecoder
         , requestPort = requestPort
         , responsePort = responsePort
-        , endpoint = Endpoint
+        , endpoint = Endpoint -- Requests will come in with this message
         , initialModel = Model []
         , parseRoute = \path -> UrlParser.parse Route.route path Dict.empty
-        , pipeline = mainPipeline
+        , update = update
         , subscriptions = subscriptions
         }
 
 
-{-| Your pipeline.
+pipeline : Plug Config Model Route
+pipeline =
+    Plug.pipeline
+        |> plug Middleware.cors
+        |> plug Middleware.auth
 
-A pipeline is a sequence of plugs, each of which transforms the connection
-in some way.
+
+{-| The application update function.
+
+Just like an Elm SPA, an elm-serverless app has a single update
+function which is the first point of contact for incoming messages.
 
 -}
-mainPipeline : Plug
-mainPipeline =
-    pipeline
-        -- Simple plugs just transform the connection.
-        -- A router takes a `Conn` and returns a new pipeline.
-        |> fork router
+update : Msg -> Conn -> ( Conn, Cmd Msg )
+update msg conn =
+    case msg of
+        -- New requests come in here
+        Endpoint ->
+            conn
+                -- Calls folds conn into each plug of the pipeline,
+                -- until the pipeline is exhausted, or until one of the plugs
+                -- "sends" a response
+                |> Plug.apply pipeline
+                -- mapUnsent only applies the router if the conn is unsent,
+                -- otherwise we get `(sentConn, Cmd.none)`. Note that a sent
+                -- response is encapsulated in `conn`, not as a command.
+                -- Once a conn is sent, it is removed from the connection pool.
+                |> Conn.mapUnsent router
+
+        -- This message is intended for the Pipeline/Quote module
+        GotQuotes result ->
+            Quote.gotQuotes result conn
 
 
-router : Conn -> Plug
+router : Conn -> ( Conn, Cmd Msg )
 router conn =
-    -- This router parses `conn.req.path` into elm data thanks to
-    -- evancz/url-parser (modified for use outside of the browser).
-    -- We can then match on the HTTP method and route, returning custom
-    -- pipelines for each combination.
     case
-        ( conn |> method
-        , conn |> route
+        ( method conn
+        , -- Elm data returned from client provided parseRoute function.
+          -- The connection path is parsed before calling the update function,
+          -- so by the time you get here, we don't have to worry about handling
+          -- unexpected paths, a 404 will be automatically replied if parsing
+          -- fails.
+          route conn
         )
     of
         ( GET, Home ) ->
-            -- responder can quickly create a loop plug which sends a response
-            responder responsePort <|
-                \_ -> ( 200, text "Home" )
+            ( Conn.respond ( 200, text "Home" ) conn
+            , Cmd.none
+            )
 
-        ( method, Quote lang ) ->
-            -- Notice that we are passing part of the router result
-            -- (i.e. `lang`) into `loadQuotes`.
-            Quote.router method lang
+        ( _, Quote lang ) ->
+            Quote.router lang conn
 
         ( GET, Buggy ) ->
-            responder responsePort <|
-                \_ -> ( 500, text "bugs, bugs, bugs" )
+            ( Conn.respond ( 500, text "bugs, bugs, bugs" ) conn
+            , Cmd.none
+            )
 
         _ ->
-            responder responsePort <|
-                \conn -> ( 405, text "Method not allowed" )
+            ( Conn.respond ( 405, text "Method not allowed" ) conn
+            , Cmd.none
+            )
 
 
 

@@ -19,6 +19,8 @@ const elm = require('./API.elm');
 const config = rc('demo', {
   languages: ['en', 'ru'],
 
+  enableAuth: 'false',
+
   cors: {
     origin: '*',
     methods: 'get,post,options',

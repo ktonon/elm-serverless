@@ -36,15 +36,6 @@ simpleLoop label msg conn =
     ( conn |> appendToBody label, Cmd.none )
 
 
-simpleFork : String -> Conn -> Plug
-simpleFork label conn =
-    let
-        method =
-            conn |> Conn.request |> Request.method |> toString
-    in
-    pipeline |> plug (simplePlug (method ++ label))
-
-
 
 -- ROUTING
 
@@ -76,6 +67,7 @@ getHeader : String -> Conn -> Maybe String
 getHeader key conn =
     conn
         |> Conn.jsonEncodedResponse
+        |> Encode.encode 0
         |> Regex.find (AtMost 1) (regex <| "\"" ++ key ++ "\":\"(.*?)\"")
         |> List.head
         |> Maybe.andThen (\{ submatches } -> List.head submatches)

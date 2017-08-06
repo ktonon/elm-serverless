@@ -30,6 +30,7 @@ all =
                         >> addHeader ( "content-type", "application/xml" )
                     )
                     >> Conn.jsonEncodedResponse
+                    >> Encode.encode 0
                     >> Expect.match
                         (stringPattern "\"content-type\":\"application/xml\"")
             ]
