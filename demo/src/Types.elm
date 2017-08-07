@@ -5,7 +5,6 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Route exposing (Route)
 import Serverless.Conn
-import Serverless.Cors as Cors
 import Serverless.Port
 
 
@@ -20,7 +19,6 @@ import Serverless.Port
 type alias Config =
     { languages : List String
     , enableAuth : Bool
-    , cors : Cors.Config
     }
 
 
@@ -29,7 +27,6 @@ configDecoder =
     decode Config
         |> required "languages" (Decode.list Decode.string)
         |> required "enableAuth" (Decode.string |> Decode.map ((==) "true"))
-        |> required "cors" Cors.configDecoder
 
 
 {-| Can be anything you want.
