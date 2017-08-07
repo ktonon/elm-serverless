@@ -75,7 +75,8 @@ all =
               "remoteIp": "127.0.0.1",
               "scheme": "http",
               "stage": "test",
-              "queryParams": null
+              "queryParams": null,
+              "queryString": ""
             }
             """
               , DecodesTo (Request.init "some-id")

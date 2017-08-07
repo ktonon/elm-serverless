@@ -19,7 +19,33 @@ describe('The demo server', () => {
         .then(res => {
           res.headers.should.have.property('content-type')
             .which.equal('text/text; charset=utf-8');
-          res.text.should.equal('Home');
+          res.text.should.startWith('Home');
+        })
+    );
+
+    it('parses a single query parameter', () =>
+      request.get('/?q=foo%20bar')
+        .set('Authorization', 'anything')
+        .expect(200).then(res => {
+          res.text.should.match(/\bq = "foo bar"/);
+        })
+    );
+
+    it('parses a two query parameters', () =>
+      request.get('/?q=*&sort=asc')
+        .set('Authorization', 'anything')
+        .expect(200).then(res => {
+          res.text.should.match(/\bq = "*"/);
+          res.text.should.match(/\bsort = Asc\b/);
+        })
+    );
+
+    it('provides default query values', () =>
+      request.get('/')
+        .set('Authorization', 'anything')
+        .expect(200).then(res => {
+          res.text.should.match(/\bq = ""/);
+          res.text.should.match(/\bsort = Desc\b/);
         })
     );
   });

@@ -1,6 +1,5 @@
 module API exposing (..)
 
-import Dict
 import Middleware
 import Pipelines.Quote as Quote
 import Route exposing (Route(..))
@@ -29,7 +28,7 @@ main =
         , responsePort = responsePort
         , endpoint = Endpoint -- Requests will come in with this message
         , initialModel = Model []
-        , parseRoute = \path -> UrlParser.parse Route.route path Dict.empty
+        , parseRoute = UrlParser.parseString Route.route
         , update = update
         , subscriptions = subscriptions
         }
@@ -81,8 +80,8 @@ router conn =
           route conn
         )
     of
-        ( GET, Home ) ->
-            ( Conn.respond ( 200, text "Home" ) conn
+        ( GET, Home query ) ->
+            ( Conn.respond ( 200, text <| (++) "Home: " <| toString query ) conn
             , Cmd.none
             )
 

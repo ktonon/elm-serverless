@@ -1,3 +1,4 @@
+const urlencode = require('urlencode');
 const uuid = require('uuid');
 
 const defaultLogger = require('./logger');
@@ -41,6 +42,7 @@ module.exports = ({
     path: path(pathParameters || {}),
     port: parseInt(headers['X-Forwarded-Port'] || port, 10),
     queryParams: queryStringParameters,
+    queryString: `?${urlencode.stringify(queryStringParameters)}`,
     remoteIp: sourceIp || '127.0.0.1',
     scheme: headers['X-Forwarded-Proto'] || 'http',
     stage: requestContext.stage || 'local',

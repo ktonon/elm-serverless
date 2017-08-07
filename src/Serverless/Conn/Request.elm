@@ -14,6 +14,7 @@ module Serverless.Conn.Request
         , methodDecoder
         , path
         , query
+        , queryString
         , schemeDecoder
         , stage
         )
@@ -29,7 +30,7 @@ Typically imported as
 
 ## Attributes
 
-@docs id, body, endpoint, header, method, path, query, stage
+@docs id, body, endpoint, header, method, path, query, queryString, stage
 
 
 ## Misc
@@ -102,6 +103,7 @@ type alias Model =
     , scheme : Scheme
     , stage : String
     , queryParams : Dict String String
+    , queryString : String
     }
 
 
@@ -130,6 +132,7 @@ init id =
             Http
             "test"
             Dict.empty
+            ""
         )
 
 
@@ -208,6 +211,13 @@ query name (Request { queryParams }) =
     Dict.get name queryParams
 
 
+{-| The original query string.
+-}
+queryString : Request -> String
+queryString (Request { queryString }) =
+    queryString
+
+
 {-| IP address of the requesting entity.
 -}
 remoteIp : Request -> IpAddress
@@ -245,6 +255,7 @@ decoder =
         |> required "scheme" schemeDecoder
         |> required "stage" Decode.string
         |> required "queryParams" (KeyValueList.decoder |> Decode.map Dict.fromList)
+        |> required "queryString" Decode.string
         |> Decode.map Request
 
 

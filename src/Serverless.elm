@@ -137,7 +137,10 @@ update_ api slsMsg model =
         RawRequest raw ->
             case decodeValue Request.decoder raw of
                 Ok req ->
-                    case api.parseRoute <| Request.path req of
+                    case
+                        api.parseRoute <|
+                            (Request.path req ++ Request.queryString req)
+                    of
                         Just route ->
                             { model | pool = ConnPool.add defaultLogger route req model.pool }
                                 |> updateChild api
