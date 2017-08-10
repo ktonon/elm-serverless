@@ -94,7 +94,7 @@ router conn =
             Quote.router lang conn
 
         ( GET, Number ) ->
-            -- This once calls out to a JavaScript function named `getRandom`.
+            -- This one calls out to a JavaScript function named `getRandom`.
             -- The result comes in as a message `RandomNumber`.
             Conn.interop [ GetRandom 1000000000 ] conn
 
@@ -108,7 +108,8 @@ router conn =
 {-| The application update function.
 
 Just like an Elm SPA, an elm-serverless app has a single update
-function which is the first point of contact for incoming messages.
+function which handles messages resulting from interop calls and side-effects
+in general.
 
 -}
 update : Msg -> Conn -> ( Conn, Cmd Msg )
