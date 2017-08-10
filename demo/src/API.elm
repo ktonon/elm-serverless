@@ -13,7 +13,7 @@ import Types exposing (..)
 import UrlParser
 
 
-{-| A Serverless.Program is parameterized by your 4 custom types
+{-| A Serverless.Program is parameterized by your 5 custom types
 
   - Config is a server load-time record of deployment specific values
   - Model is for whatever you need during the processing of a request
