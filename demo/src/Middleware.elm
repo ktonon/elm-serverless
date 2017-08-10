@@ -5,7 +5,7 @@ module Middleware exposing (auth, cors)
 
 import Serverless.Conn as Conn exposing (request, updateResponse)
 import Serverless.Conn.Body exposing (text)
-import Serverless.Conn.Response exposing (addHeader)
+import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
 import Types exposing (Conn)
 
 
@@ -34,7 +34,12 @@ auth conn =
         )
     of
         ( True, Nothing ) ->
-            Conn.respond ( 401, text "Authorization header not provided" ) conn
+            conn
+                |> updateResponse
+                    (setStatus 401
+                        >> setBody (text "Authorization header not provided")
+                    )
+                |> Conn.toSent
 
         _ ->
             conn

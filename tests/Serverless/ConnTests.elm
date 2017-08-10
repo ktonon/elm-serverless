@@ -11,6 +11,7 @@ import Json.Encode
 import Serverless.Conn as Conn
     exposing
         ( send
+        , toSent
         , unsent
         , updateResponse
         )
@@ -101,7 +102,7 @@ responseTests =
                     |> Expect.match (stringPattern "\"statusCode\":200")
         , Test.conn "send sets the response to Sent" <|
             \conn ->
-                Expect.equal Nothing (send conn |> unsent)
+                Expect.equal Nothing (toSent conn |> unsent)
         , Test.connWith Fuzz.header "headers adds a response header" <|
             \( conn, ( key, value ) ) ->
                 conn

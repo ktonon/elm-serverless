@@ -18,9 +18,9 @@ const encodeBody = (body) => {
   }
 };
 
-const handler = ({ pool, logger = defaultLogger }) => function responseHandler(resp) {
+const handler = ({ pool, logger = defaultLogger }) => function responseHandler(id, resp) {
   logger.info(JSON.stringify({ resp }, null, 2));
-  const { callback } = pool.take(resp.id);
+  const { callback } = pool.take(id);
   const statusCode = parseInt(resp.statusCode, 10);
   if (callback) {
     if (isNaN(statusCode)) {
@@ -37,7 +37,7 @@ const handler = ({ pool, logger = defaultLogger }) => function responseHandler(r
       });
     }
   } else {
-    logger.error('resp missing callback:', resp.id);
+    logger.error('resp missing callback:', id);
   }
 };
 

@@ -60,7 +60,7 @@ route =
 
 conn : Conn
 conn =
-    Conn.init (Config "secret") (Model 0) Home <| Request.init "id"
+    Conn.init "id" (Config "secret") (Model 0) Home Request.init
 
 
 getHeader : String -> Conn -> Maybe String
@@ -97,12 +97,16 @@ type Msg
     = NoOp
 
 
+type alias Interop =
+    ()
+
+
 type alias Plug =
-    Plug.Plug Config Model Route Msg
+    Plug.Plug Config Model Route Interop
 
 
 type alias Conn =
-    Conn.Conn Config Model Route
+    Conn.Conn Config Model Route Interop
 
 
 requestPort : (Encode.Value -> msg) -> Sub msg

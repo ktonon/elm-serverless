@@ -1,3 +1,6 @@
+const co = require('co');
+const should = require('should');
+
 const request = require('./request');
 
 describe('The demo server', () => {
@@ -112,5 +115,20 @@ describe('The demo server', () => {
           res.text.should.equal('Method not allowed');
         })
     );
+  });
+
+  describe('GET /number', () => {
+    it('has status 200', () =>
+      request.get('/number')
+        .set('Authorization', 'anything')
+        .expect(200)
+    );
+
+    it('returns a different value each time', () => co(function* () {
+      const res0 = yield request.get('/number').set('Authorization', 'anything').expect(200);
+      const res1 = yield request.get('/number').set('Authorization', 'anything').expect(200);
+      should(typeof res0.body).equal('number');
+      res0.body.should.not.equal(res1.body);
+    }));
   });
 });

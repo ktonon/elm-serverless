@@ -37,7 +37,6 @@ module.exports = ({
     body: encodeBody(body),
     headers: norm(headers),
     host,
-    id,
     method,
     path: path(pathParameters || {}),
     port: parseInt(headers['X-Forwarded-Port'] || port, 10),
@@ -48,7 +47,7 @@ module.exports = ({
     stage: requestContext.stage || 'local',
   };
 
-  pool.put(req, callback);
+  pool.put(id, req, callback);
   logger.info(JSON.stringify({ req }, null, 2));
-  requestPort.send(req);
+  requestPort.send([id, '__request__', req]);
 };

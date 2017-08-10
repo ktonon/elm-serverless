@@ -18,40 +18,159 @@ __NOTE__: The master branch is on version 4.0.0 which is not yet released. This 
 * A single update function (just like an Elm SPA).
 * Proper JavaScript interop. ([#2](https://github.com/ktonon/elm-serverless/issues/2))
 
-## Intro
+## Example
 
-You define a `Serverless.Program`.
+The following is an excerpt from the [./demo][] program.
 
 ```elm
-main : Serverless.Program Config Model Route Msg
+{-| A Serverless.Program is parameterized by your 4 custom types
+
+  - Config is a server load-time record of deployment specific values
+  - Model is for whatever you need during the processing of a request
+  - Route represents the set of routes your app will handle
+  - Interop enumerates the JavaScript functions which may be called
+  - Msg is your app message type
+
+-}
+main : Serverless.Program Config Model Route Interop Msg
 main =
     Serverless.httpApi
-        { configDecoder = configDecoder -- Decode once per Lambda container
+        { -- Decodes per instance configuration into Elm data. If decoding fails
+          -- the server will fail to start. This decoder is called once at
+          -- startup.
+          configDecoder = configDecoder
+
+        -- Each incoming connection gets this fresh model.
+        , initialModel = { quotes = [] }
+
+        -- Parses the request path and query string into Elm data.
+        -- If parsing fails, a 404 is automatically sent.
+        , parseRoute = UrlParser.parseString Route.route
+
+        -- Entry point for new connections.
+        -- This function composition passes the conn through a pipeline and then
+        -- into a router (but only if the conn is not sent by the pipeline).
+        , endpoint = Plug.apply pipeline >> Conn.mapUnsent router
+
+        -- Update function which operates on Conn.
+        , update = update
+
+        -- Enumerates JavaScript interop functions and provides JSON coders
+        -- to convert data between Elm and JSON.
+        , interop = Serverless.Interop interopEncode interopDecoder
+
+        -- Provides ports to the framework which are used for requests,
+        -- responses, and JavaScript interop function calls. Do not use these
+        -- ports directly, the framework handles associating messages to
+        -- specific connections with unique identifiers.
         , requestPort = requestPort
         , responsePort = responsePort
-        , endpoint = Endpoint           -- Processing starts with this msg
-        , initialModel = Model []       -- Fresh custom model per connection
-        , parseRoute = parseRoute       -- String -> Route
-        , update = update               -- Msg -> Conn -> (Conn, Cmd Msg)
-        , subscriptions = subscriptions
         }
 
+
+{-| Pipelines are chains of functions (plugs) which transform the connection.
+
+These pipelines can optionally send a response through the connection early, for
+example a 401 sent if authorization fails. Use Plug.apply to pass a connection
+through a pipeline (see above). Note that Plug.apply will stop processing the
+pipeline once the connection is sent.
+
+-}
+pipeline : Plug
+pipeline =
+    Plug.pipeline
+        |> plug Middleware.cors
+        |> plug Middleware.auth
+
+
+{-| Just a big "case of" on the request method and route.
+
+Remember that route is the request path and query string, already parsed into
+nice Elm data, courtesy of the parseRoute function provided above.
+
+-}
+router : Conn -> ( Conn, Cmd Msg )
+router conn =
+    case
+        ( method conn
+        , route conn
+        )
+    of
+        ( GET, Home query ) ->
+            Conn.respond ( 200, text <| (++) "Home: " <| toString query ) conn
+
+        ( _, Quote lang ) ->
+            -- Delegate to Pipeline/Quote module.
+            Quote.router lang conn
+
+        ( GET, Number ) ->
+            -- This once calls out to a JavaScript function named `getRandom`.
+            -- The result comes in as a message `RandomNumber`.
+            Conn.interop [ GetRandom 1000000000 ] conn
+
+        ( GET, Buggy ) ->
+            Conn.respond ( 500, text "bugs, bugs, bugs" ) conn
+
+        _ ->
+            Conn.respond ( 405, text "Method not allowed" ) conn
+
+
+{-| The application update function.
+
+Just like an Elm SPA, an elm-serverless app has a single update
+function which is the first point of contact for incoming messages.
+
+-}
+update : Msg -> Conn -> ( Conn, Cmd Msg )
+update msg conn =
+    case msg of
+        -- This message is intended for the Pipeline/Quote module
+        GotQuotes result ->
+            Quote.gotQuotes result conn
+
+        -- Result of a JavaScript interop call. The `interopDecoder` function
+        -- passed into Serverless.httpApi is responsible for converting interop
+        -- results into application messages.
+        RandomNumber val ->
+            Conn.respond ( 200, json <| Json.Encode.int val ) conn
 ```
 
-The main difference between an Elm SPA and a Serverless app is that the update function operates on a `Conn config model route` instead of just the app `model`. As you can see from the type name, a `Conn` is parameterized with three types specific to your application.
+On the JavaScript side, we use the npm package to create a bridge from the AWS Lambda handler to your Elm application.
 
-* `config` is a server load-time record of deployment specific values. It is initialized once per AWS Lambda instance. It is immutable and all connections share the same value.
-* `model` is for whatever you need during the processing of a request. It is initialized to `initialModel` (in the above example `Model []`) for each incoming request.
-* `route` represents the set of routes your app will handle. By the time your app gets to handle the request, that path and query will already be parsed into nice Elm data (using the `parseRoute` function which you provide). If parsing fails, a 404 is automatically sent.
+```javascript
+const elm = require('./API.elm');
 
-In addition to these the conn also contains the HTTP request and pending HTTP response, and a globally unique identifier.
+// ...
 
-## Demo
+module.exports.handler = elmServerless.httpApi({
+  // Your elm app is the handler
+  handler: elm.API,
 
-There are two demos:
+  // One handler per Interop type constructor
+  interop: {
+    // Handles `GetRandom Int`
+    getRandom: upper => Math.floor(Math.random() * upper),
+  },
 
-* [./demo][]: which is kept in sync with the master branch of this repository
-* [elm-serverless-demo][]: a separate repository which works with [![elm-package](https://img.shields.io/badge/elm--serverless-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest) (the latest release)
+  // Config is a record type that you define.
+  // You will also provide a JSON decoder for this.
+  // It should be deployment data that is constant, perhaps loaded from
+  // an environment variable.
+  config: {
+    enableAuth: 'false',
+    languages: ['en', 'ru'],
+  }
+
+  // Because elm libraries cannot expose ports, you have to define them.
+  // Whatever you call them, you have to provide the names.
+  // The meanings are obvious. A connection comes in through the requestPort,
+  // and the response is sent back through the responsePort.
+  requestPort: 'requestPort',
+  responsePort: 'responsePort',
+});
+```
+
+Note there is another demo ([elm-serverless-demo][]) which targets [![elm-package](https://img.shields.io/badge/elm--serverless-3.0.2-blue.svg)](http://package.elm-lang.org/packages/ktonon/elm-serverless/latest) (the latest release).
 
 ## Middleware
 

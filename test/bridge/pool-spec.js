@@ -9,10 +9,10 @@ const makeCallback = (retVal) => sinon.stub().returns(retVal);
 const id = uuid.v4();
 
 describe('new Pool()', () => {
-  describe('put({ id }, callback) and take(id)', () => {
+  describe('put(id, req, callback) and take(id)', () => {
     it('are used to associate callbacks with identifiers', () => {
       const pool = new Pool();
-      pool.put({ id }, makeCallback('foo'));
+      pool.put(id, {}, makeCallback('foo'));
       const { callback } = pool.take(id);
       callback.should.not.throw();
       callback().should.equal('foo');
@@ -22,16 +22,16 @@ describe('new Pool()', () => {
   describe('put({ id }, callback)', () => {
     it('logs an error if the same id is used twice', () => {
       const pool = new Pool({ logger: spyLogger() });
-      pool.put({ id }, makeCallback());
+      pool.put(id, {}, makeCallback());
       pool.logger.error.called.should.be.false();
-      pool.put({ id }, makeCallback());
+      pool.put(id, {}, makeCallback());
       pool.logger.error.called.should.be.true();
     });
 
     it('replaces the callback if the same id is used twice', () => {
       const pool = new Pool({ logger: spyLogger() });
-      pool.put({ id }, makeCallback('foo'));
-      pool.put({ id }, makeCallback('bar'));
+      pool.put(id, {}, makeCallback('foo'));
+      pool.put(id, {}, makeCallback('bar'));
       pool.take(id).callback().should.equal('bar');
     });
 
@@ -51,7 +51,7 @@ describe('new Pool()', () => {
 
     it('removes the callback from the pool', () => {
       const pool = new Pool({ logger: spyLogger() });
-      pool.put({ id }, makeCallback('foo'));
+      pool.put(id, {}, makeCallback('foo'));
       pool.take(id).callback().should.equal('foo');
       pool.logger.error.called.should.be.false();
       should(pool.take(id).callback).be.undefined();

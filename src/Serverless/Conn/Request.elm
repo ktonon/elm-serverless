@@ -1,14 +1,12 @@
 module Serverless.Conn.Request
     exposing
-        ( Id
-        , Method(..)
+        ( Method(..)
         , Request
         , Scheme(..)
         , body
         , decoder
         , endpoint
         , header
-        , id
         , init
         , method
         , methodDecoder
@@ -25,12 +23,12 @@ Typically imported as
 
     import Serverless.Conn.Request as Request
 
-@docs Request, Id, Method, Scheme
+@docs Request, Method, Scheme
 
 
 ## Attributes
 
-@docs id, body, endpoint, header, method, path, query, queryString, stage
+@docs body, endpoint, header, method, path, query, queryString, stage
 
 
 ## Misc
@@ -54,12 +52,6 @@ import Serverless.Conn.KeyValueList as KeyValueList
 -}
 type Request
     = Request Model
-
-
-{-| Universally unique request identifier.
--}
-type alias Id =
-    String
 
 
 {-| HTTP request method.
@@ -92,8 +84,7 @@ type Scheme
 
 
 type alias Model =
-    { id : Id
-    , body : Body
+    { body : Body
     , headers : Dict String String
     , host : String
     , method : Method
@@ -117,11 +108,10 @@ Exposed for unit testing. Incoming connections initialize requests using
 JSON decoders.
 
 -}
-init : Id -> Request
-init id =
+init : Request
+init =
     Request
         (Model
-            id
             Body.empty
             Dict.empty
             ""
@@ -138,13 +128,6 @@ init id =
 
 
 -- GETTERS
-
-
-{-| Universally unique identifier.
--}
-id : Request -> Id
-id (Request { id }) =
-    id
 
 
 {-| Request body.
@@ -244,7 +227,6 @@ stage (Request { stage }) =
 decoder : Decoder Request
 decoder =
     decode Model
-        |> required "id" Decode.string
         |> required "body" Body.decoder
         |> required "headers" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> required "host" Decode.string

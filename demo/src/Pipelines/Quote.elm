@@ -17,20 +17,16 @@ router lang conn =
             loadQuotes lang conn
 
         POST ->
-            ( Conn.respond
+            respond
                 ( 501
                 , text <|
                     "Not implemented, but I got this body: "
                         ++ (conn |> Conn.request |> Request.body |> toString)
                 )
                 conn
-            , Cmd.none
-            )
 
         _ ->
-            ( Conn.respond ( 405, text "Method not allowed" ) conn
-            , Cmd.none
-            )
+            respond ( 405, text "Method not allowed" ) conn
 
 
 loadQuotes : Route.Lang -> Conn -> ( Conn, Cmd Msg )
@@ -42,9 +38,7 @@ loadQuotes lang conn =
             |> langFilter lang
     of
         [] ->
-            ( respond ( 404, text "Could not find language" ) conn
-            , Cmd.none
-            )
+            respond ( 404, text "Could not find language" ) conn
 
         langs ->
             ( conn
@@ -63,7 +57,7 @@ gotQuotes result conn =
     case result of
         Ok q ->
             -- ...and send our response once we have the results
-            ( respond
+            respond
                 ( 200
                 , q
                     |> List.sortBy .lang
@@ -71,13 +65,9 @@ gotQuotes result conn =
                     |> Body.json
                 )
                 conn
-            , Cmd.none
-            )
 
         Err err ->
-            ( respond ( 500, text <| toString err ) conn
-            , Cmd.none
-            )
+            respond ( 500, text <| toString err ) conn
 
 
 

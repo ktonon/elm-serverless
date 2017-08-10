@@ -31,6 +31,12 @@ module.exports.handler = elmServerless.httpApi({
   // Your elm app is the handler
   handler: elm.API,
 
+  // One handler per Interop type constructor
+  interop: {
+    // Handles `GetRandom Int`
+    getRandom: upper => Math.floor(Math.random() * upper),
+  },
+
   // Config is a record type that you define.
   // You will also provide a JSON decoder for this.
   // It should be deployment data that is constant, perhaps loaded from
