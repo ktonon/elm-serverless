@@ -3,21 +3,23 @@ const should = require('should');
 
 const request = require('./request');
 
+const path = (relative) => `/quoted${relative}`;
+
 describe('The demo server', () => {
   describe('GET /', () => {
     it('expects an Authorization header', () =>
-      request.get('/')
+      request.get(path('/'))
         .expect(401)
     );
 
     it('has status 200', () =>
-      request.get('/')
+      request.get(path('/'))
         .set('Authorization', 'anything')
         .expect(200)
     );
 
     it('responds with plain text', () =>
-      request.get('/')
+      request.get(path('/'))
         .set('Authorization', 'anything')
         .then(res => {
           res.headers.should.have.property('content-type')
@@ -27,7 +29,7 @@ describe('The demo server', () => {
     );
 
     it('parses a single query parameter', () =>
-      request.get('/?q=foo%20bar')
+      request.get(path('/?q=foo%20bar'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
           res.text.should.match(/\bq = "foo bar"/);
@@ -35,7 +37,7 @@ describe('The demo server', () => {
     );
 
     it('parses a two query parameters', () =>
-      request.get('/?q=*&sort=asc')
+      request.get(path('/?q=*&sort=asc'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
           res.text.should.match(/\bq = "*"/);
@@ -44,7 +46,7 @@ describe('The demo server', () => {
     );
 
     it('provides default query values', () =>
-      request.get('/')
+      request.get(path('/'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
           res.text.should.match(/\bq = ""/);
@@ -55,7 +57,7 @@ describe('The demo server', () => {
 
   describe('POST /', () => {
     it('has status 405', () =>
-      request.post('/')
+      request.post(path('/'))
         .set('Authorization', 'anything')
         .expect(405)
     );
@@ -63,13 +65,13 @@ describe('The demo server', () => {
 
   describe('GET /buggy', () => {
     it('has status 500', () =>
-      request.get('/buggy')
+      request.get(path('/buggy'))
         .set('Authorization', 'anything')
         .expect(500)
     );
 
     it('responds with plain text', () =>
-      request.get('/buggy')
+      request.get(path('/buggy'))
         .set('Authorization', 'anything')
         .then(res => {
           res.headers.should.have.property('content-type')
@@ -81,13 +83,13 @@ describe('The demo server', () => {
 
   describe('GET /some-path-that-does-not-exist', () => {
     it('has status 404', () =>
-      request.get('/some-random-path')
+      request.get(path('/some-random-path'))
         .set('Authorization', 'anything')
         .expect(404)
     );
 
     it('responds with plain text', () =>
-      request.get('/some-random-path')
+      request.get(path('/some-random-path'))
         .set('Authorization', 'anything')
         .then(res => {
           res.headers.should.have.property('content-type')
@@ -99,7 +101,7 @@ describe('The demo server', () => {
 
   describe('POST /quote', () => {
     it('has status 501', () =>
-      request.post('/quote')
+      request.post(path('/quote'))
         .set('Authorization', 'anything')
         .expect(501).then(res => {
           res.text.should.match(/^Not implemented/);
@@ -109,7 +111,7 @@ describe('The demo server', () => {
 
   describe('PUT /quote', () => {
     it('has status 405', () =>
-      request.put('/quote')
+      request.put(path('/quote'))
         .set('Authorization', 'anything')
         .expect(405).then(res => {
           res.text.should.equal('Method not allowed');
@@ -119,14 +121,14 @@ describe('The demo server', () => {
 
   describe('GET /number', () => {
     it('has status 200', () =>
-      request.get('/number')
+      request.get(path('/number'))
         .set('Authorization', 'anything')
         .expect(200)
     );
 
     it('returns a different value each time', () => co(function* () {
-      const res0 = yield request.get('/number').set('Authorization', 'anything').expect(200);
-      const res1 = yield request.get('/number').set('Authorization', 'anything').expect(200);
+      const res0 = yield request.get(path('/number')).set('Authorization', 'anything').expect(200);
+      const res1 = yield request.get(path('/number')).set('Authorization', 'anything').expect(200);
       should(typeof res0.body).equal('number');
       res0.body.should.not.equal(res1.body);
     }));

@@ -5,6 +5,10 @@ module Serverless
         , Interop
         , Program
         , httpApi
+        , noConfig
+        , noInterop
+        , noRoutes
+        , noSideEffects
         )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
@@ -17,6 +21,14 @@ for a usage example.
 ## JavaScript Interop
 
 @docs Interop
+
+
+## Initialization Helpers
+
+Various aspects of Program may not be needed. These functions are provided as a
+convenient way to opt-out.
+
+@docs noConfig, noInterop, noRoutes, noSideEffects
 
 -}
 
@@ -105,6 +117,41 @@ type alias Interop interop msg =
     { encodeInput : interop -> Json.Encode.Value
     , outputDecoder : String -> Maybe (Json.Decode.Decoder msg)
     }
+
+
+
+-- OPT-OUT PROGRAM INITIALIZERS
+
+
+{-| Opt-out of configuration decoding.
+-}
+noConfig : Json.Decode.Decoder ()
+noConfig =
+    Json.Decode.succeed ()
+
+
+{-| Opt-out of JavaScript interop.
+-}
+noInterop : Interop () msg
+noInterop =
+    Interop (\() -> Json.Encode.null) (\_ -> Nothing)
+
+
+{-| Opt-out of route parsing.
+-}
+noRoutes : String -> Maybe ()
+noRoutes _ =
+    Just ()
+
+
+{-| Opt-out of side-effects.
+-}
+noSideEffects :
+    ()
+    -> Conn config model route interop
+    -> ( Conn config model route interop, Cmd () )
+noSideEffects _ conn =
+    ( conn, Cmd.none )
 
 
 

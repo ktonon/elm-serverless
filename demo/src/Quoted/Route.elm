@@ -1,4 +1,4 @@
-module Route exposing (..)
+module Quoted.Route exposing (..)
 
 import UrlParser exposing (..)
 

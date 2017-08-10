@@ -10,7 +10,12 @@ We use [serverless-offline][] to run the server locally during development. To g
 * `npm install`
 * `npm start`
 
-Which will start a server listening on port `3000`. [http://localhost:3000/quote](http://localhost:3000/quote) will respond with quotes which it fetches from another service
+Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless applications which are deployed as a bundle.
+
+* [http://localhost:3000](http://localhost:3000) responds using the bare bones `Hello` world app.
+* [http://localhost:3000/quoted/...](http://localhost:3000/quoted) uses the `Quoted` app.
+
+See [serverless.yml][] and [webpack.config.js][] for details on how elm-serverless apps get mapped to base paths.
 
 ## Deploy to AWS Lambda
 

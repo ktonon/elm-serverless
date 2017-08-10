@@ -1,13 +1,13 @@
-module Pipelines.Quote exposing (..)
+module Quoted.Pipelines.Quote exposing (..)
 
 import Http
-import Models.Quote as Quote
-import Route exposing (..)
+import Quoted.Models.Quote as Quote
+import Quoted.Route exposing (..)
+import Quoted.Types exposing (Conn, Msg(..), responsePort)
 import Serverless.Conn as Conn exposing (method, respond, updateResponse)
 import Serverless.Conn.Body as Body exposing (json, text)
 import Serverless.Conn.Request as Request exposing (Method(..))
 import Task
-import Types exposing (Conn, Msg(..), responsePort)
 
 
 router : Lang -> Conn -> ( Conn, Cmd Msg )
@@ -29,7 +29,7 @@ router lang conn =
             respond ( 405, text "Method not allowed" ) conn
 
 
-loadQuotes : Route.Lang -> Conn -> ( Conn, Cmd Msg )
+loadQuotes : Quoted.Route.Lang -> Conn -> ( Conn, Cmd Msg )
 loadQuotes lang conn =
     case
         conn
@@ -52,7 +52,7 @@ loadQuotes lang conn =
             )
 
 
-gotQuotes : Result Http.Error (List Types.Quote) -> Conn -> ( Conn, Cmd Msg )
+gotQuotes : Result Http.Error (List Quoted.Types.Quote) -> Conn -> ( Conn, Cmd Msg )
 gotQuotes result conn =
     case result of
         Ok q ->
@@ -74,7 +74,7 @@ gotQuotes result conn =
 -- HELPERS
 
 
-langFilter : Route.Lang -> List String -> List String
+langFilter : Quoted.Route.Lang -> List String -> List String
 langFilter filt langs =
     case filt of
         LangAll ->

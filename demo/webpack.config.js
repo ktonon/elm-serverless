@@ -2,13 +2,16 @@ const path = require('path');
 const webpack = require('webpack');
 
 const config = {
-  entry: './src/api.js',
+  entry: {
+    hello: './src/Hello/api.js',
+    quoted: './src/Quoted/api.js',
+  },
   target: 'node', // Ignores built-in modules like path, fs, etc.
 
   output: {
     libraryTarget: 'commonjs',
     path: path.resolve(`${__dirname}/.webpack`),
-    filename: 'api.js',
+    filename: '[name].js',
   },
 
   module: {

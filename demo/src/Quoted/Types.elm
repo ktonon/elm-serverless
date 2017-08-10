@@ -1,10 +1,10 @@
-port module Types exposing (..)
+port module Quoted.Types exposing (..)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Json.Encode as Encode
-import Route exposing (Route)
+import Quoted.Route exposing (Route)
 import Serverless.Conn exposing (Id)
 import Serverless.Plug
 import Serverless.Port

@@ -14,17 +14,22 @@ custom:
     dontPrintOutput: true
 
 functions:
-  api:
-    handler: api.handler # Refers to function `handler` exported from `api.js`
+  hello:
+    handler: hello.handler # Refers to function `handler` exported from `Hello/api.js`
     events:
-      # The following sets up Lambda Proxy Integration
-      # Basically, the elm app will do the routing instead of
-      # API Gateway
       - http:
           integration: lambda-proxy
           path: /
           method: ANY
+
+  quoted:
+    handler: quoted.handler
+    events:
       - http:
           integration: lambda-proxy
-          path: /{proxy+}
+          path: /quoted
+          method: ANY
+      - http:
+          integration: lambda-proxy
+          path: /quoted/{proxy+} # Lambda Proxy Integration
           method: ANY
