@@ -12,13 +12,14 @@ We use [serverless-offline][] to run the server locally during development. To g
 
 Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless applications which are deployed as a bundle.
 
-| Demo        | Path               | Description                              |
-| ------------| ------------------ | ---------------------------------------- |
-| [Hello][]   | [/][]              | Bare bones hello world app.              |
-| [Routing][] | [/routing][]       | Parses the request path into Elm data.   |
-| [Quoted][]  | [/quoted][]        | Shows one way to organize a project.     |
-|             | [/quoted/quote][]  | Demonstrates side-effects.               |
-|             | [/quoted/number][] | Demonstrates JavaScript interop          |
+| Demo          | Path               | Description                              |
+| ------------- | ------------------ | ---------------------------------------- |
+| [Hello][]     | [/][]              | Bare bones hello world app.              |
+| [Routing][]   | [/routing][]       | Parses the request path into Elm data.   |
+| [Pipelines][] | [/pipelines][]     | Shows how to build middleware.           |
+| [Quoted][]    | [/quoted][]        | Shows one way to organize a project.     |
+|               | [/quoted/quote][]  | Demonstrates side-effects.               |
+|               | [/quoted/number][] | Demonstrates JavaScript interop          |
 
 See [serverless.yml][] and [webpack.config.js][] for details on how elm-serverless apps get mapped to base paths.
 
@@ -42,12 +43,14 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 * [serverless][] along with [serverless-webpack][] packages and deploys your app to [AWS Lambda][]
 
 [/]:http://localhost:3000
+[/pipelines]:http://localhost:3000/pipelines
 [/routing]:http://localhost:3000/routing
 [/quoted]:http://localhost:3000/quoted
 [/quoted/quote]:http://localhost:3000/quoted/quote
 [/quoted/number]:http://localhost:3000/quoted/number
 
 [Hello]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Hello
+[Pipelines]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Pipelines
 [Routing]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing
 [Quoted]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Quoted
 

@@ -94,16 +94,16 @@ nest :
 nest a b =
     case ( a, b ) of
         ( Pipeline begin, Pipeline end ) ->
-            Pipeline <| List.append begin end
+            Pipeline <| List.append end begin
 
         ( Pipeline begin, _ ) ->
-            Pipeline <| List.append begin [ b ]
+            Pipeline <| b :: begin
 
         ( _, Pipeline end ) ->
-            Pipeline <| a :: end
+            Pipeline <| List.append end [ a ]
 
         _ ->
-            Pipeline [ a, b ]
+            Pipeline [ b, a ]
 
 
 {-| Extend the pipeline with a simple plug.

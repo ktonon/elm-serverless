@@ -4,6 +4,7 @@ const webpack = require('webpack');
 const config = {
   entry: {
     hello: './src/Hello/api.js',
+    pipelines: './src/Pipelines/api.js',
     quoted: './src/Quoted/api.js',
     routing: './src/Routing/api.js',
   },
