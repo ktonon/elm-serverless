@@ -5,7 +5,7 @@ const request = require('./request');
 
 const path = (relative) => `/quoted${relative}`;
 
-describe('The demo server', () => {
+describe('Demo: /quoted', () => {
   describe('GET /', () => {
     it('expects an Authorization header', () =>
       request.get(path('/'))

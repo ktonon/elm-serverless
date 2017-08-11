@@ -5,6 +5,7 @@ const config = {
   entry: {
     hello: './src/Hello/api.js',
     quoted: './src/Quoted/api.js',
+    routing: './src/Routing/api.js',
   },
   target: 'node', // Ignores built-in modules like path, fs, etc.
 

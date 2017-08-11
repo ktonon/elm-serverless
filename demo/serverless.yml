@@ -22,6 +22,18 @@ functions:
           path: /
           method: ANY
 
+  routing:
+    handler: routing.handler # Refers to function `handler` exported from `Hello/api.js`
+    events:
+      - http:
+          integration: lambda-proxy
+          path: /routing
+          method: ANY
+      - http:
+          integration: lambda-proxy
+          path: /routing/{proxy+} # Lambda Proxy Integration
+          method: ANY
+
   quoted:
     handler: quoted.handler
     events:

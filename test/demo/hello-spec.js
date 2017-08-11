@@ -3,7 +3,7 @@ const request = require('./request');
 const greeting = 'Hello Elm on AWS Lambda';
 const path = (relative) => `${relative}`;
 
-describe('Demo: Hello', () => {
+describe('Demo: /', () => {
   describe('GET /', () => {
     it('has status 200', () =>
       request.get(path('/')).expect(200)

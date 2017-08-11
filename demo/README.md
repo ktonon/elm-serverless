@@ -12,8 +12,13 @@ We use [serverless-offline][] to run the server locally during development. To g
 
 Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless applications which are deployed as a bundle.
 
-* [http://localhost:3000](http://localhost:3000) responds using the bare bones `Hello` world app.
-* [http://localhost:3000/quoted/...](http://localhost:3000/quoted) uses the `Quoted` app.
+| Demo        | Path               | Description                              |
+| ------------| ------------------ | ---------------------------------------- |
+| [Hello][]   | [/][]              | Bare bones hello world app.              |
+| [Routing][] | [/routing][]       | Parses the request path into Elm data.   |
+| [Quoted][]  | [/quoted][]        | Shows one way to organize a project.     |
+|             | [/quoted/quote][]  | Demonstrates side-effects.               |
+|             | [/quoted/number][] | Demonstrates JavaScript interop          |
 
 See [serverless.yml][] and [webpack.config.js][] for details on how elm-serverless apps get mapped to base paths.
 
@@ -36,15 +41,15 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 * [webpack][] along with [elm-webpack-loader][] compiles your elm code to JavaScript
 * [serverless][] along with [serverless-webpack][] packages and deploys your app to [AWS Lambda][]
 
-There are four files that you should check out in this demo to get a better understanding of how everything fits together:
+[/]:http://localhost:3000
+[/routing]:http://localhost:3000/routing
+[/quoted]:http://localhost:3000/quoted
+[/quoted/quote]:http://localhost:3000/quoted/quote
+[/quoted/number]:http://localhost:3000/quoted/number
 
-1. [serverless.yml][]: configures [serverless][] and uses two plugins
-    * [serverless-webpack][] for building the AWS Lambda function using Webpack
-    * [serverless-offline][] for running the AWS Lambda function locally
-    * running `npm start` invokes both of these in parallel
-2. [webpack.config.js][]: compiles elm using [elm-webpack-loader][]
-3. [api.js][]: contains the `handler` function, which is the entry point to your application, called by AWS Lambda
-4. [API.elm][]: contains the elm `Serverless.Program` which defines your HTTP API
+[Hello]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Hello
+[Routing]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing
+[Quoted]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Quoted
 
 [API.elm]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm
 [api.js]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/api.js
