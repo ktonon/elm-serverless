@@ -12,14 +12,15 @@ We use [serverless-offline][] to run the server locally during development. To g
 
 Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless applications which are deployed as a bundle.
 
-| Demo          | Path               | Description                              |
-| ------------- | ------------------ | ---------------------------------------- |
-| [Hello][]     | [/][]              | Bare bones hello world app.              |
-| [Routing][]   | [/routing][]       | Parses the request path into Elm data.   |
-| [Pipelines][] | [/pipelines][]     | Shows how to build middleware.           |
-| [Quoted][]    | [/quoted][]        | Shows one way to organize a project.     |
-|               | [/quoted/quote][]  | Demonstrates side-effects.               |
-|               | [/quoted/number][] | Demonstrates JavaScript interop          |
+| Demo            | Path              | Description                          |
+| --------------- | ----------------- | ------------------------------------ |
+| [Hello][]       | [/][]             | Bare bones hello world app.          |
+| [Routing][]     | [/routing][]      | Parse request path into Elm data.    |
+| [Pipelines][]   | [/pipelines][]    | Build chains of middleware.          |
+| [Config][]      | [/config][]       | Load per-instance configuration.     |
+| [SideEffects][] | [/side-effects][] | Handle effects in the update loop.   |
+| [Interop][]     | [/interop][]      | Call JavaScript functions.           |
+| [Quoted][]      | [/quoted][]       | Shows one way to organize a project. |
 
 See [serverless.yml][] and [webpack.config.js][] for details on how elm-serverless apps get mapped to base paths.
 
@@ -43,16 +44,22 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 * [serverless][] along with [serverless-webpack][] packages and deploys your app to [AWS Lambda][]
 
 [/]:http://localhost:3000
+[/config]:http://localhost:3000/config
+[/interop]:http://localhost:3000/interop
 [/pipelines]:http://localhost:3000/pipelines
-[/routing]:http://localhost:3000/routing
 [/quoted]:http://localhost:3000/quoted
-[/quoted/quote]:http://localhost:3000/quoted/quote
 [/quoted/number]:http://localhost:3000/quoted/number
+[/quoted/quote]:http://localhost:3000/quoted/quote
+[/routing]:http://localhost:3000/routing
+[/side-effects]:http://localhost:3000/side-effects
 
+[Config]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Config
 [Hello]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Hello
+[Interop]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Interop
 [Pipelines]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Pipelines
-[Routing]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing
 [Quoted]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Quoted
+[Routing]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing
+[SideEffects]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/SideEffects
 
 [API.elm]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm
 [api.js]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/api.js

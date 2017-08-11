@@ -2,7 +2,7 @@ port module Hello.API exposing (..)
 
 import Serverless
 import Serverless.Conn exposing (respond)
-import Serverless.Conn.Body as Body exposing (text)
+import Serverless.Conn.Body exposing (text)
 import Serverless.Port
 
 

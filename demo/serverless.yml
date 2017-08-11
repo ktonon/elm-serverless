@@ -22,6 +22,26 @@ functions:
           path: /
           method: ANY
 
+  config:
+    handler: config.handler
+    events:
+      - http:
+          integration: lambda-proxy
+          path: /config
+          method: ANY
+
+  interop:
+    handler: interop.handler
+    events:
+      - http:
+          integration: lambda-proxy
+          path: /interop
+          method: ANY
+      - http:
+          integration: lambda-proxy
+          path: /interop/{proxy+}
+          method: ANY
+
   routing:
     handler: routing.handler
     events:
@@ -40,6 +60,18 @@ functions:
       - http:
           integration: lambda-proxy
           path: /pipelines
+          method: ANY
+
+  sideEffects:
+    handler: sideEffects.handler
+    events:
+      - http:
+          integration: lambda-proxy
+          path: /side-effects
+          method: ANY
+      - http:
+          integration: lambda-proxy
+          path: /side-effects/{proxy+}
           method: ANY
 
   quoted:

@@ -160,7 +160,7 @@ noSideEffects _ conn =
 
 type alias Model config model route interop =
     { pool : ConnPool.Pool config model route interop
-    , config : config
+    , configResult : Result String config
     }
 
 
@@ -172,7 +172,7 @@ type RawMsg msg
 type SlsMsg config model route interop msg
     = RequestAdd (Conn config model route interop)
     | RequestUpdate Id msg
-    | ProcessingError Id Int String
+    | ProcessingError Id Int Bool String
 
 
 init_ :
@@ -183,24 +183,32 @@ init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
             ( { pool = ConnPool.empty
-              , config = config
+              , configResult = Ok config
               }
                 |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
-            Debug.crash "Initialization failed" err
+            ( { pool = ConnPool.empty
+              , configResult = Err <| err ++ " Flags(" ++ toString flags ++ ")"
+              }
+            , Cmd.none
+            )
 
 
 toSlsMsg :
     HttpApi config model route interop msg
-    -> config
+    -> Result String config
     -> RawMsg msg
     -> SlsMsg config model route interop msg
-toSlsMsg api config rawMsg =
-    case rawMsg of
-        RequestPort ( id, action, raw ) ->
+toSlsMsg api configResult rawMsg =
+    case ( configResult, rawMsg ) of
+        ( Err err, RequestPort ( id, _, _ ) ) ->
+            ProcessingError id 500 True <|
+                (++) "Failed to parse configuration flags. " err
+
+        ( Ok config, RequestPort ( id, action, raw ) ) ->
             case action of
                 "__request__" ->
                     case decodeValue Request.decoder raw of
@@ -213,12 +221,12 @@ toSlsMsg api config rawMsg =
                                     RequestAdd <| Conn.init id config api.initialModel route req
 
                                 Nothing ->
-                                    ProcessingError id 404 <|
+                                    ProcessingError id 404 False <|
                                         (++) "Could not parse route: "
                                             (Request.path req)
 
                         Err err ->
-                            ProcessingError id 500 <|
+                            ProcessingError id 500 False <|
                                 (++) "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
                                     (toString err)
 
@@ -228,10 +236,10 @@ toSlsMsg api config rawMsg =
                             RequestUpdate id msg
 
                         Err err ->
-                            ProcessingError id 500 <|
+                            ProcessingError id 500 False <|
                                 (++) "Error decoding interop result: " err
 
-        HandlerMsg id msg ->
+        ( _, HandlerMsg id msg ) ->
             RequestUpdate id msg
 
 
@@ -241,7 +249,7 @@ update_ :
     -> Model config model route interop
     -> ( Model config model route interop, Cmd (RawMsg msg) )
 update_ api rawMsg model =
-    case toSlsMsg api model.config rawMsg of
+    case toSlsMsg api model.configResult rawMsg of
         RequestAdd conn ->
             updateChildHelper api
                 (api.endpoint conn)
@@ -250,8 +258,18 @@ update_ api rawMsg model =
         RequestUpdate connId msg ->
             updateChild api connId msg model
 
-        ProcessingError connId status err ->
-            ( model, send api connId status err )
+        ProcessingError connId status secret err ->
+            let
+                _ =
+                    Debug.log "Processing error" err
+
+                errMsg =
+                    if secret then
+                        "Internal Server Error. Check logs for details."
+                    else
+                        err
+            in
+            ( model, send api connId status errMsg )
 
 
 updateChild :

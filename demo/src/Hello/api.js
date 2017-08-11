@@ -24,6 +24,9 @@ module.exports.handler = elmServerless.httpApi({
   // Whatever you call them, you have to provide the names.
   // The meanings are obvious. A connection comes in through the requestPort,
   // and the response is sent back through the responsePort.
+  //
+  // These are the default values, so if you follow the convention of naming
+  // your ports in this way, you can omit these options.
   requestPort: 'requestPort',
   responsePort: 'responsePort',
 });

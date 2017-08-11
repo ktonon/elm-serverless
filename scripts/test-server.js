@@ -1,23 +1,17 @@
 const fs = require('fs');
-const ps = require('ps-node'); // eslint-disable-line import/no-extraneous-dependencies
+const psList = require('ps-list'); // eslint-disable-line import/no-extraneous-dependencies
 const { spawn } = require('child_process');
 const { port } = require('../test/demo/request');
 
 const args = `offline --port=${port}`.split(' ');
 const logFile = `${__dirname}/test-server.log`;
+const logger = console;
 
-const findServer = () => new Promise((resolve, reject) => {
-  ps.lookup({ command: 'node' }, (err, results) => {
-    if (err) {
-      reject(err);
-      return;
-    }
-    const [server] = results.filter(proc => {
-      const [cmd, ...rest] = proc.arguments;
-      return /\bserverless$/.test(cmd) && rest.reduce((acc, arg, i) => acc && arg === args[i]);
-    });
-    resolve(server);
-  });
+const findServer = () => psList().then(data => {
+  const argsPattern = new RegExp(args.join(' '));
+  return data.filter(({ name, cmd }) =>
+    name === 'node' &&
+    argsPattern.test(cmd))[0];
 });
 
 const startServer = () => new Promise((resolve, reject) => {
@@ -57,17 +51,20 @@ const startServer = () => new Promise((resolve, reject) => {
     reject(`test server terminated with code: ${code}`);
   });
 }).then(pid => {
-  console.log(`Test server started (${pid})`); // eslint-disable-line no-console
+  logger.info(`Test server started (${pid})`);
   return true;
 }).catch(err => {
-  console.error(err); // eslint-disable-line no-console
+  logger.error(err);
   process.exit(1);
 });
 
 findServer().then(server => {
   if (server) {
-    console.log(`Stopping old test server (${server.pid})`); // eslint-disable-line no-console
+    logger.info(`Stopping old test server (${server.pid})`);
     process.kill(server.pid);
   }
   startServer();
+}).catch(err => {
+  logger.error(err);
+  process.exit(1);
 });

@@ -3,10 +3,13 @@ const webpack = require('webpack');
 
 const config = {
   entry: {
+    config: './src/Config/api.js',
     hello: './src/Hello/api.js',
+    interop: './src/Interop/api.js',
     pipelines: './src/Pipelines/api.js',
     quoted: './src/Quoted/api.js',
     routing: './src/Routing/api.js',
+    sideEffects: './src/SideEffects/api.js',
   },
   target: 'node', // Ignores built-in modules like path, fs, etc.
 
