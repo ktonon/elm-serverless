@@ -12,8 +12,7 @@
         "Serverless.Conn.Body",
         "Serverless.Conn.Request",
         "Serverless.Conn.Response",
-        "Serverless.Plug",
-        "Serverless.Port"
+        "Serverless.Plug"
     ],
     "dependencies": {
         "NoRedInk/elm-decode-pipeline": "3.0.0 <= v < 4.0.0",

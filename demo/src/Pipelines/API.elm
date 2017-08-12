@@ -5,7 +5,6 @@ import Serverless.Conn exposing (header, mapUnsent, respond, toSent, updateRespo
 import Serverless.Conn.Body exposing (text)
 import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
 import Serverless.Plug as Plug exposing (Plug, plug)
-import Serverless.Port
 
 
 {-| Pipelines demo.
@@ -71,7 +70,7 @@ pipeline =
             )
 
 
-port requestPort : Serverless.Port.Request msg
+port requestPort : Serverless.RequestPort msg
 
 
-port responsePort : Serverless.Port.Response msg
+port responsePort : Serverless.ResponsePort msg

@@ -3,7 +3,6 @@ port module Hello.API exposing (..)
 import Serverless
 import Serverless.Conn exposing (respond)
 import Serverless.Conn.Body exposing (text)
-import Serverless.Port
 
 
 {-| This is the "hello world" of elm-serverless.
@@ -33,7 +32,7 @@ main =
         }
 
 
-port requestPort : Serverless.Port.Request msg
+port requestPort : Serverless.RequestPort msg
 
 
-port responsePort : Serverless.Port.Response msg
+port responsePort : Serverless.ResponsePort msg

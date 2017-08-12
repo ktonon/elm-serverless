@@ -4,6 +4,8 @@ module Serverless
         , HttpApi
         , Interop
         , Program
+        , RequestPort
+        , ResponsePort
         , httpApi
         , noConfig
         , noInterop
@@ -16,6 +18,11 @@ at the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.
 for a usage example.
 
 @docs Program, Flags, httpApi, HttpApi
+
+
+## Ports
+
+@docs RequestPort, ResponsePort
 
 
 ## JavaScript Interop
@@ -39,7 +46,6 @@ import Serverless.Conn.Body as Body
 import Serverless.Conn.Pool as ConnPool
 import Serverless.Conn.Request as Request
 import Serverless.Conn.Response as Response exposing (Status)
-import Serverless.Port as Port
 
 
 {-| Serverless program type.
@@ -49,7 +55,7 @@ This maps to a headless elm
 
 -}
 type alias Program config model route interop msg =
-    Platform.Program Flags (Model config model route interop) (RawMsg msg)
+    Platform.Program Flags (Model config model route interop) (Msg msg)
 
 
 {-| Type of flags for program.
@@ -106,8 +112,8 @@ type alias HttpApi config model route interop msg =
     , endpoint : Conn config model route interop -> ( Conn config model route interop, Cmd msg )
     , update : msg -> Conn config model route interop -> ( Conn config model route interop, Cmd msg )
     , interop : Interop interop msg
-    , requestPort : Port.Request (RawMsg msg)
-    , responsePort : Port.Response (RawMsg msg)
+    , requestPort : RequestPort (Msg msg)
+    , responsePort : ResponsePort (Msg msg)
     }
 
 
@@ -117,6 +123,30 @@ type alias Interop interop msg =
     { encodeInput : interop -> Json.Encode.Value
     , outputDecoder : String -> Maybe (Json.Decode.Decoder msg)
     }
+
+
+type alias IO =
+    ( String, String, Json.Encode.Value )
+
+
+{-| Type of port through which the request is received.
+Set your request port to this type.
+
+    port requestPort : RequestPort msg
+
+-}
+type alias RequestPort msg =
+    (IO -> msg) -> Sub msg
+
+
+{-| Type of port through which the request is sent.
+Set your response port to this type.
+
+    port responsePort : ResponsePort msg
+
+-}
+type alias ResponsePort msg =
+    IO -> Cmd msg
 
 
 
@@ -164,8 +194,8 @@ type alias Model config model route interop =
     }
 
 
-type RawMsg msg
-    = RequestPort Port.IO
+type Msg msg
+    = RequestPortMsg IO
     | HandlerMsg Id msg
 
 
@@ -178,7 +208,7 @@ type SlsMsg config model route interop msg
 init_ :
     HttpApi config model route interop msg
     -> Flags
-    -> ( Model config model route interop, Cmd (RawMsg msg) )
+    -> ( Model config model route interop, Cmd (Msg msg) )
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
@@ -200,15 +230,15 @@ init_ api flags =
 toSlsMsg :
     HttpApi config model route interop msg
     -> Result String config
-    -> RawMsg msg
+    -> Msg msg
     -> SlsMsg config model route interop msg
 toSlsMsg api configResult rawMsg =
     case ( configResult, rawMsg ) of
-        ( Err err, RequestPort ( id, _, _ ) ) ->
+        ( Err err, RequestPortMsg ( id, _, _ ) ) ->
             ProcessingError id 500 True <|
                 (++) "Failed to parse configuration flags. " err
 
-        ( Ok config, RequestPort ( id, action, raw ) ) ->
+        ( Ok config, RequestPortMsg ( id, action, raw ) ) ->
             case action of
                 "__request__" ->
                     case decodeValue Request.decoder raw of
@@ -245,9 +275,9 @@ toSlsMsg api configResult rawMsg =
 
 update_ :
     HttpApi config model route interop msg
-    -> RawMsg msg
+    -> Msg msg
     -> Model config model route interop
-    -> ( Model config model route interop, Cmd (RawMsg msg) )
+    -> ( Model config model route interop, Cmd (Msg msg) )
 update_ api rawMsg model =
     case toSlsMsg api model.configResult rawMsg of
         RequestAdd conn ->
@@ -277,7 +307,7 @@ updateChild :
     -> Id
     -> msg
     -> Model config model route interop
-    -> ( Model config model route interop, Cmd (RawMsg msg) )
+    -> ( Model config model route interop, Cmd (Msg msg) )
 updateChild api connId msg model =
     case ConnPool.get connId model.pool of
         Just conn ->
@@ -294,7 +324,7 @@ updateChildHelper :
     HttpApi config model route interop msg
     -> ( Conn config model route interop, Cmd msg )
     -> Model config model route interop
-    -> ( Model config model route interop, Cmd (RawMsg msg) )
+    -> ( Model config model route interop, Cmd (Msg msg) )
 updateChildHelper api ( conn, cmd ) model =
     case Conn.unsent conn of
         Nothing ->
@@ -323,9 +353,9 @@ updateChildHelper api ( conn, cmd ) model =
 sub_ :
     HttpApi config model route interop msg
     -> Model config model route interop
-    -> Sub (RawMsg msg)
+    -> Sub (Msg msg)
 sub_ api model =
-    api.requestPort RequestPort
+    api.requestPort RequestPortMsg
 
 
 
@@ -337,7 +367,7 @@ send :
     -> Id
     -> Status
     -> String
-    -> Cmd (RawMsg msg)
+    -> Cmd (Msg msg)
 send { responsePort } id code msg =
     responsePort
         ( id
@@ -356,7 +386,7 @@ send { responsePort } id code msg =
 interopCallCmd :
     HttpApi config model route interop msg
     -> Conn config model route interop
-    -> Cmd (RawMsg msg)
+    -> Cmd (Msg msg)
 interopCallCmd api conn =
     conn
         |> Conn.interopCalls

@@ -5,9 +5,9 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Json.Encode as Encode
 import Quoted.Route exposing (Route)
+import Serverless
 import Serverless.Conn exposing (Id)
 import Serverless.Plug
-import Serverless.Port
 
 
 -- CUSTOM TYPES
@@ -99,7 +99,7 @@ type alias Plug =
     Serverless.Plug.Plug Config Model Route Interop
 
 
-port requestPort : Serverless.Port.Request msg
+port requestPort : Serverless.RequestPort msg
 
 
-port responsePort : Serverless.Port.Response msg
+port responsePort : Serverless.ResponsePort msg

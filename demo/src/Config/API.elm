@@ -5,7 +5,6 @@ import Json.Decode.Pipeline exposing (decode, required)
 import Serverless
 import Serverless.Conn as Conn exposing (respond)
 import Serverless.Conn.Body exposing (text)
-import Serverless.Port
 
 
 {-| Shows how to load per-instance configuration.
@@ -109,7 +108,7 @@ resultToDecoder result =
             fail (toString err)
 
 
-port requestPort : Serverless.Port.Request msg
+port requestPort : Serverless.RequestPort msg
 
 
-port responsePort : Serverless.Port.Response msg
+port responsePort : Serverless.ResponsePort msg

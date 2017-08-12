@@ -5,7 +5,6 @@ import Json.Encode
 import Serverless
 import Serverless.Conn as Conn exposing (respond, route)
 import Serverless.Conn.Body exposing (json)
-import Serverless.Port
 import UrlParser exposing ((</>), int, map, oneOf, s, top)
 
 
@@ -122,7 +121,7 @@ type alias Conn =
     Conn.Conn () () Route Interop
 
 
-port requestPort : Serverless.Port.Request msg
+port requestPort : Serverless.RequestPort msg
 
 
-port responsePort : Serverless.Port.Response msg
+port responsePort : Serverless.ResponsePort msg
