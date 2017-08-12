@@ -1,7 +1,6 @@
 module Serverless
     exposing
-        ( Flags
-        , HttpApi
+        ( HttpApi
         , Interop
         , Program
         , RequestPort
@@ -14,18 +13,42 @@ module Serverless
         )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
-at the [demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/API.elm)
+at the [demos](https://github.com/ktonon/elm-serverless/blob/master/demo)
+for usage examples.
+
+
+## Table of Contents
+
+  - [Defining a Program](#defining-a-program)
+  - [Port Types](#port-types)
+  - [JavaScript Interop](#javascript-interop)
+  - [Initialization Helpers](#initialization-helpers)
+
+
+## Defining a Program
+
+Use `httpApi` to define a headless Elm program.
+
+@docs httpApi, HttpApi, Program
+
+
+## Port Types
+
+Since a library cannot expose ports, your application must define two ports
+with the following signatures. See the
+[Hello World Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Hello)
 for a usage example.
-
-@docs Program, Flags, httpApi, HttpApi
-
-
-## Ports
 
 @docs RequestPort, ResponsePort
 
 
 ## JavaScript Interop
+
+If you require the ability to call out to JavaScript, you must define a type
+which enumerates the functions that can be called. Use `Interop` to define this
+type as well as coders for converting to and from JSON. See the
+[Interop Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Interop)
+for a usage example.
 
 @docs Interop
 
@@ -84,24 +107,25 @@ httpApi api =
 
 {-| Program for an HTTP API.
 
-A Serverless.Program is parameterized by your 4 custom types
+A Serverless.Program is parameterized by your 5 custom types
 
   - `config` is a server load-time record of deployment specific values
   - `model` is for whatever you need during the processing of a request
   - `route` represents your application routes
+  - `interop` defines an interface to JavaScript functions
   - `msg` is your app message type
 
 You must provide the following:
 
   - `configDecoder` decodes a JSON value for your custom config type
   - `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports
-  - `endpoint` is a message through which connections are first received
   - `initialModel` is a value to which new connections will set their model
   - `parseRoute` takes the `request/path/and?query=string` and parses it into a `route`
+  - `interop` defines JavaScript functions and JSON coders for arguments and results
+  - `endpoint` is a function which receives incoming connections
   - `update` the app update function
-  - `subscriptions` the app subscriptions function
 
-Notices that `update` and `subscriptions` operate on `Conn config model route interop`
+Notices that `update` and `endpoint` operate on `Conn config model route interop`
 and not just on `model`.
 
 -}
@@ -154,6 +178,15 @@ type alias ResponsePort msg =
 
 
 {-| Opt-out of configuration decoding.
+
+    main : Serverless.Program () model route interop msg
+    main =
+        Serverless.httpApi
+            { configDecoder = noConfig
+
+            -- ...
+            }
+
 -}
 noConfig : Json.Decode.Decoder ()
 noConfig =
@@ -161,6 +194,15 @@ noConfig =
 
 
 {-| Opt-out of JavaScript interop.
+
+    main : Serverless.Program config model route () msg
+    main =
+        Serverless.httpApi
+            { interop = noInterop
+
+            -- ...
+            }
+
 -}
 noInterop : Interop () msg
 noInterop =
@@ -168,6 +210,15 @@ noInterop =
 
 
 {-| Opt-out of route parsing.
+
+    main : Serverless.Program config model () interop msg
+    main =
+        Serverless.httpApi
+            { parseRoute = noRoutes
+
+            -- ...
+            }
+
 -}
 noRoutes : String -> Maybe ()
 noRoutes _ =
@@ -175,6 +226,15 @@ noRoutes _ =
 
 
 {-| Opt-out of side-effects.
+
+    main : Serverless.Program config model route interop ()
+    main =
+        Serverless.httpApi
+            { update = noSideEffects
+
+            -- ...
+            }
+
 -}
 noSideEffects :
     ()

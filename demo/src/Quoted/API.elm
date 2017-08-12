@@ -6,8 +6,8 @@ import Quoted.Pipelines.Quote as Quote
 import Quoted.Route exposing (Route(..))
 import Quoted.Types exposing (..)
 import Serverless
-import Serverless.Conn as Conn exposing (json, method, respond, route, text, updateResponse)
-import Serverless.Conn.Request as Request exposing (Method(..))
+import Serverless.Conn exposing (interop, jsonBody, mapUnsent, method, respond, route, textBody, updateResponse)
+import Serverless.Conn.Request exposing (Method(..))
 import Serverless.Plug as Plug exposing (plug)
 import UrlParser
 
@@ -39,7 +39,7 @@ main =
         -- Entry point for new connections.
         -- This function composition passes the conn through a pipeline and then
         -- into a router (but only if the conn is not sent by the pipeline).
-        , endpoint = Plug.apply pipeline >> Conn.mapUnsent router
+        , endpoint = Plug.apply pipeline >> mapUnsent router
 
         -- Update function which operates on Conn.
         , update = update
@@ -86,7 +86,7 @@ router conn =
         )
     of
         ( GET, Home query ) ->
-            Conn.respond ( 200, text <| (++) "Home: " <| toString query ) conn
+            respond ( 200, textBody <| (++) "Home: " <| toString query ) conn
 
         ( _, Quote lang ) ->
             -- Delegate to Pipeline/Quote module.
@@ -95,13 +95,13 @@ router conn =
         ( GET, Number ) ->
             -- This one calls out to a JavaScript function named `getRandom`.
             -- The result comes in as a message `RandomNumber`.
-            Conn.interop [ GetRandom 1000000000 ] conn
+            interop [ GetRandom 1000000000 ] conn
 
         ( GET, Buggy ) ->
-            Conn.respond ( 500, text "bugs, bugs, bugs" ) conn
+            respond ( 500, textBody "bugs, bugs, bugs" ) conn
 
         _ ->
-            Conn.respond ( 405, text "Method not allowed" ) conn
+            respond ( 405, textBody "Method not allowed" ) conn
 
 
 {-| The application update function.
@@ -122,4 +122,4 @@ update msg conn =
         -- passed into Serverless.httpApi is responsible for converting interop
         -- results into application messages.
         RandomNumber val ->
-            Conn.respond ( 200, json <| Json.Encode.int val ) conn
+            respond ( 200, jsonBody <| Json.Encode.int val ) conn

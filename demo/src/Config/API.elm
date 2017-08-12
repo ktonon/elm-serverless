@@ -3,7 +3,7 @@ port module Config.API exposing (..)
 import Json.Decode exposing (Decoder, andThen, fail, int, map, string, succeed)
 import Json.Decode.Pipeline exposing (decode, required)
 import Serverless
-import Serverless.Conn as Conn exposing (respond, text)
+import Serverless.Conn exposing (config, respond, textBody)
 
 
 {-| Shows how to load per-instance configuration.
@@ -29,7 +29,7 @@ main =
             \conn ->
                 respond
                     ( 200
-                    , text <| (++) "Config: " <| toString (Conn.config conn)
+                    , textBody <| (++) "Config: " <| toString (config conn)
                     )
                     conn
         }

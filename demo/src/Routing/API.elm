@@ -1,7 +1,7 @@
 port module Routing.API exposing (..)
 
 import Serverless
-import Serverless.Conn as Conn exposing (method, respond, route, text)
+import Serverless.Conn exposing (method, respond, route, textBody)
 import Serverless.Conn.Request exposing (Method(..))
 import UrlParser exposing ((</>), map, oneOf, s, string, top)
 
@@ -58,22 +58,22 @@ router conn =
         )
     of
         ( GET, Home ) ->
-            respond ( 200, text "The home page" ) conn
+            respond ( 200, textBody "The home page" ) conn
 
         ( GET, BlogList ) ->
-            respond ( 200, text "List of recent posts..." ) conn
+            respond ( 200, textBody "List of recent posts..." ) conn
 
         ( GET, Blog slug ) ->
-            respond ( 200, text <| (++) "Specific post: " slug ) conn
+            respond ( 200, textBody <| (++) "Specific post: " slug ) conn
 
         _ ->
-            respond ( 405, text "Method not allowed" ) conn
+            respond ( 405, textBody "Method not allowed" ) conn
 
 
 {-| For convenience we defined our own Conn with arguments to the type parameters
 -}
 type alias Conn =
-    Conn.Conn () () Route ()
+    Serverless.Conn.Conn () () Route ()
 
 
 port requestPort : Serverless.RequestPort msg

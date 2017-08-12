@@ -9,7 +9,7 @@ module Serverless.Conn
         , interop
         , interopCalls
         , interopClear
-        , json
+        , jsonBody
         , jsonEncodedResponse
         , mapUnsent
         , method
@@ -18,7 +18,7 @@ module Serverless.Conn
         , respond
         , route
         , send
-        , text
+        , textBody
         , toSent
         , unsent
         , updateModel
@@ -35,7 +35,8 @@ module Serverless.Conn
   - [Processing Application Data](#processing-application-data)
   - [Querying the Request](#querying-the-request)
   - [Responding](#responding)
-  - [Waiting for Side-Effects](#waiting-for-side-effects)
+  - [Response Body](#response-body)
+  - [JavaScript Interop](#javascript-interop)
   - [Misc](#misc)
 
 
@@ -60,9 +61,11 @@ Update the response and send it.
 @docs respond, updateResponse, send, toSent, unsent, mapUnsent
 
 
-## Body
+## Response Body
 
-@docs text, json
+Use these constructors to create response bodies with different content types.
+
+@docs textBody, jsonBody
 
 
 ## JavaScript Interop
@@ -187,10 +190,10 @@ route (Conn { route }) =
 
     -- The following two expressions produce the same result
     conn
-        |> respond ( 200, text "Ok" )
+        |> respond ( 200, textBody "Ok" )
     --> conn
     -->     |> updateResponse
-    -->         ((setStatus 200) >> (setBody <| text "Ok"))
+    -->         ((setStatus 200) >> (setBody <| textBody "Ok"))
     -->     |> send
 
 -}
@@ -301,15 +304,15 @@ mapUnsent func (Conn conn) =
 
 {-| A plain text body.
 -}
-text : String -> Body
-text =
+textBody : String -> Body
+textBody =
     Body.text
 
 
 {-| A JSON body.
 -}
-json : Json.Encode.Value -> Body
-json =
+jsonBody : Json.Encode.Value -> Body
+jsonBody =
     Body.json
 
 

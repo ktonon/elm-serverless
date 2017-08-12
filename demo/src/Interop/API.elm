@@ -1,9 +1,9 @@
 port module Interop.API exposing (..)
 
-import Json.Decode
-import Json.Encode
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
 import Serverless
-import Serverless.Conn as Conn exposing (json, respond, route)
+import Serverless.Conn exposing (interop, jsonBody, respond, route)
 import UrlParser exposing ((</>), int, map, oneOf, s, top)
 
 
@@ -48,27 +48,27 @@ type Interop
     | GetRandomUnit
 
 
-encodeInterop : Interop -> Json.Encode.Value
+encodeInterop : Interop -> Encode.Value
 encodeInterop interop =
     case interop of
         GetRandomInt lower upper ->
-            Json.Encode.object
-                [ ( "lower", Json.Encode.int lower )
-                , ( "upper", Json.Encode.int upper )
+            Encode.object
+                [ ( "lower", Encode.int lower )
+                , ( "upper", Encode.int upper )
                 ]
 
         GetRandomUnit ->
-            Json.Encode.object []
+            Encode.object []
 
 
-interopDecoder : String -> Maybe (Json.Decode.Decoder Msg)
+interopDecoder : String -> Maybe (Decoder Msg)
 interopDecoder name =
     case name of
         "getRandomInt" ->
-            Just (Json.Decode.int |> Json.Decode.map RandomNumber)
+            Just <| Decode.map RandomNumber Decode.int
 
         "getRandomUnit" ->
-            Just (Json.Decode.float |> Json.Decode.map RandomFloat)
+            Just <| Decode.map RandomFloat Decode.float
 
         _ ->
             Nothing
@@ -87,10 +87,10 @@ endpoint : Conn -> ( Conn, Cmd Msg )
 endpoint conn =
     case route conn of
         NumberRange lower upper ->
-            Conn.interop [ GetRandomInt lower upper ] conn
+            interop [ GetRandomInt lower upper ] conn
 
         Unit ->
-            Conn.interop [ GetRandomUnit ] conn
+            interop [ GetRandomUnit ] conn
 
 
 
@@ -106,10 +106,10 @@ update : Msg -> Conn -> ( Conn, Cmd Msg )
 update msg conn =
     case msg of
         RandomNumber val ->
-            respond ( 200, json <| Json.Encode.int val ) conn
+            respond ( 200, jsonBody <| Encode.int val ) conn
 
         RandomFloat val ->
-            respond ( 200, json <| Json.Encode.float val ) conn
+            respond ( 200, jsonBody <| Encode.float val ) conn
 
 
 
@@ -117,7 +117,7 @@ update msg conn =
 
 
 type alias Conn =
-    Conn.Conn () () Route Interop
+    Serverless.Conn.Conn () () Route Interop
 
 
 port requestPort : Serverless.RequestPort msg

@@ -3,7 +3,7 @@ port module SideEffects.API exposing (..)
 import Json.Encode
 import Random
 import Serverless
-import Serverless.Conn as Conn exposing (json, respond, route)
+import Serverless.Conn exposing (jsonBody, respond, route)
 import UrlParser exposing ((</>), int, map, oneOf, s, top)
 
 
@@ -77,10 +77,10 @@ update : Msg -> Conn -> ( Conn, Cmd Msg )
 update msg conn =
     case msg of
         RandomNumber val ->
-            respond ( 200, json <| Json.Encode.int val ) conn
+            respond ( 200, jsonBody <| Json.Encode.int val ) conn
 
         RandomFloat val ->
-            respond ( 200, json <| Json.Encode.float val ) conn
+            respond ( 200, jsonBody <| Json.Encode.float val ) conn
 
 
 
@@ -88,7 +88,7 @@ update msg conn =
 
 
 type alias Conn =
-    Conn.Conn () () Route ()
+    Serverless.Conn.Conn () () Route ()
 
 
 port requestPort : Serverless.RequestPort msg
