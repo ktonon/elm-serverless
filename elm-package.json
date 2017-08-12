@@ -9,7 +9,6 @@
     "exposed-modules": [
         "Serverless",
         "Serverless.Conn",
-        "Serverless.Conn.Body",
         "Serverless.Conn.Request",
         "Serverless.Conn.Response",
         "Serverless.Plug"

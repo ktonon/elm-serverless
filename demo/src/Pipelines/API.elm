@@ -1,8 +1,7 @@
 port module Pipelines.API exposing (main)
 
 import Serverless
-import Serverless.Conn exposing (header, mapUnsent, respond, toSent, updateResponse)
-import Serverless.Conn.Body exposing (text)
+import Serverless.Conn exposing (header, mapUnsent, respond, text, toSent, updateResponse)
 import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
 import Serverless.Plug as Plug exposing (Plug, plug)
 

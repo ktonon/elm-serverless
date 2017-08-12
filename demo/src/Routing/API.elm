@@ -1,8 +1,7 @@
 port module Routing.API exposing (..)
 
 import Serverless
-import Serverless.Conn as Conn exposing (method, respond, route)
-import Serverless.Conn.Body exposing (text)
+import Serverless.Conn as Conn exposing (method, respond, route, text)
 import Serverless.Conn.Request exposing (Method(..))
 import UrlParser exposing ((</>), map, oneOf, s, string, top)
 

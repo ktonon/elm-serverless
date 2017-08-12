@@ -3,8 +3,7 @@ port module Interop.API exposing (..)
 import Json.Decode
 import Json.Encode
 import Serverless
-import Serverless.Conn as Conn exposing (respond, route)
-import Serverless.Conn.Body exposing (json)
+import Serverless.Conn as Conn exposing (json, respond, route)
 import UrlParser exposing ((</>), int, map, oneOf, s, top)
 
 

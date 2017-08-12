@@ -9,6 +9,7 @@ module Serverless.Conn
         , interop
         , interopCalls
         , interopClear
+        , json
         , jsonEncodedResponse
         , mapUnsent
         , method
@@ -17,6 +18,7 @@ module Serverless.Conn
         , respond
         , route
         , send
+        , text
         , toSent
         , unsent
         , updateModel
@@ -58,6 +60,11 @@ Update the response and send it.
 @docs respond, updateResponse, send, toSent, unsent, mapUnsent
 
 
+## Body
+
+@docs text, json
+
+
 ## JavaScript Interop
 
 @docs interop
@@ -74,7 +81,7 @@ tests.
 -}
 
 import Json.Encode
-import Serverless.Conn.Body as Body exposing (Body, text)
+import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.Request as Request exposing (Method, Request)
 import Serverless.Conn.Response as Response exposing (Response, Status, setBody, setStatus)
 
@@ -175,7 +182,6 @@ route (Conn { route }) =
 
 {-| Update a response and send it.
 
-    import Serverless.Conn.Body exposing (text)
     import Serverless.Conn.Response exposing (setBody, setStatus)
     import TestHelpers exposing (conn, responsePort)
 
@@ -287,6 +293,24 @@ mapUnsent func (Conn conn) =
 
         Unsent _ ->
             func (Conn conn)
+
+
+
+-- BODY
+
+
+{-| A plain text body.
+-}
+text : String -> Body
+text =
+    Body.text
+
+
+{-| A JSON body.
+-}
+json : Json.Encode.Value -> Body
+json =
+    Body.json
 
 
 

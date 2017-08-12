@@ -1,8 +1,7 @@
 port module Hello.API exposing (..)
 
 import Serverless
-import Serverless.Conn exposing (respond)
-import Serverless.Conn.Body exposing (text)
+import Serverless.Conn exposing (respond, text)
 
 
 {-| This is the "hello world" of elm-serverless.

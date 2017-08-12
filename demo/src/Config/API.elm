@@ -3,8 +3,7 @@ port module Config.API exposing (..)
 import Json.Decode exposing (Decoder, andThen, fail, int, map, string, succeed)
 import Json.Decode.Pipeline exposing (decode, required)
 import Serverless
-import Serverless.Conn as Conn exposing (respond)
-import Serverless.Conn.Body exposing (text)
+import Serverless.Conn as Conn exposing (respond, text)
 
 
 {-| Shows how to load per-instance configuration.

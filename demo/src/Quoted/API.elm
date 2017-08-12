@@ -6,8 +6,7 @@ import Quoted.Pipelines.Quote as Quote
 import Quoted.Route exposing (Route(..))
 import Quoted.Types exposing (..)
 import Serverless
-import Serverless.Conn as Conn exposing (method, respond, route, updateResponse)
-import Serverless.Conn.Body as Body exposing (json, text)
+import Serverless.Conn as Conn exposing (json, method, respond, route, text, updateResponse)
 import Serverless.Conn.Request as Request exposing (Method(..))
 import Serverless.Plug as Plug exposing (plug)
 import UrlParser
