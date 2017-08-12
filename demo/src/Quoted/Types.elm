@@ -31,14 +31,6 @@ configDecoder =
         |> required "enableAuth" (Decode.string |> Decode.map ((==) "true"))
 
 
-{-| Can be anything you want.
-This will get set to initialModel (see above) for each incomming connection.
--}
-type alias Model =
-    { quotes : List Quote
-    }
-
-
 type alias Quote =
     { lang : String
     , text : String
@@ -92,11 +84,11 @@ interopDecoder interopName =
 
 
 type alias Conn =
-    Serverless.Conn.Conn Config Model Route Interop
+    Serverless.Conn.Conn Config () Route Interop
 
 
 type alias Plug =
-    Serverless.Plug.Plug Config Model Route Interop
+    Serverless.Plug.Plug Config () Route Interop
 
 
 port requestPort : Serverless.RequestPort msg

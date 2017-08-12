@@ -16,6 +16,7 @@ Which will start a server listening on port `3000`. Note that the demo includes 
 | --------------- | ----------------- | ------------------------------------ |
 | [Hello][]       | [/][]             | Bare bones hello world app.          |
 | [Routing][]     | [/routing][]      | Parse request path into Elm data.    |
+| [Forms][]       | [/forms][]        | Shows how to parse a JSON body.      |
 | [Pipelines][]   | [/pipelines][]    | Build chains of middleware.          |
 | [Config][]      | [/config][]       | Load per-instance configuration.     |
 | [SideEffects][] | [/side-effects][] | Handle effects in the update loop.   |
@@ -45,6 +46,7 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 
 [/]:http://localhost:3000
 [/config]:http://localhost:3000/config
+[/forms]:http://localhost:3000/forms
 [/interop]:http://localhost:3000/interop
 [/pipelines]:http://localhost:3000/pipelines
 [/quoted]:http://localhost:3000/quoted
@@ -54,6 +56,7 @@ Two tools are involved in getting your elm app on [AWS Lambda][]:
 [/side-effects]:http://localhost:3000/side-effects
 
 [Config]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Config
+[Forms]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Forms
 [Hello]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Hello
 [Interop]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Interop
 [Pipelines]:https://github.com/ktonon/elm-serverless/blob/master/demo/src/Pipelines

@@ -2,6 +2,8 @@ module Serverless.Conn.Body
     exposing
         ( Body
         , appendText
+        , asJson
+        , asText
         , contentType
         , decoder
         , empty
@@ -19,6 +21,11 @@ module Serverless.Conn.Body
 ## Constructors
 
 @docs empty, text, json
+
+
+## Destructuring
+
+@docs asText, asJson
 
 
 ## Querying
@@ -78,6 +85,40 @@ text =
 json : Encode.Value -> Body
 json =
     Json
+
+
+
+-- DESTRUCTURING
+
+
+{-| Extract the String from the body.
+
+Returns `Nothing` if the body is not type `text/text`
+
+-}
+asText : Body -> Maybe String
+asText body =
+    case body of
+        Text val ->
+            Just val
+
+        _ ->
+            Nothing
+
+
+{-| Extract the JSON value from the body.
+
+Returns `Nothing` if the body is not type `application/json`
+
+-}
+asJson : Body -> Maybe Encode.Value
+asJson body =
+    case body of
+        Json val ->
+            Just val
+
+        _ ->
+            Nothing
 
 
 
@@ -166,13 +207,25 @@ appendText val body =
 
 {-| JSON decoder a request body.
 -}
-decoder : Decoder Body
-decoder =
+decoder : Maybe String -> Decoder Body
+decoder maybeType =
     Decode.nullable Decode.string
         |> andThen
-            (Maybe.map Text
-                >> Maybe.withDefault Empty
-                >> Decode.succeed
+            (\maybeString ->
+                case maybeString of
+                    Just w ->
+                        if maybeType |> Maybe.withDefault "" |> String.startsWith "application/json" then
+                            case Decode.decodeString Decode.value w of
+                                Ok val ->
+                                    Decode.succeed <| Json val
+
+                                Err err ->
+                                    Decode.succeed <| Text w
+                        else
+                            Decode.succeed <| Text w
+
+                    Nothing ->
+                        Decode.succeed Empty
             )
 
 

@@ -4,6 +4,7 @@ const webpack = require('webpack');
 const config = {
   entry: {
     config: './src/Config/api.js',
+    forms: './src/Forms/api.js',
     hello: './src/Hello/api.js',
     interop: './src/Interop/api.js',
     pipelines: './src/Pipelines/api.js',

@@ -21,16 +21,15 @@ import UrlParser
   - Msg is your app message type
 
 -}
-main : Serverless.Program Config Model Route Interop Msg
+main : Serverless.Program Config () Route Interop Msg
 main =
     Serverless.httpApi
-        { -- Decodes per instance configuration into Elm data. If decoding fails
-          -- the server will fail to start. This decoder is called once at
-          -- startup.
-          configDecoder = configDecoder
+        { initialModel = ()
 
-        -- Each incoming connection gets this fresh model.
-        , initialModel = { quotes = [] }
+        -- Decodes per instance configuration into Elm data. If decoding fails
+        -- the server will fail to start. This decoder is called once at
+        -- startup.
+        , configDecoder = configDecoder
 
         -- Parses the request path and query string into Elm data.
         -- If parsing fails, a 404 is automatically sent.

@@ -1,5 +1,6 @@
 module Serverless.Conn.DecodeTests exposing (all)
 
+import Json.Encode as Encode
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
 import Serverless.Conn.KeyValueList as KeyValueList
@@ -18,12 +19,18 @@ all =
             , ( """{ "fOo": "baR " }""", DecodesTo [ ( "fOo", "baR " ) ] )
             , ( """{ "foo": 3 }""", FailsToDecode )
             ]
-        , describeDecoder "body"
-            Body.decoder
+        , describeDecoder "body for plain text"
+            (Body.decoder Nothing)
             [ ( "null", DecodesTo Body.empty )
             , ( "\"\"", DecodesTo (Body.text "") )
             , ( "\"foo bar\\ncar\"", DecodesTo (Body.text "foo bar\ncar") )
             , ( "\"{}\"", DecodesTo (Body.text "{}") )
+            ]
+        , describeDecoder "body for json"
+            (Body.decoder <| Just "application/json")
+            [ ( "null", DecodesTo Body.empty )
+            , ( "\"\"", DecodesTo (Body.text "") )
+            , ( "\"{}\"", DecodesTo (Body.json <| Encode.object []) )
             ]
         , describeDecoder "ip"
             IpAddress.decoder

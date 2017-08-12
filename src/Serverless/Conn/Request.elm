@@ -3,6 +3,8 @@ module Serverless.Conn.Request
         ( Method(..)
         , Request
         , Scheme(..)
+        , asJson
+        , asText
         , body
         , decoder
         , endpoint
@@ -26,9 +28,19 @@ Typically imported as
 @docs Request, Method, Scheme
 
 
-## Attributes
+## Body
 
-@docs body, endpoint, header, method, path, query, queryString, stage
+@docs body, asText, asJson
+
+
+## Routing
+
+@docs method, path, query, queryString
+
+
+## Other attributes
+
+@docs endpoint, header, method, stage
 
 
 ## Misc
@@ -41,8 +53,9 @@ used internally by the framework.
 -}
 
 import Dict exposing (Dict)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode as Decode exposing (Decoder, andThen)
+import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
 import Serverless.Conn.KeyValueList as KeyValueList
@@ -137,6 +150,26 @@ body (Request { body }) =
     body
 
 
+{-| Extract the String from the body.
+
+Returns `Nothing` if the body is not type `text/text`
+
+-}
+asText : Body -> Maybe String
+asText =
+    Body.asText
+
+
+{-| Extract the JSON value from the body.
+
+Returns `Nothing` if the body is not type `application/json`
+
+-}
+asJson : Body -> Maybe Json.Encode.Value
+asJson =
+    Body.asJson
+
+
 {-| Describes the server endpoint to which the request was made.
 
     ( scheme, host, port_ ) =
@@ -226,9 +259,21 @@ stage (Request { stage }) =
 -}
 decoder : Decoder Request
 decoder =
-    decode Model
-        |> required "body" Body.decoder
+    decode HeadersOnly
         |> required "headers" (KeyValueList.decoder |> Decode.map Dict.fromList)
+        |> andThen (Decode.map Request << modelDecoder)
+
+
+type alias HeadersOnly =
+    { headers : Dict String String
+    }
+
+
+modelDecoder : HeadersOnly -> Decoder Model
+modelDecoder { headers } =
+    decode Model
+        |> required "body" (Body.decoder <| Dict.get "content-type" headers)
+        |> hardcoded headers
         |> required "host" Decode.string
         |> required "method" methodDecoder
         |> required "path" Decode.string
@@ -238,7 +283,6 @@ decoder =
         |> required "stage" Decode.string
         |> required "queryParams" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> required "queryString" Decode.string
-        |> Decode.map Request
 
 
 {-| JSON decoder for the HTTP request method.

@@ -30,6 +30,14 @@ functions:
           path: /config
           method: ANY
 
+  forms:
+    handler: forms.handler
+    events:
+      - http:
+          integration: lambda-proxy
+          path: /forms
+          method: ANY
+
   interop:
     handler: interop.handler
     events:

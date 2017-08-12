@@ -1,4 +1,4 @@
-port module Hello.API exposing (..)
+port module Hello.API exposing (main)
 
 import Serverless
 import Serverless.Conn exposing (respond, textBody)
