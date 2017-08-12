@@ -20,9 +20,6 @@ describe('Demo: /forms', () => {
       .set('content-type', 'application/json')
       .send('{,}')
       .expect(400)
-      .then(res => {
-        res.text.should.equal('JSON body expected');
-      })
   );
 
   it('POST application/json wrong object has status 400', () =>
@@ -31,9 +28,6 @@ describe('Demo: /forms', () => {
       .set('content-type', 'application/json')
       .send({ age: 4 })
       .expect(400)
-      .then(res => {
-        res.text.should.equal('Expecting an object with a field named `name` but instead got: {"age":4}');
-      })
   );
 
   it('POST application/json correct object has status 200', () =>

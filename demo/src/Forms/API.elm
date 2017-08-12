@@ -35,23 +35,18 @@ endpoint : Conn -> ( Conn, Cmd () )
 endpoint conn =
     case
         ( method conn
-        , conn |> request |> body |> asJson
+        , conn
+            |> request
+            |> body
+            |> asJson
+            |> Maybe.andThen (decodeValue personDecoder >> Result.toMaybe)
         )
     of
-        ( POST, Just jsonValue ) ->
-            let
-                _ =
-                    Debug.log "jsonValue" jsonValue
-            in
-            case decodeValue personDecoder jsonValue of
-                Ok person ->
-                    respond ( 200, textBody <| toString person ) conn
-
-                Err err ->
-                    respond ( 400, textBody err ) conn
+        ( POST, Just person ) ->
+            respond ( 200, textBody <| toString person ) conn
 
         ( POST, Nothing ) ->
-            respond ( 400, textBody "JSON body expected" ) conn
+            respond ( 400, textBody "Bad request" ) conn
 
         _ ->
             respond ( 405, textBody "Method not allowed" ) conn
