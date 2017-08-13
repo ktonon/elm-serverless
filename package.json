@@ -13,7 +13,7 @@
     "clobber": "rm -rf elm-stuff demo/elm-stuff demo/.webpack tests/elm-stuff tests/Doc",
     "rebuild": "npm run clobber && npm install && npm test",
     "deploy:demo": "cd demo && cross-env NODE_ENV=production serverless deploy",
-    "postinstall": "elm package install -y && cd demo && elm package install -y",
+    "postinstall": "elm package install -y",
     "posttest": "eslint .",
     "pretest": "node scripts/test-server",
     "start": "cd demo && serverless offline",
