@@ -37,7 +37,6 @@ module Serverless.Conn
   - [Responding](#responding)
   - [Response Body](#response-body)
   - [JavaScript Interop](#javascript-interop)
-  - [Misc](#misc)
 
 
 ## Processing Application Data

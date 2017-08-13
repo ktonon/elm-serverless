@@ -21,26 +21,41 @@ module Serverless.Conn.Request
 
 {-| Query attributes of the HTTP request.
 
-Typically imported as
 
-    import Serverless.Conn.Request as Request
+## Table of Contents
+
+  - [Request Types](#request-types)
+  - [Routing](#routing)
+  - [Body](#body)
+  - [Other Attributes](#other-attributes)
+
+
+## Request Types
 
 @docs Request, Method, Scheme
 
 
+## Routing
+
+These attributes are typically involved in routing requests. See the
+[Routing Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing/API.elm)
+for an example.
+
+@docs method, path, queryString
+
+
 ## Body
+
+Functions to access the request body and attempt a cast to a content type. See the
+[Forms Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Forms/API.elm)
+for an example.
 
 @docs body, asText, asJson
 
 
-## Routing
+## Other Attributes
 
-@docs method, path, query, queryString
-
-
-## Other attributes
-
-@docs endpoint, header, method, stage
+@docs header, query, endpoint, stage
 
 
 ## Misc
@@ -151,9 +166,6 @@ body (Request { body }) =
 
 
 {-| Extract the String from the body.
-
-Returns `Nothing` if the body is not type `text/text`
-
 -}
 asText : Body -> Result String String
 asText =
@@ -161,9 +173,6 @@ asText =
 
 
 {-| Extract the JSON value from the body.
-
-Returns `Nothing` if the body is not type `application/json`
-
 -}
 asJson : Body -> Result String Json.Encode.Value
 asJson =
@@ -214,6 +223,10 @@ method (Request { method }) =
 
 
 {-| Request path.
+
+While you can access this attribute directly, it is better to provide a
+`parseRoute` function to the framework.
+
 -}
 path : Request -> String
 path (Request { path }) =
@@ -228,6 +241,10 @@ query name (Request { queryParams }) =
 
 
 {-| The original query string.
+
+While you can access this attribute directly, it is better to provide a
+`parseRoute` function to the framework.
+
 -}
 queryString : Request -> String
 queryString (Request { queryString }) =

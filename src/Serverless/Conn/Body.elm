@@ -13,46 +13,10 @@ module Serverless.Conn.Body
         , text
         )
 
-{-| Request/response body with functions to query and update.
-
-@docs Body
-
-
-## Constructors
-
-@docs empty, text, json
-
-
-## Destructuring
-
-@docs asText, asJson
-
-
-## Querying
-
-@docs contentType, isEmpty
-
-
-## Updating
-
-@docs appendText
-
-
-## Misc
-
-These functions are typically not needed when building an application. They are
-used internally by the framework.
-
-@docs decoder, encode
-
--}
-
 import Json.Decode as Decode exposing (Decoder, andThen)
 import Json.Encode as Encode
 
 
-{-| Request or response body.
--}
 type Body
     = Empty
     | Error String
@@ -64,25 +28,16 @@ type Body
 -- CONSTRUCTORS
 
 
-{-| An empty body.
-
-Represents the lack of a request or response body.
-
--}
 empty : Body
 empty =
     Empty
 
 
-{-| A plain text body.
--}
 text : String -> Body
 text =
     Text
 
 
-{-| A JSON body.
--}
 json : Encode.Value -> Body
 json =
     Json
@@ -92,8 +47,6 @@ json =
 -- DESTRUCTURING
 
 
-{-| Extract the String from the body.
--}
 asText : Body -> Result String String
 asText body =
     case body of
@@ -110,8 +63,6 @@ asText body =
             Ok <| Encode.encode 0 val
 
 
-{-| Extract the JSON value from the body.
--}
 asJson : Body -> Result String Encode.Value
 asJson body =
     case body of
@@ -215,8 +166,6 @@ appendText val body =
 -- JSON
 
 
-{-| JSON decoder a request body.
--}
 decoder : Maybe String -> Decoder Body
 decoder maybeType =
     Decode.nullable Decode.string
@@ -240,8 +189,6 @@ decoder maybeType =
             )
 
 
-{-| JSON encode a response body.
--}
 encode : Body -> Encode.Value
 encode body =
     case body of
