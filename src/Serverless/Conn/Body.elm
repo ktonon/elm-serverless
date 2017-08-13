@@ -55,6 +55,7 @@ import Json.Encode as Encode
 -}
 type Body
     = Empty
+    | Error String
     | Text String
     | Json Encode.Value
 
@@ -92,33 +93,39 @@ json =
 
 
 {-| Extract the String from the body.
-
-Returns `Nothing` if the body is not type `text/text`
-
 -}
-asText : Body -> Maybe String
+asText : Body -> Result String String
 asText body =
     case body of
-        Text val ->
-            Just val
+        Empty ->
+            Ok ""
 
-        _ ->
-            Nothing
+        Error err ->
+            Err err
+
+        Text val ->
+            Ok val
+
+        Json val ->
+            Ok <| Encode.encode 0 val
 
 
 {-| Extract the JSON value from the body.
-
-Returns `Nothing` if the body is not type `application/json`
-
 -}
-asJson : Body -> Maybe Encode.Value
+asJson : Body -> Result String Encode.Value
 asJson body =
     case body of
-        Json val ->
-            Just val
+        Empty ->
+            Ok Encode.null
 
-        _ ->
-            Nothing
+        Error err ->
+            Err err
+
+        Text val ->
+            Decode.decodeString Decode.value val
+
+        Json val ->
+            Ok val
 
 
 
@@ -194,6 +201,9 @@ appendText val body =
         Empty ->
             Ok (Text val)
 
+        Error err ->
+            Err <| "cannot append to body with error: " ++ err
+
         Text existingVal ->
             Ok (Text (existingVal ++ val))
 
@@ -220,7 +230,8 @@ decoder maybeType =
                                     Decode.succeed <| Json val
 
                                 Err err ->
-                                    Decode.succeed <| Text w
+                                    Decode.succeed <|
+                                        Error err
                         else
                             Decode.succeed <| Text w
 
@@ -236,6 +247,9 @@ encode body =
     case body of
         Empty ->
             Encode.null
+
+        Error err ->
+            Encode.string err
 
         Text w ->
             Encode.string w

@@ -155,7 +155,7 @@ body (Request { body }) =
 Returns `Nothing` if the body is not type `text/text`
 
 -}
-asText : Body -> Maybe String
+asText : Body -> Result String String
 asText =
     Body.asText
 
@@ -165,7 +165,7 @@ asText =
 Returns `Nothing` if the body is not type `application/json`
 
 -}
-asJson : Body -> Maybe Json.Encode.Value
+asJson : Body -> Result String Json.Encode.Value
 asJson =
     Body.asJson
 

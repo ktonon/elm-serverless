@@ -12,6 +12,9 @@ describe('Demo: /forms', () => {
       .post(path('/'))
       .set('content-type', 'text/text')
       .expect(400)
+      .then(res => {
+        res.text.should.equal('Could not decode request body. Given an invalid JSON: Unexpected end of JSON input');
+      })
   );
 
   it('POST application/json invalid JSON has status 400', () =>
@@ -20,6 +23,9 @@ describe('Demo: /forms', () => {
       .set('content-type', 'application/json')
       .send('{,}')
       .expect(400)
+      .then(res => {
+        res.text.should.equal('Could not decode request body. Given an invalid JSON: Unexpected token , in JSON at position 1');
+      })
   );
 
   it('POST application/json wrong object has status 400', () =>
@@ -28,6 +34,9 @@ describe('Demo: /forms', () => {
       .set('content-type', 'application/json')
       .send({ age: 4 })
       .expect(400)
+      .then(res => {
+        res.text.should.equal('Could not decode request body. Expecting an object with a field named `name` but instead got: {"age":4}');
+      })
   );
 
   it('POST application/json correct object has status 200', () =>
@@ -38,6 +47,17 @@ describe('Demo: /forms', () => {
       .expect(200)
       .then(res => {
         res.text.should.equal('{ name = "fred", age = 4 }');
+      })
+  );
+
+  it('POST text/text with JSON body has status 200', () =>
+    request
+      .post(path('/'))
+      .set('content-type', 'text/text')
+      .send('{"age":3,"name":"barney"}')
+      .expect(200)
+      .then(res => {
+        res.text.should.equal('{ name = "barney", age = 3 }');
       })
   );
 });

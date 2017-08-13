@@ -36,17 +36,19 @@ endpoint conn =
     case
         ( method conn
         , conn
-            |> request
-            |> body
-            |> asJson
-            |> Maybe.andThen (decodeValue personDecoder >> Result.toMaybe)
+            |> (request >> body >> asJson)
+            |> Result.andThen (decodeValue personDecoder)
         )
     of
-        ( POST, Just person ) ->
+        ( POST, Ok person ) ->
             respond ( 200, textBody <| toString person ) conn
 
-        ( POST, Nothing ) ->
-            respond ( 400, textBody "Bad request" ) conn
+        ( POST, Err err ) ->
+            respond
+                ( 400
+                , textBody <| "Could not decode request body. " ++ err
+                )
+                conn
 
         _ ->
             respond ( 405, textBody "Method not allowed" ) conn

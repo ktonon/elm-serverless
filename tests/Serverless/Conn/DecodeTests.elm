@@ -29,7 +29,6 @@ all =
         , describeDecoder "body for json"
             (Body.decoder <| Just "application/json")
             [ ( "null", DecodesTo Body.empty )
-            , ( "\"\"", DecodesTo (Body.text "") )
             , ( "\"{}\"", DecodesTo (Body.json <| Encode.object []) )
             ]
         , describeDecoder "ip"
