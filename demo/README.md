@@ -1,5 +1,4 @@
-elm serverless demo
-===================
+# Demo <img src="https://raw.githubusercontent.com/ktonon/elm-serverless/master/es-logo-small.png" width="37"> Programs
 
 This folder provides an example usage of [elm-serverless][].
 
@@ -10,7 +9,12 @@ We use [serverless-offline][] to run the server locally during development. To g
 * `npm install`
 * `npm start`
 
-Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless applications which are deployed as a bundle.
+Which will start a server listening on port `3000`. Note that the demo includes multiple, independent, elm-serverless programs which are deployed as a bundle. Each program contains:
+
+* `API.elm` - the main entry point of the Elm HTTP API
+* `api.js` - a small bridge from JavaScript to Elm
+
+Learn by reading the demos in the following order:
 
 | Demo            | Path              | Description                          |
 | --------------- | ----------------- | ------------------------------------ |
