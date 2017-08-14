@@ -21,8 +21,8 @@ Learn by reading the demos in the following order:
 | [Hello][]       | [/][]             | Bare bones hello world app.          |
 | [Routing][]     | [/routing][]      | Parse request path into Elm data.    |
 | [Forms][]       | [/forms][]        | Shows how to parse a JSON body.      |
-| [Pipelines][]   | [/pipelines][]    | Build chains of middleware.          |
 | [Config][]      | [/config][]       | Load per-instance configuration.     |
+| [Pipelines][]   | [/pipelines][]    | Build chains of middleware.          |
 | [SideEffects][] | [/side-effects][] | Handle effects in the update loop.   |
 | [Interop][]     | [/interop][]      | Call JavaScript functions.           |
 | [Quoted][]      | [/quoted][]       | Shows one way to organize a project. |

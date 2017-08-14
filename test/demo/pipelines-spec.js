@@ -17,6 +17,23 @@ describe('Demo: /pipelines', () => {
     })
   );
 
+  it('includes response headers from cors middleware', () =>
+    request.get(path('/')).expect(401).then(res => {
+      should(res.headers).have.property('access-control-allow-origin', '*');
+      should(res.headers).have.property('access-control-allow-methods', 'GET,POST,OPTIONS');
+    })
+  );
+
+  it('reflects origin from the request', () =>
+    request
+      .get(path('/'))
+      .set('origin', 'foo.bar.com')
+      .expect(401)
+      .then(res => {
+        should(res.headers).have.property('access-control-allow-origin', 'foo.bar.com');
+      })
+  );
+
   it('completes the pipeline if Authorized', () =>
     request
       .get(path('/'))

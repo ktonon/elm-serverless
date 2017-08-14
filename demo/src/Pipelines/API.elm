@@ -1,8 +1,10 @@
 port module Pipelines.API exposing (main)
 
+import Json.Decode.Pipeline exposing (decode, required)
 import Serverless
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
+import Serverless.Cors
 import Serverless.Plug as Plug exposing (Plug, plug)
 
 
@@ -12,11 +14,10 @@ Pipelines are sequences of functions which transform the connection. They are
 ideal for building middelware.
 
 -}
-main : Serverless.Program () () () () ()
+main : Serverless.Program Config () () () ()
 main =
     Serverless.httpApi
-        { configDecoder = Serverless.noConfig
-        , initialModel = ()
+        { initialModel = ()
         , parseRoute = Serverless.noRoutes
         , update = Serverless.noSideEffects
         , interop = Serverless.noInterop
@@ -33,14 +34,27 @@ main =
         , endpoint =
             Plug.apply pipeline
                 >> mapUnsent (respond ( 200, textBody "Pipeline applied" ))
+
+        -- Some middleware may provide a configuration decoder.
+        , configDecoder =
+            decode Config
+                |> required "cors" Serverless.Cors.configDecoder
         }
 
 
-pipeline : Plug () () () ()
+{-| Stores middleware configuration.
+-}
+type alias Config =
+    { cors : Serverless.Cors.Config }
+
+
+pipeline : Plug Config () () ()
 pipeline =
     Plug.pipeline
         -- Each plug in a pipeline transforms the connection
         |> plug (updateResponse <| addHeader ( "x-from-first-plug", "foo" ))
+        -- Middleware is often distributed as separate packages
+        |> plug (\conn -> Serverless.Cors.cors (config conn |> .cors) conn)
         -- Some plugs may send a response
         |> plug authMiddleware
         -- Plugs following a sent response will be skipped
@@ -54,7 +68,7 @@ This can be done with the `toSent` function, which will make the conn immutable.
 point the conn becomes "sent".
 
 -}
-authMiddleware : Conn () () () () -> Conn () () () ()
+authMiddleware : Conn Config () () () -> Conn Config () () ()
 authMiddleware conn =
     case header "authorization" conn of
         Just _ ->
