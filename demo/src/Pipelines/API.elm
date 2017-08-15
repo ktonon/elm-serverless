@@ -54,7 +54,7 @@ pipeline =
         -- Each plug in a pipeline transforms the connection
         |> plug (updateResponse <| addHeader ( "x-from-first-plug", "foo" ))
         -- Middleware is often distributed as separate packages
-        |> plug (\conn -> Serverless.Cors.cors (config conn |> .cors) conn)
+        |> plug (Serverless.Cors.fromConfig .cors)
         -- Some plugs may send a response
         |> plug authMiddleware
         -- Plugs following a sent response will be skipped
