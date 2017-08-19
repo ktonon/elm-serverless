@@ -11,7 +11,7 @@ import Serverless.Plug as Plug exposing (Plug, plug)
 {-| Pipelines demo.
 
 Pipelines are sequences of functions which transform the connection. They are
-ideal for building middelware.
+ideal for building middleware.
 
 -}
 main : Serverless.Program Config () () () ()
