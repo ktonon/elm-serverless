@@ -1,17 +1,9 @@
 const path = require('path');
 const webpack = require('webpack');
+const slsw = require('serverless-webpack');
 
 const config = {
-  entry: {
-    config: './src/Config/api.js',
-    forms: './src/Forms/api.js',
-    hello: './src/Hello/api.js',
-    interop: './src/Interop/api.js',
-    pipelines: './src/Pipelines/api.js',
-    quoted: './src/Quoted/api.js',
-    routing: './src/Routing/api.js',
-    sideEffects: './src/SideEffects/api.js',
-  },
+  entry: slsw.lib.entries,
   target: 'node', // Ignores built-in modules like path, fs, etc.
 
   output: {

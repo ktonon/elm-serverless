@@ -10,12 +10,11 @@ plugins:
 
 custom:
   serverless-offline:
-    location: .webpack
     dontPrintOutput: true
 
 functions:
   hello:
-    handler: hello.handler # Refers to function `handler` exported from `Hello/api.js`
+    handler: src/Hello/api.handler # Refers to function `handler` exported from `Hello/api.js`
     events:
       - http:
           integration: lambda-proxy
@@ -23,7 +22,7 @@ functions:
           method: ANY
 
   config:
-    handler: config.handler
+    handler: src/Config/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -31,7 +30,7 @@ functions:
           method: ANY
 
   forms:
-    handler: forms.handler
+    handler: src/Forms/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -39,7 +38,7 @@ functions:
           method: ANY
 
   interop:
-    handler: interop.handler
+    handler: src/Interop/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -51,7 +50,7 @@ functions:
           method: ANY
 
   routing:
-    handler: routing.handler
+    handler: src/Routing/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -63,7 +62,7 @@ functions:
           method: ANY
 
   pipelines:
-    handler: pipelines.handler
+    handler: src/Pipelines/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -71,7 +70,7 @@ functions:
           method: ANY
 
   sideEffects:
-    handler: sideEffects.handler
+    handler: src/SideEffects/api.handler
     events:
       - http:
           integration: lambda-proxy
@@ -83,7 +82,7 @@ functions:
           method: ANY
 
   quoted:
-    handler: quoted.handler
+    handler: src/Quoted/api.handler
     events:
       - http:
           integration: lambda-proxy
