@@ -33,12 +33,13 @@ const startServer = () => new Promise((resolve, reject) => {
     if (newBytes > 0) {
       const data = Buffer.alloc(newBytes);
       fs.readSync(out, data, 0, newBytes, seenBytes);
+      const line = data.toString('utf8');
       seenBytes = stat.size;
 
-      if (/error/i.test(data)) {
-        reject(`test server: ${data}`);
+      if (/error/i.test(line)) {
+        reject(`test server: ${line}`);
         return;
-      } else if (/Version: webpack \d+\.\d+\.\d+/.test(data)) {
+      } else if (/Serverless: Offline listening on/.test(line)) {
         resolve(server.pid);
         return;
       }
