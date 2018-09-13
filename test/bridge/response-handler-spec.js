@@ -69,7 +69,7 @@ describe('responseHandler({ pool })', () => {
     }).should.be.true();
   });
 
-  it('JSON strinfies bodies which are objects', () => {
+  it('JSON stringifies bodies which are objects', () => {
     const h = makeHandler();
     const cb = sinon.spy();
     h.pool.put(id, {}, cb);
@@ -82,7 +82,7 @@ describe('responseHandler({ pool })', () => {
     }).should.be.true();
   });
 
-  it('Uses plain text for numbers', () => {
+  it('uses plain text for numbers', () => {
     const h = makeHandler();
     const cb = sinon.spy();
     h.pool.put(id, {}, cb);
