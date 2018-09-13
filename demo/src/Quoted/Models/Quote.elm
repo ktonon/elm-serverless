@@ -1,10 +1,11 @@
-module Quoted.Models.Quote exposing (..)
+module Quoted.Models.Quote exposing (decoder, encodeList, format, request)
 
 import Http
 import Json.Decode exposing (Decoder, string)
 import Json.Decode.Pipeline exposing (decode, hardcoded, required)
 import Json.Encode as J
 import Quoted.Types exposing (Quote)
+
 
 
 -- MODEL

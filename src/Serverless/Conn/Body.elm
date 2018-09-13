@@ -1,17 +1,16 @@
-module Serverless.Conn.Body
-    exposing
-        ( Body
-        , appendText
-        , asJson
-        , asText
-        , contentType
-        , decoder
-        , empty
-        , encode
-        , isEmpty
-        , json
-        , text
-        )
+module Serverless.Conn.Body exposing
+    ( Body
+    , appendText
+    , asJson
+    , asText
+    , contentType
+    , decoder
+    , empty
+    , encode
+    , isEmpty
+    , json
+    , text
+    )
 
 import Json.Decode as Decode exposing (Decoder, andThen)
 import Json.Encode as Encode
@@ -181,6 +180,7 @@ decoder maybeType =
                                 Err err ->
                                     Decode.succeed <|
                                         Error err
+
                         else
                             Decode.succeed <| Text w
 

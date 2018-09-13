@@ -1,11 +1,10 @@
-module Serverless.Conn.Fuzz
-    exposing
-        ( body
-        , conn
-        , header
-        , request
-        , status
-        )
+module Serverless.Conn.Fuzz exposing
+    ( body
+    , conn
+    , header
+    , request
+    , status
+    )
 
 import Fuzz exposing (Fuzzer, andMap, andThen, constant, map)
 import Fuzz.Extra exposing (eitherOr)

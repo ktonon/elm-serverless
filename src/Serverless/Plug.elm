@@ -1,12 +1,9 @@
-module Serverless.Plug
-    exposing
-        ( Plug
-        , apply
-        , nest
-        , pipeline
-        , plug
-        , size
-        )
+module Serverless.Plug exposing
+    ( Plug
+    , pipeline, plug, nest
+    , apply
+    , size
+    )
 
 {-| A **pipeline** is a sequence of functions which transform the connection,
 optionally sending back an HTTP response at each step. We use the term **plug**

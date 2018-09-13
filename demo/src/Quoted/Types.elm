@@ -1,4 +1,4 @@
-port module Quoted.Types exposing (..)
+port module Quoted.Types exposing (Config, Conn, Interop(..), Msg(..), Plug, Quote, configDecoder, interopDecoder, interopEncode, requestPort, responsePort)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -8,6 +8,7 @@ import Quoted.Route exposing (Route)
 import Serverless
 import Serverless.Conn exposing (Id)
 import Serverless.Plug
+
 
 
 -- CUSTOM TYPES

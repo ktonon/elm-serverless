@@ -1,4 +1,4 @@
-port module Config.API exposing (..)
+port module Config.API exposing (Auth, Config, Protocol(..), Service, configDecoder, main, protocolDecoder, requestPort, responsePort, resultToDecoder, serviceDecoder)
 
 import Json.Decode exposing (Decoder, andThen, fail, int, map, string, succeed)
 import Json.Decode.Pipeline exposing (decode, required)

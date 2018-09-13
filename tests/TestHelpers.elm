@@ -1,4 +1,4 @@
-module TestHelpers exposing (..)
+module TestHelpers exposing (Config, Conn, Interop, Model, Msg(..), Plug, Route(..), appendToBody, conn, getHeader, httpGet, requestPort, responsePort, route, simpleLoop, simplePlug)
 
 import Json.Encode as Encode
 import Regex exposing (HowMany(..), regex)

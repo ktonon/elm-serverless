@@ -1,4 +1,4 @@
-port module SideEffects.API exposing (..)
+port module SideEffects.API exposing (Conn, Msg(..), Route(..), endpoint, main, requestPort, responsePort, update)
 
 import Json.Encode
 import Random

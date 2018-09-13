@@ -1,4 +1,4 @@
-module Quoted.Route exposing (..)
+module Quoted.Route exposing (Lang(..), Query, Route(..), Sort(..), lang, query, route, sort)
 
 import UrlParser exposing (..)
 
@@ -59,6 +59,7 @@ sort =
         >> (\val ->
                 if val == "asc" then
                     Asc
+
                 else
                     Desc
            )
