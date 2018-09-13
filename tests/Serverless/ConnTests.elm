@@ -14,7 +14,7 @@ import Serverless.Conn as Conn
         , unsent
         , updateResponse
         )
-import Serverless.Conn.Body exposing (text)
+import Serverless.Conn.Body exposing (binary, text)
 import Serverless.Conn.Fuzz as Fuzz
 import Serverless.Conn.Response as Response exposing (addHeader, setBody, setStatus)
 import Serverless.Conn.Test as Test
@@ -109,4 +109,18 @@ responseTests =
                     |> Conn.jsonEncodedResponse
                     |> Json.Encode.encode 0
                     |> Expect.match (stringPattern ("\"" ++ key ++ "\":\"" ++ value ++ "\""))
+        , Test.conn "binary sets the response header" <|
+            \conn ->
+                conn
+                    |> updateResponse (setBody <| binary "application/octet-stream" "hello")
+                    |> Conn.jsonEncodedResponse
+                    |> Json.Encode.encode 0
+                    |> Expect.match (stringPattern "\"content-type\":\"application/octet-stream; charset=utf-8\"")
+        , Test.conn "binary sets isBase64Encoded to true" <|
+            \conn ->
+                conn
+                    |> updateResponse (setBody <| binary "application/octet-stream" "hello")
+                    |> Conn.jsonEncodedResponse
+                    |> Json.Encode.encode 0
+                    |> Expect.match (stringPattern "\"isBase64Encoded\":true")
         ]

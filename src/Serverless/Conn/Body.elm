@@ -3,10 +3,12 @@ module Serverless.Conn.Body exposing
     , appendText
     , asJson
     , asText
+    , binary
     , contentType
     , decoder
     , empty
     , encode
+    , isBase64Encoded
     , isEmpty
     , json
     , text
@@ -21,6 +23,7 @@ type Body
     | Error String
     | Text String
     | Json Encode.Value
+    | Binary String String
 
 
 
@@ -42,6 +45,11 @@ json =
     Json
 
 
+binary : String -> String -> Body
+binary =
+    Binary
+
+
 
 -- DESTRUCTURING
 
@@ -61,6 +69,9 @@ asText body =
         Json val ->
             Ok <| Encode.encode 0 val
 
+        Binary _ val ->
+            Ok val
+
 
 asJson : Body -> Result String Encode.Value
 asJson body =
@@ -76,6 +87,9 @@ asJson body =
 
         Json val ->
             Ok val
+
+        Binary _ val ->
+            Decode.decodeString Decode.value val
 
 
 
@@ -99,6 +113,9 @@ contentType body =
         Json _ ->
             "application/json"
 
+        Binary contentType _ ->
+            contentType
+
         _ ->
             "text/text"
 
@@ -121,6 +138,16 @@ isEmpty : Body -> Bool
 isEmpty body =
     case body of
         Empty ->
+            True
+
+        _ ->
+            False
+
+
+isBase64Encoded : Body -> Bool
+isBase64Encoded body =
+    case body of
+        Binary _ _ ->
             True
 
         _ ->
@@ -159,6 +186,9 @@ appendText val body =
 
         Json jval ->
             Err "cannot append text to json"
+
+        Binary _ _ ->
+            Err "cannot append text to binary"
 
 
 
@@ -203,3 +233,6 @@ encode body =
 
         Json j ->
             j
+
+        Binary _ v ->
+            Encode.string v
