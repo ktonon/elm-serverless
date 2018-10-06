@@ -13,7 +13,7 @@ describe('Demo: /forms', () => {
       .set('content-type', 'text/text')
       .expect(400)
       .then(res => {
-        res.text.should.equal('Could not decode request body. Given an invalid JSON: Unexpected end of JSON input');
+        res.text.should.equal('Could not decode request body. Expecting an object with a field named `name` but instead got: null');
       })
   );
 
