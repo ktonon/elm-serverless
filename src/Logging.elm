@@ -43,7 +43,7 @@ type alias Logger a =
 logger : LogLevel -> Logger a
 logger minLevel level label val =
     if (minLevel |> logLevelToInt) > (level |> logLevelToInt) then
-        Debug.log ((level |> toString) ++ ": " ++ label) val
+        Debug.log (Debug.toString level ++ ": " ++ label) val
 
     else
         val

@@ -56,7 +56,7 @@ used internally by the framework.
 
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, andThen)
-import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
@@ -148,8 +148,8 @@ init =
 {-| Request body.
 -}
 body : Request -> Body
-body (Request { body }) =
-    body
+body (Request request) =
+    request.body
 
 
 {-| Extract the String from the body.
@@ -205,8 +205,8 @@ header key (Request { headers }) =
 
 -}
 method : Request -> Method
-method (Request { method }) =
-    method
+method (Request request) =
+    request.method
 
 
 {-| Request path.
@@ -216,8 +216,8 @@ While you can access this attribute directly, it is better to provide a
 
 -}
 path : Request -> String
-path (Request { path }) =
-    path
+path (Request request) =
+    request.path
 
 
 {-| Get a query argument by name.
@@ -234,15 +234,15 @@ While you can access this attribute directly, it is better to provide a
 
 -}
 queryString : Request -> String
-queryString (Request { queryString }) =
-    queryString
+queryString (Request request) =
+    request.queryString
 
 
 {-| IP address of the requesting entity.
 -}
 remoteIp : Request -> IpAddress
-remoteIp (Request { remoteIp }) =
-    remoteIp
+remoteIp (Request request) =
+    request.remoteIp
 
 
 {-| Serverless deployment stage.
@@ -251,8 +251,8 @@ See <https://serverless.com/framework/docs/providers/aws/guide/deploying/>
 
 -}
 stage : Request -> String
-stage (Request { stage }) =
-    stage
+stage (Request request) =
+    request.stage
 
 
 
@@ -263,7 +263,7 @@ stage (Request { stage }) =
 -}
 decoder : Decoder Request
 decoder =
-    decode HeadersOnly
+    Decode.succeed HeadersOnly
         |> required "headers" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> andThen (Decode.map Request << modelDecoder)
 
@@ -275,7 +275,7 @@ type alias HeadersOnly =
 
 modelDecoder : HeadersOnly -> Decoder Model
 modelDecoder { headers } =
-    decode Model
+    Decode.succeed Model
         |> required "body" (Body.decoder <| Dict.get "content-type" headers)
         |> hardcoded headers
         |> required "host" Decode.string

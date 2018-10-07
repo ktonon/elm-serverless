@@ -111,15 +111,15 @@ type Sendable a
 {-| Application defined configuration
 -}
 config : Conn config model route interop -> config
-config (Conn { config }) =
-    config
+config (Conn conn) =
+    conn.config
 
 
 {-| Application defined model
 -}
 model : Conn config model route interop -> model
-model (Conn { model }) =
-    model
+model (Conn conn) =
+    conn.model
 
 
 {-| Transform and update the application defined model stored in the connection.
@@ -157,8 +157,8 @@ method =
 {-| Parsed route
 -}
 route : Conn config model route interop -> route
-route (Conn { route }) =
-    route
+route (Conn conn) =
+    conn.route
 
 
 
@@ -308,8 +308,8 @@ interop :
     List interop
     -> Conn config model route interop
     -> ( Conn config model route interop, Cmd msg )
-interop interopCalls (Conn conn) =
-    ( Conn { conn | interopCalls = List.append conn.interopCalls interopCalls }
+interop listOfinteropCalls (Conn conn) =
+    ( Conn { conn | interopCalls = List.append conn.interopCalls listOfinteropCalls }
     , Cmd.none
     )
 
@@ -317,8 +317,8 @@ interop interopCalls (Conn conn) =
 {-| Get all schedule interop calls.
 -}
 interopCalls : Conn config model route interop -> List interop
-interopCalls (Conn { interopCalls }) =
-    interopCalls
+interopCalls (Conn conn) =
+    conn.interopCalls
 
 
 {-| Remove all schedule interop calls.
@@ -335,22 +335,22 @@ interopClear (Conn conn) =
 {-| Universally unique Conn identifier
 -}
 id : Conn config model route interop -> Id
-id (Conn { id }) =
-    id
+id (Conn conn) =
+    conn.id
 
 
 {-| Initialize a new Conn.
 -}
 init : Id -> config -> model -> route -> Request -> Conn config model route interop
-init id config model route req =
+init givenId givenConfig givenModel givenRoute req =
     Conn
         (Impl
-            id
-            config
+            givenId
+            givenConfig
             req
             (Unsent Response.init)
-            model
-            route
+            givenModel
+            givenRoute
             []
         )
 
@@ -361,8 +361,8 @@ This is the format the response takes when it gets sent through the response por
 
 -}
 jsonEncodedResponse : Conn config model route interop -> Json.Encode.Value
-jsonEncodedResponse (Conn { resp }) =
-    case resp of
+jsonEncodedResponse (Conn conn) =
+    case conn.resp of
         Unsent resp ->
             Response.encode resp
 

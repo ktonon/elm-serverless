@@ -128,8 +128,8 @@ apply :
     Plug config model route interop
     -> Conn config model route interop
     -> Conn config model route interop
-apply plug conn =
-    case ( Conn.unsent conn, plug ) of
+apply givenPlug conn =
+    case ( Conn.unsent conn, givenPlug ) of
         ( Nothing, _ ) ->
             conn
 
@@ -138,9 +138,7 @@ apply plug conn =
 
         ( _, Pipeline plugs ) ->
             List.foldl
-                (\plug ->
-                    apply plug
-                )
+                apply
                 conn
                 plugs
 
@@ -152,8 +150,8 @@ apply plug conn =
 {-| The number of plugs in a pipeline
 -}
 size : Plug config model route interop -> Int
-size plug =
-    case plug of
+size givenPlug =
+    case givenPlug of
         Simple _ ->
             1
 

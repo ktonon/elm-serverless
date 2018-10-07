@@ -1,0 +1,22 @@
+{
+    "type": "package",
+    "name": "ktonon/elm-serverless",
+    "summary": "Deploy an elm worker to AWS Lambda using serverless",
+    "license": "MIT",
+    "version": "4.0.1",
+    "exposed-modules": [
+        "Serverless",
+        "Serverless.Conn",
+        "Serverless.Conn.Request",
+        "Serverless.Conn.Response",
+        "Serverless.Plug"
+    ],
+    "elm-version": "0.19.0 <= v < 0.20.0",
+    "dependencies": {
+        "NoRedInk/elm-json-decode-pipeline": "1.0.0 <= v < 2.0.0",
+        "elm/core": "1.0.0 <= v < 2.0.0",
+        "elm/http": "1.0.0 <= v < 2.0.0",
+        "elm/json": "1.0.0 <= v < 2.0.0"
+    },
+    "test-dependencies": {}
+}

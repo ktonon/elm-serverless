@@ -91,7 +91,7 @@ httpApi :
     HttpApi config model route interop msg
     -> Program config model route interop msg
 httpApi api =
-    Platform.programWithFlags
+    Platform.worker
         { init = init_ api
         , update = update_ api
         , subscriptions = sub_ api
@@ -274,7 +274,7 @@ init_ api flags =
 
         Err err ->
             ( { pool = ConnPool.empty
-              , configResult = Err <| err ++ " Flags(" ++ toString flags ++ ")"
+              , configResult = Err <| Json.Decode.errorToString err ++ " Flags(" ++ Debug.toString flags ++ ")"
               }
             , Cmd.none
             )
@@ -311,10 +311,10 @@ toSlsMsg api configResult rawMsg =
                         Err err ->
                             ProcessingError id 500 False <|
                                 (++) "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
-                                    (toString err)
+                                    (Debug.toString err)
 
-                action ->
-                    case decodeOutput api.interop action raw of
+                otherAction ->
+                    case decodeOutput api.interop otherAction raw of
                         Ok msg ->
                             RequestUpdate id msg
 
@@ -390,11 +390,11 @@ updateChildHelper api ( conn, cmd ) model =
                 )
             )
 
-        Just conn ->
+        Just unsentConn ->
             ( { model
                 | pool =
                     ConnPool.replace
-                        (Conn.interopClear conn)
+                        (Conn.interopClear unsentConn)
                         model.pool
               }
             , Cmd.batch
@@ -459,7 +459,7 @@ interopFunctionName : interop -> String
 interopFunctionName interop =
     let
         name =
-            interop |> toString |> String.split " " |> List.head |> Maybe.withDefault ""
+            interop |> Debug.toString |> String.split " " |> List.head |> Maybe.withDefault ""
     in
     (++)
         (name |> String.left 1 |> String.toLower)
@@ -470,8 +470,8 @@ encodeInput :
     Interop interop msg
     -> interop
     -> Json.Encode.Value
-encodeInput { encodeInput } interop =
-    encodeInput interop
+encodeInput interop input =
+    interop.encodeInput input
 
 
 decodeOutput :
@@ -482,7 +482,9 @@ decodeOutput :
 decodeOutput { outputDecoder } interopName jsonValue =
     case outputDecoder interopName of
         Just decoder ->
-            Json.Decode.decodeValue decoder jsonValue
+            jsonValue
+                |> Json.Decode.decodeValue decoder
+                |> Result.mapError Json.Decode.errorToString
 
         Nothing ->
             Err <|
