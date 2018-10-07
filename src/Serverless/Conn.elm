@@ -1,29 +1,12 @@
-module Serverless.Conn
-    exposing
-        ( Conn
-        , Id
-        , config
-        , header
-        , id
-        , init
-        , interop
-        , interopCalls
-        , interopClear
-        , jsonBody
-        , jsonEncodedResponse
-        , mapUnsent
-        , method
-        , model
-        , request
-        , respond
-        , route
-        , send
-        , textBody
-        , toSent
-        , unsent
-        , updateModel
-        , updateResponse
-        )
+module Serverless.Conn exposing
+    ( Conn, Id
+    , config, model, updateModel
+    , request, id, method, header, route
+    , respond, updateResponse, send, toSent, unsent, mapUnsent
+    , textBody, jsonBody
+    , interop
+    , init, jsonEncodedResponse, interopCalls, interopClear
+    )
 
 {-| Functions for querying and updating connections.
 

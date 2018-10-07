@@ -1,10 +1,8 @@
-module Serverless.Conn.IpAddress
-    exposing
-        ( IpAddress
-        , decoder
-        , ip4
-        , loopback
-        )
+module Serverless.Conn.IpAddress exposing
+    ( IpAddress
+    , ip4, loopback
+    , decoder
+    )
 
 {-| Internet protocol addresses and related functions.
 
@@ -84,6 +82,7 @@ toNonNegativeInt val =
         Ok i ->
             if i >= 0 then
                 Just i
+
             else
                 Nothing
 
@@ -97,6 +96,7 @@ require4 maybeList =
         Just list ->
             if List.length list == 4 then
                 Just list
+
             else
                 Nothing
 

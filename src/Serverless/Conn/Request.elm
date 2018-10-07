@@ -1,23 +1,10 @@
-module Serverless.Conn.Request
-    exposing
-        ( Method(..)
-        , Request
-        , Scheme(..)
-        , asJson
-        , asText
-        , body
-        , decoder
-        , endpoint
-        , header
-        , init
-        , method
-        , methodDecoder
-        , path
-        , query
-        , queryString
-        , schemeDecoder
-        , stage
-        )
+module Serverless.Conn.Request exposing
+    ( Request, Method(..), Scheme(..)
+    , method, path, queryString
+    , body, asText, asJson
+    , header, query, endpoint, stage
+    , init, decoder, methodDecoder, schemeDecoder
+    )
 
 {-| Query attributes of the HTTP request.
 

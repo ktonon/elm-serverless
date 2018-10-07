@@ -1,16 +1,9 @@
-module Serverless
-    exposing
-        ( HttpApi
-        , Interop
-        , Program
-        , RequestPort
-        , ResponsePort
-        , httpApi
-        , noConfig
-        , noInterop
-        , noRoutes
-        , noSideEffects
-        )
+module Serverless exposing
+    ( httpApi, HttpApi, Program
+    , RequestPort, ResponsePort
+    , Interop
+    , noConfig, noInterop, noRoutes, noSideEffects
+    )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
 at the [demos](https://github.com/ktonon/elm-serverless/blob/master/demo)
@@ -356,6 +349,7 @@ update_ api rawMsg model =
                 errMsg =
                     if secret then
                         "Internal Server Error. Check logs for details."
+
                     else
                         err
             in
