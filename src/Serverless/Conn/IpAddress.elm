@@ -26,7 +26,6 @@ used internally by the framework.
 -}
 
 import Json.Decode as Decode exposing (Decoder, andThen)
-import Toolkit.Helpers exposing (maybeList, take4Tuple)
 
 
 {-| IP address type.
@@ -102,4 +101,35 @@ require4 maybeList =
                 Nothing
 
         Nothing ->
+            Nothing
+
+
+
+-- HELPERS
+-- From https://package.elm-lang.org/packages/danielnarey/elm-toolkit/4.5.0/Toolkit-Helpers
+
+
+take4Tuple : List a -> Maybe ( a, a, a, a )
+take4Tuple list =
+    case list of
+        a :: b :: c :: d :: _ ->
+            Just ( a, b, c, d )
+
+        _ ->
+            Nothing
+
+
+maybeList : List (Maybe a) -> Maybe (List a)
+maybeList list =
+    case list |> List.take 1 of
+        [ Just value ] ->
+            list
+                |> List.drop 1
+                |> maybeList
+                |> Maybe.map ((::) value)
+
+        [] ->
+            Just []
+
+        _ ->
             Nothing
