@@ -1,10 +1,8 @@
-module Serverless.Conn.Charset
-    exposing
-        ( Charset
-        , default
-        , toString
-        , utf8
-        )
+module Serverless.Conn.Charset exposing
+    ( Charset
+    , default, utf8
+    , toString
+    )
 
 {-| A character encoding.
 

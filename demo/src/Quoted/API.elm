@@ -1,4 +1,4 @@
-module Quoted.API exposing (..)
+module Quoted.API exposing (main, pipeline, router, update)
 
 import Json.Encode
 import Quoted.Middleware

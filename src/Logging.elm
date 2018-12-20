@@ -1,4 +1,4 @@
-module Logging exposing (..)
+module Logging exposing (LogLevel(..), Logger, defaultLogger, logLevelToInt, logger, nullLogger)
 
 {-| Available Log levels
 -}
@@ -44,6 +44,7 @@ logger : LogLevel -> Logger a
 logger minLevel level label val =
     if (minLevel |> logLevelToInt) > (level |> logLevelToInt) then
         Debug.log ((level |> toString) ++ ": " ++ label) val
+
     else
         val
 

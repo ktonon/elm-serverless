@@ -1,14 +1,8 @@
-module Serverless.Conn.Response
-    exposing
-        ( Response
-        , Status
-        , addHeader
-        , encode
-        , init
-        , setBody
-        , setStatus
-        , updateBody
-        )
+module Serverless.Conn.Response exposing
+    ( Response, Status
+    , addHeader, setBody, updateBody, setStatus
+    , init, encode
+    )
 
 {-| Query and update the HTTP response.
 
@@ -131,6 +125,7 @@ encode (Response res) =
                 |> KeyValueList.encode
           )
         , ( "statusCode", Encode.int res.status )
+        , ( "isBase64Encoded", res.body |> Body.isBase64Encoded |> Encode.bool )
         ]
 
 

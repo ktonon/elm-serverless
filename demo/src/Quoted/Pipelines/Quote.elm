@@ -1,4 +1,4 @@
-module Quoted.Pipelines.Quote exposing (..)
+module Quoted.Pipelines.Quote exposing (gotQuotes, langFilter, loadQuotes, router)
 
 import Http
 import Quoted.Models.Quote as Quote
@@ -82,5 +82,6 @@ langFilter filt langs =
         Lang string ->
             if langs |> List.member string then
                 [ string ]
+
             else
                 []

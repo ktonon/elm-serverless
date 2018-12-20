@@ -1,4 +1,4 @@
-port module Interop.API exposing (..)
+port module Interop.API exposing (Conn, Interop(..), Msg(..), Route(..), encodeInterop, endpoint, interopDecoder, main, requestPort, responsePort, update)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode

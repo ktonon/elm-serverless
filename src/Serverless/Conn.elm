@@ -1,29 +1,12 @@
-module Serverless.Conn
-    exposing
-        ( Conn
-        , Id
-        , config
-        , header
-        , id
-        , init
-        , interop
-        , interopCalls
-        , interopClear
-        , jsonBody
-        , jsonEncodedResponse
-        , mapUnsent
-        , method
-        , model
-        , request
-        , respond
-        , route
-        , send
-        , textBody
-        , toSent
-        , unsent
-        , updateModel
-        , updateResponse
-        )
+module Serverless.Conn exposing
+    ( Conn, Id
+    , config, model, updateModel
+    , request, id, method, header, route
+    , respond, updateResponse, send, toSent, unsent, mapUnsent
+    , textBody, jsonBody, binaryBody
+    , interop
+    , init, jsonEncodedResponse, interopCalls, interopClear
+    )
 
 {-| Functions for querying and updating connections.
 
@@ -64,7 +47,7 @@ Update the response and send it.
 
 Use these constructors to create response bodies with different content types.
 
-@docs textBody, jsonBody
+@docs textBody, jsonBody, binaryBody
 
 
 ## JavaScript Interop
@@ -313,6 +296,13 @@ textBody =
 jsonBody : Json.Encode.Value -> Body
 jsonBody =
     Body.json
+
+
+{-| A binary file.
+-}
+binaryBody : String -> String -> Body
+binaryBody =
+    Body.binary
 
 
 

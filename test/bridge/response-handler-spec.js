@@ -52,6 +52,7 @@ describe('responseHandler({ pool })', () => {
       statusCode: 500,
       body: `${responseHandler.missingStatusCodeBody}: undefined`,
       headers: responseHandler.defaultHeaders(''),
+      isBase64Encoded: false
     }).should.be.true();
   });
 
@@ -64,10 +65,11 @@ describe('responseHandler({ pool })', () => {
       statusCode: 404,
       body: 'not found',
       headers: responseHandler.defaultHeaders(''),
+      isBase64Encoded: false
     }).should.be.true();
   });
 
-  it('JSON strinfies bodies which are objects', () => {
+  it('JSON stringifies bodies which are objects', () => {
     const h = makeHandler();
     const cb = sinon.spy();
     h.pool.put(id, {}, cb);
@@ -76,10 +78,11 @@ describe('responseHandler({ pool })', () => {
       statusCode: 200,
       body: '{"great":"job"}',
       headers: responseHandler.defaultHeaders({}),
+      isBase64Encoded: false
     }).should.be.true();
   });
 
-  it('Uses plain text for numbers', () => {
+  it('uses plain text for numbers', () => {
     const h = makeHandler();
     const cb = sinon.spy();
     h.pool.put(id, {}, cb);
@@ -88,6 +91,20 @@ describe('responseHandler({ pool })', () => {
       statusCode: 200,
       body: '42',
       headers: responseHandler.defaultHeaders(''),
+      isBase64Encoded: false
+    }).should.be.true();
+  });
+
+  it('sets isBase64Encoded to true', () => {
+    const h = makeHandler();
+    const cb = sinon.spy();
+    h.pool.put(id, {}, cb);
+    h(id, { statusCode: '200', body: 42, isBase64Encoded: true });
+    cb.calledWith(null, {
+      statusCode: 200,
+      body: '42',
+      headers: responseHandler.defaultHeaders(''),
+      isBase64Encoded: true
     }).should.be.true();
   });
 });

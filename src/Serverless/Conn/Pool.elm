@@ -1,12 +1,11 @@
-module Serverless.Conn.Pool
-    exposing
-        ( Pool
-        , empty
-        , get
-        , remove
-        , replace
-        , size
-        )
+module Serverless.Conn.Pool exposing
+    ( Pool
+    , empty
+    , get
+    , remove
+    , replace
+    , size
+    )
 
 import Dict exposing (Dict)
 import Serverless.Conn as Conn exposing (Conn, Id)
