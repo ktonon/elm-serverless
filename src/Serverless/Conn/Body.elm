@@ -92,6 +92,7 @@ asJson body =
 
         Binary _ val ->
             Decode.decodeString Decode.value val
+                |> Result.mapError Decode.errorToString
 
 
 
@@ -115,8 +116,8 @@ contentType body =
         Json _ ->
             "application/json"
 
-        Binary contentType _ ->
-            contentType
+        Binary binType _ ->
+            binType
 
         _ ->
             "text/text"
