@@ -269,13 +269,12 @@ init_ api flags =
             ( { pool = ConnPool.empty
               , configResult = Ok config
               }
-                |> Debug.log "Initialized"
             , Cmd.none
             )
 
         Err err ->
             ( { pool = ConnPool.empty
-              , configResult = Err <| Json.Decode.errorToString err ++ " Flags(" ++ Debug.toString flags ++ ")"
+              , configResult = Err <| Json.Decode.errorToString err
               }
             , Cmd.none
             )
@@ -313,7 +312,7 @@ toSlsMsg api configResult rawMsg =
                         Err err ->
                             ProcessingError id 500 False <|
                                 (++) "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
-                                    (Debug.toString err)
+                                    (Json.Decode.errorToString err)
 
                 otherAction ->
                     case decodeOutput api.interop otherAction raw of
@@ -345,9 +344,6 @@ update_ api rawMsg model =
 
         ProcessingError connId status secret err ->
             let
-                _ =
-                    Debug.log "Processing error" err
-
                 errMsg =
                     if secret then
                         "Internal Server Error. Check logs for details."
