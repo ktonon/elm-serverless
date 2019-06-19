@@ -1,17 +1,17 @@
-module TestHelpers exposing (..)
+module TestHelpers exposing (Config, Conn, Interop, Model, Msg(..), Plug, Route(..), appendToBody, conn, getHeader, httpGet, requestPort, responsePort, route, simpleLoop, simplePlug)
 
 import Json.Encode as Encode
-import Regex exposing (HowMany(..), regex)
+import Regex
 import Serverless.Conn as Conn exposing (updateResponse)
 import Serverless.Conn.Body as Body exposing (appendText)
 import Serverless.Conn.Request as Request exposing (Request)
 import Serverless.Conn.Response as Response exposing (Response, updateBody)
 import Serverless.Plug as Plug exposing (pipeline, plug)
-import UrlParser exposing ((</>), Parser, map, oneOf, s, string, top)
+import Url.Parser exposing ((</>), Parser, map, oneOf, s, string, top)
 
 
 appendToBody : String -> Conn -> Conn
-appendToBody x conn =
+appendToBody x conn_ =
     updateResponse
         (updateBody
             (\body ->
@@ -20,10 +20,10 @@ appendToBody x conn =
                         newBody
 
                     Err err ->
-                        Debug.crash err
+                        Debug.todo "crash"
             )
         )
-        conn
+        conn_
 
 
 simplePlug : String -> Conn -> Conn
@@ -32,8 +32,8 @@ simplePlug =
 
 
 simpleLoop : String -> Msg -> Conn -> ( Conn, Cmd Msg )
-simpleLoop label msg conn =
-    ( conn |> appendToBody label, Cmd.none )
+simpleLoop label msg conn_ =
+    ( conn_ |> appendToBody label, Cmd.none )
 
 
 
@@ -64,11 +64,11 @@ conn =
 
 
 getHeader : String -> Conn -> Maybe String
-getHeader key conn =
-    conn
+getHeader key conn_ =
+    conn_
         |> Conn.jsonEncodedResponse
         |> Encode.encode 0
-        |> Regex.find (AtMost 1) (regex <| "\"" ++ key ++ "\":\"(.*?)\"")
+        |> Regex.findAtMost 1 (Maybe.withDefault Regex.never <| Regex.fromString <| "\"" ++ key ++ "\":\"(.*?)\"")
         |> List.head
         |> Maybe.andThen (\{ submatches } -> List.head submatches)
         |> Maybe.andThen (\x -> x)

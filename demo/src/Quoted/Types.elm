@@ -1,13 +1,14 @@
-port module Quoted.Types exposing (..)
+port module Quoted.Types exposing (Config, Conn, Interop(..), Msg(..), Plug, Quote, configDecoder, interopDecoder, interopEncode, requestPort, responsePort)
 
 import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Decode as Decode exposing (Decoder, succeed)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode as Encode
 import Quoted.Route exposing (Route)
 import Serverless
 import Serverless.Conn exposing (Id)
 import Serverless.Plug
+
 
 
 -- CUSTOM TYPES
@@ -26,7 +27,7 @@ type alias Config =
 
 configDecoder : Decoder Config
 configDecoder =
-    decode Config
+    succeed Config
         |> required "languages" (Decode.list Decode.string)
         |> required "enableAuth" (Decode.string |> Decode.map ((==) "true"))
 

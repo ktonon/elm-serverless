@@ -1,15 +1,15 @@
-module Quoted.API exposing (..)
+module Quoted.API exposing (main, pipeline, router, update)
 
-import Json.Encode
+import Json.Encode as Encode
 import Quoted.Middleware
 import Quoted.Pipelines.Quote as Quote
-import Quoted.Route exposing (Route(..))
-import Quoted.Types exposing (..)
+import Quoted.Route exposing (Route(..), queryEncoder)
+import Quoted.Types exposing (Config, Conn, Interop(..), Msg(..), Plug, configDecoder, interopDecoder, interopEncode, requestPort, responsePort)
 import Serverless
 import Serverless.Conn exposing (interop, jsonBody, mapUnsent, method, respond, route, textBody, updateResponse)
 import Serverless.Conn.Request exposing (Method(..))
 import Serverless.Plug as Plug exposing (plug)
-import UrlParser
+import Url.Parser
 
 
 {-| A Serverless.Program is parameterized by your 5 custom types
@@ -33,7 +33,7 @@ main =
 
         -- Parses the request path and query string into Elm data.
         -- If parsing fails, a 404 is automatically sent.
-        , parseRoute = UrlParser.parseString Quoted.Route.route
+        , parseRoute = Url.Parser.parse Quoted.Route.route
 
         -- Entry point for new connections.
         -- This function composition passes the conn through a pipeline and then
@@ -85,7 +85,7 @@ router conn =
         )
     of
         ( GET, Home query ) ->
-            respond ( 200, textBody <| (++) "Home: " <| toString query ) conn
+            respond ( 200, textBody <| (++) "Home: " <| Encode.encode 0 (queryEncoder query) ) conn
 
         ( _, Quote lang ) ->
             -- Delegate to Pipeline/Quote module.
@@ -121,4 +121,4 @@ update msg conn =
         -- passed into Serverless.httpApi is responsible for converting interop
         -- results into application messages.
         RandomNumber val ->
-            respond ( 200, jsonBody <| Json.Encode.int val ) conn
+            respond ( 200, jsonBody <| Encode.int val ) conn

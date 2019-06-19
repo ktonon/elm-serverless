@@ -13,7 +13,7 @@ describe('Demo: /forms', () => {
       .set('content-type', 'text/text')
       .expect(400)
       .then(res => {
-        res.text.should.equal('Could not decode request body. Given an invalid JSON: Unexpected end of JSON input');
+        res.text.should.equal('Could not decode request body. Problem with the given value:\n\nnull\n\nExpecting an OBJECT with a field named `age`');
       })
   );
 
@@ -24,7 +24,7 @@ describe('Demo: /forms', () => {
       .send('{,}')
       .expect(400)
       .then(res => {
-        res.text.should.equal('Could not decode request body. Given an invalid JSON: Unexpected token , in JSON at position 1');
+        res.text.should.equal('Could not decode request body. Problem with the given value:\n\n"{,}"\n\nThis is not valid JSON! Unexpected token , in JSON at position 1');
       })
   );
 
@@ -35,7 +35,7 @@ describe('Demo: /forms', () => {
       .send({ age: 4 })
       .expect(400)
       .then(res => {
-        res.text.should.equal('Could not decode request body. Expecting an object with a field named `name` but instead got: {"age":4}');
+        res.text.should.equal('Could not decode request body. Problem with the given value:\n\n{\n        "age": 4\n    }\n\nExpecting an OBJECT with a field named `name`');
       })
   );
 
@@ -46,7 +46,7 @@ describe('Demo: /forms', () => {
       .send({ age: 4, name: 'fred' })
       .expect(200)
       .then(res => {
-        res.text.should.equal('{ name = "fred", age = 4 }');
+        res.text.should.equal('{"name":"fred","age":4}');
       })
   );
 
@@ -57,7 +57,7 @@ describe('Demo: /forms', () => {
       .send('{"age":3,"name":"barney"}')
       .expect(200)
       .then(res => {
-        res.text.should.equal('{ name = "barney", age = 3 }');
+        res.text.should.equal('{"name":"barney","age":3}');
       })
   );
 });

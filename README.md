@@ -18,7 +18,7 @@ Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your A
 ## Middleware
 
 * [ktonon/elm-serverless-cors][] - Add [CORS][] to your response headers.
-
+* [ktonon/elm-serverless-auth-jwt][] - Authorization using JSON Web Tokens (JWT)
 
 [API Docs]:http://package.elm-lang.org/packages/ktonon/elm-serverless/latest/Serverless
 [./demo]:https://github.com/ktonon/elm-serverless/blob/master/demo
@@ -28,4 +28,5 @@ Deploy an [elm][] HTTP API to [AWS Lambda][] using [serverless][]. Define your A
 [elm-serverless-demo]:https://github.com/ktonon/elm-serverless-demo
 [elm]:http://elm-lang.org/
 [ktonon/elm-serverless-cors]:https://github.com/ktonon/elm-serverless-cors
+[ktonon/elm-serverless-auth-jwt]:https://github.com/ktonon/elm-serverless-auth-jwt
 [serverless]:https://serverless.com/

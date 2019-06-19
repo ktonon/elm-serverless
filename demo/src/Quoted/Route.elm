@@ -1,6 +1,8 @@
-module Quoted.Route exposing (..)
+module Quoted.Route exposing (Lang(..), Query, Route(..), Sort(..), lang, query, queryEncoder, route, sort)
 
-import UrlParser exposing (..)
+import Json.Encode as Encode
+import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
+import Url.Parser.Query as Query
 
 
 type Route
@@ -48,9 +50,27 @@ query : Parser (Query -> a) a
 query =
     map Query
         (top
-            <?> customParam "q" (Maybe.withDefault "")
-            <?> customParam "sort" sort
+            <?> (Query.string "q" |> Query.map (Maybe.withDefault ""))
+            <?> (Query.string "sort" |> Query.map sort)
         )
+
+
+queryEncoder : Query -> Encode.Value
+queryEncoder qry =
+    [ ( "q", Encode.string qry.q )
+    , ( "sort", sortEncoder qry.sort )
+    ]
+        |> Encode.object
+
+
+sortEncoder : Sort -> Encode.Value
+sortEncoder srt =
+    case srt of
+        Asc ->
+            Encode.string "Asc"
+
+        Desc ->
+            Encode.string "Desc"
 
 
 sort : Maybe String -> Sort
@@ -59,6 +79,7 @@ sort =
         >> (\val ->
                 if val == "asc" then
                     Asc
+
                 else
                     Desc
            )

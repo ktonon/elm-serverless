@@ -1,9 +1,9 @@
 const elmServerless = require('../../../src-bridge');
 
-const { Interop } = require('./API.elm');
+const { Elm } = require('./API.elm');
 
 module.exports.handler = elmServerless.httpApi({
-  handler: Interop.API,
+  handler: Elm.Interop.API,
 
   // One handler per Interop type constructor
   interop: {

@@ -1,16 +1,9 @@
-module Serverless
-    exposing
-        ( HttpApi
-        , Interop
-        , Program
-        , RequestPort
-        , ResponsePort
-        , httpApi
-        , noConfig
-        , noInterop
-        , noRoutes
-        , noSideEffects
-        )
+module Serverless exposing
+    ( httpApi, HttpApi, Program
+    , RequestPort, ResponsePort
+    , Interop
+    , noConfig, noInterop, noRoutes, noSideEffects
+    )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
 at the [demos](https://github.com/ktonon/elm-serverless/blob/master/demo)
@@ -69,6 +62,7 @@ import Serverless.Conn.Body as Body
 import Serverless.Conn.Pool as ConnPool
 import Serverless.Conn.Request as Request
 import Serverless.Conn.Response as Response exposing (Status)
+import Url exposing (Url)
 
 
 {-| Serverless program type.
@@ -98,7 +92,7 @@ httpApi :
     HttpApi config model route interop msg
     -> Program config model route interop msg
 httpApi api =
-    Platform.programWithFlags
+    Platform.worker
         { init = init_ api
         , update = update_ api
         , subscriptions = sub_ api
@@ -132,7 +126,7 @@ and not just on `model`.
 type alias HttpApi config model route interop msg =
     { configDecoder : Decoder config
     , initialModel : model
-    , parseRoute : String -> Maybe route
+    , parseRoute : Url -> Maybe route
     , endpoint : Conn config model route interop -> ( Conn config model route interop, Cmd msg )
     , update : msg -> Conn config model route interop -> ( Conn config model route interop, Cmd msg )
     , interop : Interop interop msg
@@ -220,7 +214,7 @@ noInterop =
             }
 
 -}
-noRoutes : String -> Maybe ()
+noRoutes : Url -> Maybe ()
 noRoutes _ =
     Just ()
 
@@ -281,7 +275,7 @@ init_ api flags =
 
         Err err ->
             ( { pool = ConnPool.empty
-              , configResult = Err <| err ++ " Flags(" ++ toString flags ++ ")"
+              , configResult = Err <| Json.Decode.errorToString err ++ " Flags(" ++ Debug.toString flags ++ ")"
               }
             , Cmd.none
             )
@@ -304,8 +298,9 @@ toSlsMsg api configResult rawMsg =
                     case decodeValue Request.decoder raw of
                         Ok req ->
                             case
-                                api.parseRoute <|
-                                    (Request.path req ++ Request.queryString req)
+                                Request.url req
+                                    |> Url.fromString
+                                    |> Maybe.andThen api.parseRoute
                             of
                                 Just route ->
                                     RequestAdd <| Conn.init id config api.initialModel route req
@@ -318,10 +313,10 @@ toSlsMsg api configResult rawMsg =
                         Err err ->
                             ProcessingError id 500 False <|
                                 (++) "Misconfigured server. Make sure the elm-serverless npm package version matches the elm package version."
-                                    (toString err)
+                                    (Debug.toString err)
 
-                action ->
-                    case decodeOutput api.interop action raw of
+                otherAction ->
+                    case decodeOutput api.interop otherAction raw of
                         Ok msg ->
                             RequestUpdate id msg
 
@@ -356,6 +351,7 @@ update_ api rawMsg model =
                 errMsg =
                     if secret then
                         "Internal Server Error. Check logs for details."
+
                     else
                         err
             in
@@ -396,11 +392,11 @@ updateChildHelper api ( conn, cmd ) model =
                 )
             )
 
-        Just conn ->
+        Just unsentConn ->
             ( { model
                 | pool =
                     ConnPool.replace
-                        (Conn.interopClear conn)
+                        (Conn.interopClear unsentConn)
                         model.pool
               }
             , Cmd.batch
@@ -465,7 +461,7 @@ interopFunctionName : interop -> String
 interopFunctionName interop =
     let
         name =
-            interop |> toString |> String.split " " |> List.head |> Maybe.withDefault ""
+            interop |> Debug.toString |> String.split " " |> List.head |> Maybe.withDefault ""
     in
     (++)
         (name |> String.left 1 |> String.toLower)
@@ -476,8 +472,8 @@ encodeInput :
     Interop interop msg
     -> interop
     -> Json.Encode.Value
-encodeInput { encodeInput } interop =
-    encodeInput interop
+encodeInput interop input =
+    interop.encodeInput input
 
 
 decodeOutput :
@@ -488,7 +484,9 @@ decodeOutput :
 decodeOutput { outputDecoder } interopName jsonValue =
     case outputDecoder interopName of
         Just decoder ->
-            Json.Decode.decodeValue decoder jsonValue
+            jsonValue
+                |> Json.Decode.decodeValue decoder
+                |> Result.mapError Json.Decode.errorToString
 
         Nothing ->
             Err <|

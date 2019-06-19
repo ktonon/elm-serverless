@@ -7,7 +7,7 @@ const spyLogger = require('./spy-logger');
 const requestPort = 'requestPort';
 const responsePort = 'responsePort';
 const makeHandler = () => ({
-  worker: sinon.stub().returns({
+  init: sinon.stub().returns({
     ports: {
       requestPort: { send: sinon.spy() },
       responsePort: { subscribe: sinon.spy() },
@@ -26,17 +26,17 @@ describe('elmServerless', () => {
         .should.not.throw();
     });
 
-    it('passes config to the handler.worker function', () => {
+    it('passes config to the handler.init function', () => {
       const h = makeHandler();
       const config = { some: { app: ['specific', 'configuration'] } };
       httpApi({ handler: h, config, requestPort, responsePort });
-      h.worker.calledWith(config).should.be.true();
+      h.init.calledWith({ flags: config }).should.be.true();
     });
 
     it('subscribes to the responsePort', () => {
       const h = makeHandler();
       httpApi({ handler: h, requestPort, responsePort });
-      const subscribe = h.worker().ports.responsePort.subscribe;
+      const subscribe = h.init().ports.responsePort.subscribe;
       subscribe.called.should.be.true();
       const call = subscribe.getCall(0);
       const [func] = call.args;
@@ -47,7 +47,7 @@ describe('elmServerless', () => {
       const h = makeHandler();
       const logger = spyLogger();
       httpApi({ handler: h, logger, requestPort, responsePort });
-      const subscribe = h.worker().ports.responsePort.subscribe;
+      const subscribe = h.init().ports.responsePort.subscribe;
       const responseHandler = subscribe.getCalls()[0].args[0];
       logger.error.getCalls().should.be.empty();
       responseHandler(['id', '__response__', {}]);
@@ -59,7 +59,7 @@ describe('elmServerless', () => {
       const h = makeHandler();
       const logger = spyLogger();
       httpApi({ handler: h, logger, requestPort, responsePort });
-      const subscribe = h.worker().ports.responsePort.subscribe;
+      const subscribe = h.init().ports.responsePort.subscribe;
       const responseHandler = subscribe.getCalls()[0].args[0];
       (() => responseHandler(['id', 'missingHandler', {}])).should.throw(/^Missing interop/);
     });
@@ -77,17 +77,17 @@ describe('elmServerless', () => {
     });
 
     it('requires a valid handler', () => {
-      (() => httpApi({ handler: { worker: 'foo' }, requestPort, responsePort }))
-        .should.throw(/^Invalid handler argument(.|\n)*?Got: { worker: 'foo' }/);
+      (() => httpApi({ handler: { init: 'foo' }, requestPort, responsePort }))
+        .should.throw(/^Invalid handler argument(.|\n)*?Got: { init: 'foo' }/);
     });
 
-    it('expects handler.worker to return an object', () => {
+    it('expects handler.init to return an object', () => {
       (() => httpApi({
-        handler: { worker: sinon.stub().returns('foo') },
+        handler: { init: sinon.stub().returns('foo') },
         requestPort,
         responsePort,
       }))
-        .should.throw(/^handler\.worker did not return valid Elm app.*?Got: 'foo'$/);
+        .should.throw(/^handler\.init did not return valid Elm app.*?Got: 'foo'$/);
     });
 
     it('requires a requestPort', () => {

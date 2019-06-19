@@ -1,7 +1,7 @@
 const elmServerless = require('../../../src-bridge');
 
-const elm = require('./API.elm');
+const { Elm } = require('./API.elm');
 
 module.exports.handler = elmServerless.httpApi({
-  handler: elm.Routing.API,
+  handler: Elm.Routing.API,
 });

@@ -1,23 +1,10 @@
-module Serverless.Conn.Request
-    exposing
-        ( Method(..)
-        , Request
-        , Scheme(..)
-        , asJson
-        , asText
-        , body
-        , decoder
-        , endpoint
-        , header
-        , init
-        , method
-        , methodDecoder
-        , path
-        , query
-        , queryString
-        , schemeDecoder
-        , stage
-        )
+module Serverless.Conn.Request exposing
+    ( Request, Method(..), Scheme(..)
+    , url, method, path, queryString
+    , body, asText, asJson
+    , header, query, endpoint, stage, methodToString
+    , init, decoder, methodDecoder, schemeDecoder
+    )
 
 {-| Query attributes of the HTTP request.
 
@@ -41,7 +28,7 @@ These attributes are typically involved in routing requests. See the
 [Routing Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Routing/API.elm)
 for an example.
 
-@docs method, path, queryString
+@docs url, method, path, queryString
 
 
 ## Body
@@ -55,7 +42,7 @@ for an example.
 
 ## Other Attributes
 
-@docs header, query, endpoint, stage
+@docs header, query, endpoint, stage, methodToString
 
 
 ## Misc
@@ -69,7 +56,7 @@ used internally by the framework.
 
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, andThen)
-import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
@@ -100,6 +87,37 @@ type Method
     | TRACE
 
 
+methodToString : Method -> String
+methodToString meth =
+    case meth of
+        CONNECT ->
+            "CONNECT"
+
+        DELETE ->
+            "DELETE"
+
+        GET ->
+            "GET"
+
+        HEAD ->
+            "HEAD"
+
+        OPTIONS ->
+            "OPTIONS"
+
+        PATCH ->
+            "PATCH"
+
+        POST ->
+            "POST"
+
+        PUT ->
+            "PUT"
+
+        TRACE ->
+            "TRACE"
+
+
 {-| Request scheme (a.k.a. protocol).
 
     -- to use shorthand notation
@@ -123,6 +141,7 @@ type alias Model =
     , stage : String
     , queryParams : Dict String String
     , queryString : String
+    , url : String
     }
 
 
@@ -151,6 +170,7 @@ init =
             "test"
             Dict.empty
             ""
+            "http://:80/"
         )
 
 
@@ -161,8 +181,8 @@ init =
 {-| Request body.
 -}
 body : Request -> Body
-body (Request { body }) =
-    body
+body (Request request) =
+    request.body
 
 
 {-| Extract the String from the body.
@@ -204,6 +224,13 @@ header key (Request { headers }) =
     Dict.get key headers
 
 
+{-| The requested URL if it parsed correctly.
+-}
+url : Request -> String
+url (Request request) =
+    request.url
+
+
 {-| HTTP request method.
 
     case Request.method req of
@@ -218,8 +245,8 @@ header key (Request { headers }) =
 
 -}
 method : Request -> Method
-method (Request { method }) =
-    method
+method (Request request) =
+    request.method
 
 
 {-| Request path.
@@ -229,8 +256,8 @@ While you can access this attribute directly, it is better to provide a
 
 -}
 path : Request -> String
-path (Request { path }) =
-    path
+path (Request request) =
+    request.path
 
 
 {-| Get a query argument by name.
@@ -247,15 +274,15 @@ While you can access this attribute directly, it is better to provide a
 
 -}
 queryString : Request -> String
-queryString (Request { queryString }) =
-    queryString
+queryString (Request request) =
+    request.queryString
 
 
 {-| IP address of the requesting entity.
 -}
 remoteIp : Request -> IpAddress
-remoteIp (Request { remoteIp }) =
-    remoteIp
+remoteIp (Request request) =
+    request.remoteIp
 
 
 {-| Serverless deployment stage.
@@ -264,8 +291,8 @@ See <https://serverless.com/framework/docs/providers/aws/guide/deploying/>
 
 -}
 stage : Request -> String
-stage (Request { stage }) =
-    stage
+stage (Request request) =
+    request.stage
 
 
 
@@ -276,7 +303,7 @@ stage (Request { stage }) =
 -}
 decoder : Decoder Request
 decoder =
-    decode HeadersOnly
+    Decode.succeed HeadersOnly
         |> required "headers" (KeyValueList.decoder |> Decode.map Dict.fromList)
         |> andThen (Decode.map Request << modelDecoder)
 
@@ -286,9 +313,41 @@ type alias HeadersOnly =
     }
 
 
+schemeToString : Scheme -> String
+schemeToString scheme =
+    case scheme of
+        Http ->
+            "http:"
+
+        Https ->
+            "https:"
+
+
 modelDecoder : HeadersOnly -> Decoder Model
 modelDecoder { headers } =
-    decode Model
+    Decode.succeed
+        (\bodyVal headersVal hostVal methodVal pathVal portVal remoteIpVal schemeVal stageVal queryParamsVal queryStringVal ->
+            { body = bodyVal
+            , headers = headersVal
+            , host = hostVal
+            , method = methodVal
+            , path = pathVal
+            , port_ = portVal
+            , remoteIp = remoteIpVal
+            , scheme = schemeVal
+            , stage = stageVal
+            , queryParams = queryParamsVal
+            , queryString = queryStringVal
+            , url =
+                schemeToString schemeVal
+                    ++ "//"
+                    ++ hostVal
+                    ++ ":"
+                    ++ String.fromInt portVal
+                    ++ pathVal
+                    ++ queryStringVal
+            }
+        )
         |> required "body" (Body.decoder <| Dict.get "content-type" headers)
         |> hardcoded headers
         |> required "host" Decode.string

@@ -16,7 +16,7 @@ If the Serverless.Program is defined in API.elm then the handler is:
 `;
 
 const invalidElmApp = msg => {
-  throw new Error(`handler.worker did not return valid Elm app.${msg}`);
+  throw new Error(`handler.init did not return valid Elm app.${msg}`);
 };
 
 const httpApi = ({
@@ -27,12 +27,12 @@ const httpApi = ({
   requestPort = 'requestPort',
   responsePort = 'responsePort',
 } = {}) => {
-  validate(handler, 'worker', {
+  validate(handler, 'init', {
     missing: `Missing handler argument.${handlerExample}`,
     invalid: `Invalid handler argument.${handlerExample}Got`,
   });
 
-  const app = handler.worker(config);
+  const app = handler.init({ flags: config });
 
   if (typeof app !== 'object') {
     invalidElmApp(`Got: ${validate.inspect(app)}`);

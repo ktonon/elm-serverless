@@ -1,9 +1,8 @@
-module Serverless.ConnTests
-    exposing
-        ( all
-        , buildingPipelinesTests
-        , responseTests
-        )
+module Serverless.ConnTests exposing
+    ( all
+    , buildingPipelinesTests
+    , responseTests
+    )
 
 import Expect
 import Expect.Extra as Expect exposing (stringPattern)

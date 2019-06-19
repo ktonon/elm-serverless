@@ -1,7 +1,8 @@
 port module Forms.API exposing (main)
 
-import Json.Decode exposing (Decoder, decodeValue, int, map, string)
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode exposing (Decoder, decodeValue, errorToString, int, map, string, succeed)
+import Json.Decode.Pipeline exposing (required)
+import Json.Encode as Encode
 import Serverless
 import Serverless.Conn exposing (method, request, respond, textBody)
 import Serverless.Conn.Request exposing (Method(..), asJson, body)
@@ -33,15 +34,16 @@ type alias Person =
 
 endpoint : Conn -> ( Conn, Cmd () )
 endpoint conn =
-    case
-        ( method conn
-        , conn
-            |> (request >> body >> asJson)
-            |> Result.andThen (decodeValue personDecoder)
-        )
-    of
+    let
+        decodeResult val =
+            decodeValue personDecoder val |> Result.mapError errorToString
+
+        result =
+            conn |> request |> body |> asJson |> Result.andThen decodeResult
+    in
+    case ( method conn, result ) of
         ( POST, Ok person ) ->
-            respond ( 200, textBody <| toString person ) conn
+            respond ( 200, textBody <| Encode.encode 0 (personEncoder person) ) conn
 
         ( POST, Err err ) ->
             respond
@@ -56,9 +58,17 @@ endpoint conn =
 
 personDecoder : Decoder Person
 personDecoder =
-    decode Person
+    succeed Person
         |> required "name" string
         |> required "age" int
+
+
+personEncoder : Person -> Encode.Value
+personEncoder person =
+    [ ( "name", Encode.string person.name )
+    , ( "age", Encode.int person.age )
+    ]
+        |> Encode.object
 
 
 type alias Conn =

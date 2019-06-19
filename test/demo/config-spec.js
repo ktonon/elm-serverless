@@ -10,7 +10,7 @@ describe('Demo: /config', () => {
   it('responds with the parsed config', () =>
     request.get(path('/'))
       .then(res => {
-        res.text.should.equal('Config: { auth = { secret = "secret" }, someService = { protocol = Http, host = "localhost", port_ = 3131 } }');
+        res.text.should.equal('Config: {"auth":{"secret":"secret"},"someService":{"protocol":"http","host":"localhost","port":3131}}');
       })
   );
 });

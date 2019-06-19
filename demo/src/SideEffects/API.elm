@@ -1,10 +1,10 @@
-port module SideEffects.API exposing (..)
+port module SideEffects.API exposing (Conn, Msg(..), Route(..), endpoint, main, requestPort, responsePort, update)
 
 import Json.Encode
 import Random
 import Serverless
 import Serverless.Conn exposing (jsonBody, respond, route)
-import UrlParser exposing ((</>), int, map, oneOf, s, top)
+import Url.Parser exposing ((</>), int, map, oneOf, s, top)
 
 
 {-| Shows how to use the update function to handle side-effects.
@@ -20,13 +20,13 @@ main =
 
         -- Route /:lowerBound/:upperBound
         , parseRoute =
-            UrlParser.parseString <|
-                oneOf
-                    [ map NumberRange (int </> int)
-                    , map (NumberRange 0) int
-                    , map (NumberRange 0 1000000000) top
-                    , map Unit (s "unit")
-                    ]
+            oneOf
+                [ map NumberRange (int </> int)
+                , map (NumberRange 0) int
+                , map (NumberRange 0 1000000000) top
+                , map Unit (s "unit")
+                ]
+                |> Url.Parser.parse
 
         -- Incoming connection handler
         , endpoint = endpoint

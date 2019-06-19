@@ -12,13 +12,13 @@
 const elmServerless = require('../../../src-bridge');
 
 // Import the elm app
-const elm = require('./API.elm');
+const { Elm } = require('./API.elm');
 
 // Create an AWS Lambda handler which bridges to the Elm app.
 module.exports.handler = elmServerless.httpApi({
 
   // Your elm app is the handler
-  handler: elm.Hello.API,
+  handler: Elm.Hello.API,
 
   // Because elm libraries cannot expose ports, you have to define them.
   // Whatever you call them, you have to provide the names.

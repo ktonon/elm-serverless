@@ -1,6 +1,7 @@
 port module Pipelines.API exposing (main)
 
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode exposing (succeed)
+import Json.Decode.Pipeline exposing (required)
 import Serverless
 import Serverless.Conn exposing (..)
 import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
@@ -11,7 +12,7 @@ import Serverless.Plug as Plug exposing (Plug, plug)
 {-| Pipelines demo.
 
 Pipelines are sequences of functions which transform the connection. They are
-ideal for building middelware.
+ideal for building middleware.
 
 -}
 main : Serverless.Program Config () () () ()
@@ -37,7 +38,7 @@ main =
 
         -- Some middleware may provide a configuration decoder.
         , configDecoder =
-            decode Config
+            succeed Config
                 |> required "cors" Serverless.Cors.configDecoder
         }
 

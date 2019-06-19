@@ -1,14 +1,8 @@
-module Serverless.Conn.Response
-    exposing
-        ( Response
-        , Status
-        , addHeader
-        , encode
-        , init
-        , setBody
-        , setStatus
-        , updateBody
-        )
+module Serverless.Conn.Response exposing
+    ( Response, Status
+    , addHeader, setBody, updateBody, setStatus
+    , init, encode
+    )
 
 {-| Query and update the HTTP response.
 

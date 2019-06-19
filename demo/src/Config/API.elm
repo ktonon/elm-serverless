@@ -1,7 +1,8 @@
-port module Config.API exposing (..)
+port module Config.API exposing (main)
 
 import Json.Decode exposing (Decoder, andThen, fail, int, map, string, succeed)
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode.Pipeline exposing (required)
+import Json.Encode as Encode
 import Serverless
 import Serverless.Conn exposing (config, respond, textBody)
 
@@ -29,7 +30,7 @@ main =
             \conn ->
                 respond
                     ( 200
-                    , textBody <| (++) "Config: " <| toString (config conn)
+                    , textBody <| (++) "Config: " <| configToString (config conn)
                     )
                     conn
         }
@@ -37,6 +38,11 @@ main =
 
 
 -- CONFIG TYPES
+
+
+configToString : Config -> String
+configToString config =
+    Encode.encode 0 (configEncoder config)
 
 
 type alias Config =
@@ -67,17 +73,40 @@ type Protocol
 
 configDecoder : Decoder Config
 configDecoder =
-    decode Config
-        |> required "auth" (decode Auth |> required "secret" string)
+    succeed Config
+        |> required "auth" (succeed Auth |> required "secret" string)
         |> required "someService" serviceDecoder
+
+
+authEncoder : Auth -> Encode.Value
+authEncoder auth =
+    [ ( "secret", Encode.string auth.secret ) ]
+        |> Encode.object
+
+
+configEncoder : Config -> Encode.Value
+configEncoder config =
+    [ ( "auth", authEncoder config.auth )
+    , ( "someService", serviceEncoder config.someService )
+    ]
+        |> Encode.object
 
 
 serviceDecoder : Decoder Service
 serviceDecoder =
-    decode Service
+    succeed Service
         |> required "protocol" protocolDecoder
         |> required "host" string
-        |> required "port" (string |> andThen (String.toInt >> resultToDecoder))
+        |> required "port" (string |> andThen (String.toInt >> maybeToDecoder))
+
+
+serviceEncoder : Service -> Encode.Value
+serviceEncoder service =
+    [ ( "protocol", protocolEncoder service.protocol )
+    , ( "host", Encode.string service.host )
+    , ( "port", Encode.int service.port_ )
+    ]
+        |> Encode.object
 
 
 protocolDecoder : Decoder Protocol
@@ -97,14 +126,24 @@ protocolDecoder =
         string
 
 
-resultToDecoder : Result err a -> Decoder a
-resultToDecoder result =
-    case result of
-        Ok val ->
+protocolEncoder : Protocol -> Encode.Value
+protocolEncoder protocol =
+    case protocol of
+        Http ->
+            Encode.string "http"
+
+        Https ->
+            Encode.string "https"
+
+
+maybeToDecoder : Maybe a -> Decoder a
+maybeToDecoder maybe =
+    case maybe of
+        Just val ->
             succeed val
 
-        Err err ->
-            fail (toString err)
+        Nothing ->
+            fail "nothing"
 
 
 port requestPort : Serverless.RequestPort msg

@@ -32,7 +32,7 @@ describe('Demo: /quoted', () => {
       request.get(path('/?q=foo%20bar'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
-          res.text.should.match(/\bq = "foo bar"/);
+          res.text.should.match(/"q":"foo bar"/);
         })
     );
 
@@ -40,8 +40,8 @@ describe('Demo: /quoted', () => {
       request.get(path('/?q=*&sort=asc'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
-          res.text.should.match(/\bq = "*"/);
-          res.text.should.match(/\bsort = Asc\b/);
+          res.text.should.match(/"q":"*"/);
+          res.text.should.match(/"sort":"Asc"/);
         })
     );
 
@@ -49,8 +49,8 @@ describe('Demo: /quoted', () => {
       request.get(path('/'))
         .set('Authorization', 'anything')
         .expect(200).then(res => {
-          res.text.should.match(/\bq = ""/);
-          res.text.should.match(/\bsort = Desc\b/);
+          res.text.should.match(/"q":""/);
+          res.text.should.match(/"sort":"Desc"/);
         })
     );
   });

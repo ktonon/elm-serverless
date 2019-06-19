@@ -1,10 +1,11 @@
-module Quoted.Models.Quote exposing (..)
+module Quoted.Models.Quote exposing (decoder, encodeList, format, request)
 
 import Http
-import Json.Decode exposing (Decoder, string)
-import Json.Decode.Pipeline exposing (decode, hardcoded, required)
-import Json.Encode as J
+import Json.Decode exposing (Decoder, string, succeed)
+import Json.Decode.Pipeline exposing (hardcoded, required)
+import Json.Encode as Encode exposing (Value)
 import Quoted.Types exposing (Quote)
+
 
 
 -- MODEL
@@ -15,20 +16,20 @@ format lineBreak quote =
     quote.text ++ lineBreak ++ "--" ++ quote.author
 
 
-encodeList : List Quote -> J.Value
+encodeList : List Quote -> Value
 encodeList quotes =
-    J.object
+    Encode.object
         [ ( "quotes"
           , quotes
                 |> List.map
                     (\quote ->
-                        J.object
-                            [ ( "lang", quote.lang |> J.string )
-                            , ( "text", quote.text |> J.string )
-                            , ( "author", quote.author |> J.string )
+                        Encode.object
+                            [ ( "lang", quote.lang |> Encode.string )
+                            , ( "text", quote.text |> Encode.string )
+                            , ( "author", quote.author |> Encode.string )
                             ]
                     )
-                |> J.list
+                |> Encode.list identity
           )
         ]
 
@@ -39,7 +40,7 @@ encodeList quotes =
 
 decoder : String -> Decoder Quote
 decoder lang =
-    decode Quote
+    succeed Quote
         |> hardcoded lang
         |> required "quoteText" string
         |> required "quoteAuthor" string
