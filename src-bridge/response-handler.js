@@ -28,12 +28,14 @@ const handler = ({ pool, logger = defaultLogger }) => function responseHandler(i
         statusCode: 500,
         body: `${missingStatusCodeBody}: ${resp.statusCode}`,
         headers: defaultHeaders(''),
+        isBase64Encoded: !!resp.isBase64Encoded
       });
     } else {
       callback(null, {
         statusCode,
         body: encodeBody(resp.body, statusCode),
         headers: resp.headers || defaultHeaders(resp.body),
+        isBase64Encoded: !!resp.isBase64Encoded
       });
     }
   } else {
