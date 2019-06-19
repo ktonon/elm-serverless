@@ -87,6 +87,8 @@ type Method
     | TRACE
 
 
+{-| Gets the HTTP Method as a String, like 'GET', 'PUT', etc.
+-}
 methodToString : Method -> String
 methodToString meth =
     case meth of
