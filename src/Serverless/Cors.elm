@@ -200,8 +200,8 @@ variables can be used as the source of CORS configuration.
 -}
 fromConfig :
     (config -> Config)
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 fromConfig extract conn =
     cors (conn |> Conn.config |> extract) conn
 
@@ -210,8 +210,8 @@ fromConfig extract conn =
 -}
 cors :
     Config
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 cors config =
     allowOrigin config.origin
         >> exposeHeaders config.expose
@@ -229,8 +229,8 @@ just be set to `*`
 -}
 allowOrigin :
     Reflectable (List String)
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 allowOrigin origin conn =
     case origin of
         ReflectRequest ->
@@ -261,8 +261,8 @@ allowOrigin origin conn =
 -}
 exposeHeaders :
     List String
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 exposeHeaders headers conn =
     if headers |> List.isEmpty then
         conn
@@ -284,8 +284,8 @@ If the value is not positive, the header will not be set.
 -}
 maxAge :
     Int
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 maxAge age conn =
     if age > 0 then
         updateResponse
@@ -307,8 +307,8 @@ Only sets the header if the value is `True`.
 -}
 allowCredentials :
     Bool
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 allowCredentials allow conn =
     if allow then
         updateResponse
@@ -323,8 +323,8 @@ allowCredentials allow conn =
 -}
 allowMethods :
     List Method
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 allowMethods methods conn =
     if methods |> List.isEmpty then
         conn
@@ -347,8 +347,8 @@ or if absent, it will not set the header at all.
 -}
 allowHeaders :
     Reflectable (List String)
-    -> Conn config model route interop
-    -> Conn config model route interop
+    -> Conn config model route
+    -> Conn config model route
 allowHeaders headers conn =
     case headers of
         ReflectRequest ->

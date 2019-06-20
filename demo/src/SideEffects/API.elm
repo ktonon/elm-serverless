@@ -9,12 +9,11 @@ import Url.Parser exposing ((</>), int, map, oneOf, s, top)
 
 {-| Shows how to use the update function to handle side-effects.
 -}
-main : Serverless.Program () () Route () Msg
+main : Serverless.Program () () Route Msg
 main =
     Serverless.httpApi
         { configDecoder = Serverless.noConfig
         , initialModel = ()
-        , interop = Serverless.noInterop
         , requestPort = requestPort
         , responsePort = responsePort
 
@@ -88,7 +87,7 @@ update msg conn =
 
 
 type alias Conn =
-    Serverless.Conn.Conn () () Route ()
+    Serverless.Conn.Conn () () Route
 
 
 port requestPort : Serverless.RequestPort msg

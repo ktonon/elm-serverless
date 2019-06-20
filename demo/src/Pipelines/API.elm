@@ -15,13 +15,12 @@ Pipelines are sequences of functions which transform the connection. They are
 ideal for building middleware.
 
 -}
-main : Serverless.Program Config () () () ()
+main : Serverless.Program Config () () ()
 main =
     Serverless.httpApi
         { initialModel = ()
         , parseRoute = Serverless.noRoutes
         , update = Serverless.noSideEffects
-        , interop = Serverless.noInterop
         , requestPort = requestPort
         , responsePort = responsePort
 
@@ -49,7 +48,7 @@ type alias Config =
     { cors : Serverless.Cors.Config }
 
 
-pipeline : Plug Config () () ()
+pipeline : Plug Config () ()
 pipeline =
     Plug.pipeline
         -- Each plug in a pipeline transforms the connection
@@ -69,7 +68,7 @@ This can be done with the `toSent` function, which will make the conn immutable.
 point the conn becomes "sent".
 
 -}
-authMiddleware : Conn Config () () () -> Conn Config () () ()
+authMiddleware : Conn Config () () -> Conn Config () ()
 authMiddleware conn =
     case header "authorization" conn of
         Just _ ->

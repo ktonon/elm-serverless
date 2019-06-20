@@ -1,4 +1,4 @@
-module TestHelpers exposing (Config, Conn, Interop, Model, Msg(..), Plug, Route(..), appendToBody, conn, getHeader, httpGet, requestPort, responsePort, route, simpleLoop, simplePlug)
+module TestHelpers exposing (Config, Conn, Model, Msg(..), Plug, Route(..), appendToBody, conn, getHeader, httpGet, requestPort, responsePort, route, simpleLoop, simplePlug)
 
 import Json.Encode as Encode
 import Regex
@@ -97,16 +97,12 @@ type Msg
     = NoOp
 
 
-type alias Interop =
-    ()
-
-
 type alias Plug =
-    Plug.Plug Config Model Route Interop
+    Plug.Plug Config Model Route
 
 
 type alias Conn =
-    Conn.Conn Config Model Route Interop
+    Conn.Conn Config Model Route
 
 
 requestPort : (Encode.Value -> msg) -> Sub msg

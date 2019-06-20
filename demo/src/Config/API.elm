@@ -9,13 +9,12 @@ import Serverless.Conn exposing (config, respond, textBody)
 
 {-| Shows how to load per-instance configuration.
 -}
-main : Serverless.Program Config () () () ()
+main : Serverless.Program Config () () ()
 main =
     Serverless.httpApi
         { initialModel = ()
         , parseRoute = Serverless.noRoutes
         , update = Serverless.noSideEffects
-        , interop = Serverless.noInterop
         , requestPort = requestPort
         , responsePort = responsePort
 

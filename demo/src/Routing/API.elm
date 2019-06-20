@@ -12,13 +12,12 @@ import Url.Parser exposing ((</>), map, oneOf, s, string, top)
 We use a routing function as the endpoint, and provide a route parsing function.
 
 -}
-main : Serverless.Program () () Route () ()
+main : Serverless.Program () () Route ()
 main =
     Serverless.httpApi
         { configDecoder = Serverless.noConfig
         , initialModel = ()
         , update = Serverless.noSideEffects
-        , interop = Serverless.noInterop
         , requestPort = requestPort
         , responsePort = responsePort
 
@@ -85,7 +84,7 @@ router conn =
 {-| For convenience we defined our own Conn with arguments to the type parameters
 -}
 type alias Conn =
-    Serverless.Conn.Conn () () Route ()
+    Serverless.Conn.Conn () () Route
 
 
 port requestPort : Serverless.RequestPort msg

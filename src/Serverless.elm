@@ -1,8 +1,7 @@
 module Serverless exposing
     ( httpApi, HttpApi, Program
     , RequestPort, ResponsePort
-    , Interop
-    , noConfig, noInterop, noRoutes, noSideEffects
+    , noConfig, noRoutes, noSideEffects
     )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look
@@ -14,7 +13,6 @@ for usage examples.
 
   - [Defining a Program](#defining-a-program)
   - [Port Types](#port-types)
-  - [JavaScript Interop](#javascript-interop)
   - [Initialization Helpers](#initialization-helpers)
 
 
@@ -35,23 +33,12 @@ for a usage example.
 @docs RequestPort, ResponsePort
 
 
-## JavaScript Interop
-
-If you require the ability to call out to JavaScript, you must define a type
-which enumerates the functions that can be called. Use `Interop` to define this
-type as well as coders for converting to and from JSON. See the
-[Interop Demo](https://github.com/ktonon/elm-serverless/blob/master/demo/src/Interop)
-for a usage example.
-
-@docs Interop
-
-
 ## Initialization Helpers
 
 Various aspects of Program may not be needed. These functions are provided as a
 convenient way to opt-out.
 
-@docs noConfig, noInterop, noRoutes, noSideEffects
+@docs noConfig, noRoutes, noSideEffects
 
 -}
 
@@ -71,8 +58,8 @@ This maps to a headless elm
 [Platform.Program](http://package.elm-lang.org/packages/elm-lang/core/latest/Platform#Program).
 
 -}
-type alias Program config model route interop msg =
-    Platform.Program Flags (Model config model route interop) (Msg msg)
+type alias Program config model route msg =
+    Platform.Program Flags (Model config model route) (Msg msg)
 
 
 {-| Type of flags for program.
@@ -89,8 +76,8 @@ type alias Flags =
 {-| Create a program from the given HTTP api.
 -}
 httpApi :
-    HttpApi config model route interop msg
-    -> Program config model route interop msg
+    HttpApi config model route msg
+    -> Program config model route msg
 httpApi api =
     Platform.worker
         { init = init_ api
@@ -106,7 +93,6 @@ A Serverless.Program is parameterized by your 5 custom types
   - `config` is a server load-time record of deployment specific values
   - `model` is for whatever you need during the processing of a request
   - `route` represents your application routes
-  - `interop` defines an interface to JavaScript functions
   - `msg` is your app message type
 
 You must provide the following:
@@ -115,31 +101,21 @@ You must provide the following:
   - `requestPort` and `responsePort` must be defined in your app since an elm library cannot expose ports
   - `initialModel` is a value to which new connections will set their model
   - `parseRoute` takes the `request/path/and?query=string` and parses it into a `route`
-  - `interop` defines JavaScript functions and JSON coders for arguments and results
   - `endpoint` is a function which receives incoming connections
   - `update` the app update function
 
-Notices that `update` and `endpoint` operate on `Conn config model route interop`
+Notices that `update` and `endpoint` operate on `Conn config model route`
 and not just on `model`.
 
 -}
-type alias HttpApi config model route interop msg =
+type alias HttpApi config model route msg =
     { configDecoder : Decoder config
     , initialModel : model
     , parseRoute : Url -> Maybe route
-    , endpoint : Conn config model route interop -> ( Conn config model route interop, Cmd msg )
-    , update : msg -> Conn config model route interop -> ( Conn config model route interop, Cmd msg )
-    , interop : Interop interop msg
+    , endpoint : Conn config model route -> ( Conn config model route, Cmd msg )
+    , update : msg -> Conn config model route -> ( Conn config model route, Cmd msg )
     , requestPort : RequestPort (Msg msg)
     , responsePort : ResponsePort (Msg msg)
-    }
-
-
-{-| Translates Elm data to and from JSON.
--}
-type alias Interop interop msg =
-    { encodeInput : interop -> Json.Encode.Value
-    , outputDecoder : String -> Maybe (Json.Decode.Decoder msg)
     }
 
 
@@ -173,7 +149,7 @@ type alias ResponsePort msg =
 
 {-| Opt-out of configuration decoding.
 
-    main : Serverless.Program () model route interop msg
+    main : Serverless.Program () model route msg
     main =
         Serverless.httpApi
             { configDecoder = noConfig
@@ -187,25 +163,9 @@ noConfig =
     Json.Decode.succeed ()
 
 
-{-| Opt-out of JavaScript interop.
-
-    main : Serverless.Program config model route () msg
-    main =
-        Serverless.httpApi
-            { interop = noInterop
-
-            -- ...
-            }
-
--}
-noInterop : Interop () msg
-noInterop =
-    Interop (\() -> Json.Encode.null) (\_ -> Nothing)
-
-
 {-| Opt-out of route parsing.
 
-    main : Serverless.Program config model () interop msg
+    main : Serverless.Program config model () msg
     main =
         Serverless.httpApi
             { parseRoute = noRoutes
@@ -221,7 +181,7 @@ noRoutes _ =
 
 {-| Opt-out of side-effects.
 
-    main : Serverless.Program config model route interop ()
+    main : Serverless.Program config model route ()
     main =
         Serverless.httpApi
             { update = noSideEffects
@@ -232,8 +192,8 @@ noRoutes _ =
 -}
 noSideEffects :
     ()
-    -> Conn config model route interop
-    -> ( Conn config model route interop, Cmd () )
+    -> Conn config model route
+    -> ( Conn config model route, Cmd () )
 noSideEffects _ conn =
     ( conn, Cmd.none )
 
@@ -242,8 +202,8 @@ noSideEffects _ conn =
 -- IMPLEMENTATION
 
 
-type alias Model config model route interop =
-    { pool : ConnPool.Pool config model route interop
+type alias Model config model route =
+    { pool : ConnPool.Pool config model route
     , configResult : Result String config
     }
 
@@ -253,16 +213,16 @@ type Msg msg
     | HandlerMsg Id msg
 
 
-type SlsMsg config model route interop msg
-    = RequestAdd (Conn config model route interop)
+type SlsMsg config model route msg
+    = RequestAdd (Conn config model route)
     | RequestUpdate Id msg
     | ProcessingError Id Int Bool String
 
 
 init_ :
-    HttpApi config model route interop msg
+    HttpApi config model route msg
     -> Flags
-    -> ( Model config model route interop, Cmd (Msg msg) )
+    -> ( Model config model route, Cmd (Msg msg) )
 init_ api flags =
     case decodeValue api.configDecoder flags of
         Ok config ->
@@ -281,10 +241,10 @@ init_ api flags =
 
 
 toSlsMsg :
-    HttpApi config model route interop msg
+    HttpApi config model route msg
     -> Result String config
     -> Msg msg
-    -> SlsMsg config model route interop msg
+    -> SlsMsg config model route msg
 toSlsMsg api configResult rawMsg =
     case ( configResult, rawMsg ) of
         ( Err err, RequestPortMsg ( id, _, _ ) ) ->
@@ -315,23 +275,17 @@ toSlsMsg api configResult rawMsg =
                                     (Json.Decode.errorToString err)
 
                 otherAction ->
-                    case decodeOutput api.interop otherAction raw of
-                        Ok msg ->
-                            RequestUpdate id msg
-
-                        Err err ->
-                            ProcessingError id 500 False <|
-                                (++) "Error decoding interop result: " err
+                    ProcessingError id 500 False "Error: Unknown action."
 
         ( _, HandlerMsg id msg ) ->
             RequestUpdate id msg
 
 
 update_ :
-    HttpApi config model route interop msg
+    HttpApi config model route msg
     -> Msg msg
-    -> Model config model route interop
-    -> ( Model config model route interop, Cmd (Msg msg) )
+    -> Model config model route
+    -> ( Model config model route, Cmd (Msg msg) )
 update_ api rawMsg model =
     case toSlsMsg api model.configResult rawMsg of
         RequestAdd conn ->
@@ -355,11 +309,11 @@ update_ api rawMsg model =
 
 
 updateChild :
-    HttpApi config model route interop msg
+    HttpApi config model route msg
     -> Id
     -> msg
-    -> Model config model route interop
-    -> ( Model config model route interop, Cmd (Msg msg) )
+    -> Model config model route
+    -> ( Model config model route, Cmd (Msg msg) )
 updateChild api connId msg model =
     case ConnPool.get connId model.pool of
         Just conn ->
@@ -373,10 +327,10 @@ updateChild api connId msg model =
 
 
 updateChildHelper :
-    HttpApi config model route interop msg
-    -> ( Conn config model route interop, Cmd msg )
-    -> Model config model route interop
-    -> ( Model config model route interop, Cmd (Msg msg) )
+    HttpApi config model route msg
+    -> ( Conn config model route, Cmd msg )
+    -> Model config model route
+    -> ( Model config model route, Cmd (Msg msg) )
 updateChildHelper api ( conn, cmd ) model =
     case Conn.unsent conn of
         Nothing ->
@@ -392,19 +346,16 @@ updateChildHelper api ( conn, cmd ) model =
             ( { model
                 | pool =
                     ConnPool.replace
-                        (Conn.interopClear unsentConn)
+                        unsentConn
                         model.pool
               }
-            , Cmd.batch
-                [ Cmd.map (HandlerMsg (Conn.id conn)) cmd
-                , interopCallCmd api conn
-                ]
+            , Cmd.map (HandlerMsg (Conn.id conn)) cmd
             )
 
 
 sub_ :
-    HttpApi config model route interop msg
-    -> Model config model route interop
+    HttpApi config model route msg
+    -> Model config model route
     -> Sub (Msg msg)
 sub_ api model =
     api.requestPort RequestPortMsg
@@ -415,7 +366,7 @@ sub_ api model =
 
 
 send :
-    HttpApi config model route interop msg
+    HttpApi config model route msg
     -> Id
     -> Status
     -> String
@@ -429,62 +380,3 @@ send { responsePort } id code msg =
             |> Response.setBody (Body.text msg)
             |> Response.encode
         )
-
-
-
--- JAVASCRIPT INTEROP
-
-
-interopCallCmd :
-    HttpApi config model route interop msg
-    -> Conn config model route interop
-    -> Cmd (Msg msg)
-interopCallCmd api conn =
-    conn
-        |> Conn.interopCalls
-        |> List.map
-            (\interop ->
-                api.responsePort
-                    ( Conn.id conn
-                    , interopFunctionName interop
-                    , encodeInput api.interop interop
-                    )
-            )
-        |> Cmd.batch
-
-
-interopFunctionName : interop -> String
-interopFunctionName interop =
-    let
-        name =
-            interop |> Debug.toString |> String.split " " |> List.head |> Maybe.withDefault ""
-    in
-    (++)
-        (name |> String.left 1 |> String.toLower)
-        (name |> String.dropLeft 1)
-
-
-encodeInput :
-    Interop interop msg
-    -> interop
-    -> Json.Encode.Value
-encodeInput interop input =
-    interop.encodeInput input
-
-
-decodeOutput :
-    Interop interop msg
-    -> String
-    -> Json.Encode.Value
-    -> Result String msg
-decodeOutput { outputDecoder } interopName jsonValue =
-    case outputDecoder interopName of
-        Just decoder ->
-            jsonValue
-                |> Json.Decode.decodeValue decoder
-                |> Result.mapError Json.Decode.errorToString
-
-        Nothing ->
-            Err <|
-                "Could not get decoder for interop named: "
-                    ++ interopName

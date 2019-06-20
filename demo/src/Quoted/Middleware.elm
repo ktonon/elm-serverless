@@ -11,8 +11,8 @@ import Serverless.Conn.Response exposing (addHeader, setBody, setStatus)
 {-| Simple function to add some cors response headers
 -}
 cors :
-    Serverless.Conn.Conn config model route interop
-    -> Serverless.Conn.Conn config model route interop
+    Serverless.Conn.Conn config model route
+    -> Serverless.Conn.Conn config model route
 cors conn =
     updateResponse
         (addHeader ( "access-control-allow-origin", "*" )

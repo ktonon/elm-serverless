@@ -4,9 +4,10 @@ import Json.Encode as Encode
 import Quoted.Middleware
 import Quoted.Pipelines.Quote as Quote
 import Quoted.Route exposing (Route(..), queryEncoder)
-import Quoted.Types exposing (Config, Conn, Interop(..), Msg(..), Plug, configDecoder, interopDecoder, interopEncode, requestPort, responsePort)
+import Quoted.Types exposing (Config, Conn, Msg(..), Plug, configDecoder, requestPort, responsePort)
+import Random
 import Serverless
-import Serverless.Conn exposing (interop, jsonBody, mapUnsent, method, respond, route, textBody, updateResponse)
+import Serverless.Conn exposing (jsonBody, mapUnsent, method, respond, route, textBody, updateResponse)
 import Serverless.Conn.Request exposing (Method(..))
 import Serverless.Plug as Plug exposing (plug)
 import Url.Parser
@@ -17,11 +18,10 @@ import Url.Parser
   - Config is a server load-time record of deployment specific values
   - Model is for whatever you need during the processing of a request
   - Route represents the set of routes your app will handle
-  - Interop enumerates the JavaScript functions which may be called
   - Msg is your app message type
 
 -}
-main : Serverless.Program Config () Route Interop Msg
+main : Serverless.Program Config () Route Msg
 main =
     Serverless.httpApi
         { initialModel = ()
@@ -43,14 +43,10 @@ main =
         -- Update function which operates on Conn.
         , update = update
 
-        -- Enumerates JavaScript interop functions and provides JSON coders
-        -- to convert data between Elm and JSON.
-        , interop = Serverless.Interop interopEncode interopDecoder
-
         -- Provides ports to the framework which are used for requests,
-        -- responses, and JavaScript interop function calls. Do not use these
-        -- ports directly, the framework handles associating messages to
-        -- specific connections with unique identifiers.
+        -- and responses. Do not use these ports directly, the framework
+        -- handles associating messages to specific connections with
+        -- unique identifiers.
         , requestPort = requestPort
         , responsePort = responsePort
         }
@@ -92,9 +88,10 @@ router conn =
             Quote.router lang conn
 
         ( GET, Number ) ->
-            -- This one calls out to a JavaScript function named `getRandom`.
-            -- The result comes in as a message `RandomNumber`.
-            interop [ GetRandom 1000000000 ] conn
+            -- Generate a random number.
+            ( conn
+            , Random.generate RandomNumber <| Random.int 0 1000000000
+            )
 
         ( GET, Buggy ) ->
             respond ( 500, textBody "bugs, bugs, bugs" ) conn
@@ -106,8 +103,7 @@ router conn =
 {-| The application update function.
 
 Just like an Elm SPA, an elm-serverless app has a single update
-function which handles messages resulting from interop calls and side-effects
-in general.
+function which handles messages resulting from side-effects.
 
 -}
 update : Msg -> Conn -> ( Conn, Cmd Msg )
@@ -117,8 +113,5 @@ update msg conn =
         GotQuotes result ->
             Quote.gotQuotes result conn
 
-        -- Result of a JavaScript interop call. The `interopDecoder` function
-        -- passed into Serverless.httpApi is responsible for converting interop
-        -- results into application messages.
         RandomNumber val ->
             respond ( 200, jsonBody <| Encode.int val ) conn

@@ -10,14 +10,13 @@ import Serverless.Conn.Request exposing (Method(..), asJson, body)
 
 {-| Shows one way to convert a JSON POST body into Elm data
 -}
-main : Serverless.Program () () () () ()
+main : Serverless.Program () () () ()
 main =
     Serverless.httpApi
         { configDecoder = Serverless.noConfig
         , initialModel = ()
         , parseRoute = Serverless.noRoutes
         , update = Serverless.noSideEffects
-        , interop = Serverless.noInterop
         , requestPort = requestPort
         , responsePort = responsePort
 
@@ -72,7 +71,7 @@ personEncoder person =
 
 
 type alias Conn =
-    Serverless.Conn.Conn () () () ()
+    Serverless.Conn.Conn () () ()
 
 
 port requestPort : Serverless.RequestPort msg
