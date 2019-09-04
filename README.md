@@ -1,3 +1,5 @@
+__NOTE: This fork is no longer maintained. Please see [rupertlssmith/elm-serverless](https://github.com/rupertlssmith/elm-serverless) for updates which apply to elm >= 0.19__
+
 # elm <img src="https://raw.githubusercontent.com/ktonon/elm-serverless/master/es-logo-small.png" width="37"> serverless
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
